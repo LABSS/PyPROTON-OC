@@ -293,21 +293,19 @@ to-report link-color
 end
 
 to commit-crimes ; person procedure
-  let crimes []
+  let co-offender-groups []
   ask persons [
     if random-float 1 < criminal-tendency [
       let accomplices find-accomplices number-of-accomplices
-      let crime (list (turtle-set self accomplices) oc-member?)
-      set crimes lput crime crimes
+      set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
     ]
   ]
-  foreach map first crimes commit-crime
-  foreach crimes [ pair ->
-    let co-offenders first pair
-    let initiated-by-oc-member? last pair
-    if initiated-by-oc-member? [
-      ask co-offenders [ set oc-member? true ]
-    ]
+  foreach co-offender-groups commit-crime
+  let oc-co-offender-groups filter [ co-offenders ->
+    any? co-offenders with [ oc-member? ]
+  ] co-offender-groups
+  foreach oc-co-offender-groups [ co-offenders ->
+    ask co-offenders [ set oc-member? true ]
   ]
 end
 
