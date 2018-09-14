@@ -10,6 +10,8 @@ undirected-link-breed [friendship-links   friendship-link]   ; person <--> perso
 undirected-link-breed [criminal-links     criminal-link]     ; person <--> person
 undirected-link-breed [professional-links professional-link] ; person <--> person
 undirected-link-breed [school-links       school-link]       ; person <--> person
+undirected-link-breed [meta-links         meta-link]         ; person <--> person
+
 
 undirected-link-breed [positions-links         position-link]          ; job <--> employer
 undirected-link-breed [job-links               job-link]               ; person <--> job
@@ -36,6 +38,8 @@ schools-own [
 criminal-links-own [
   num-co-offenses
 ]
+
+meta-links-own [ w ]
 
 globals [
   breed-colors ; a table from breeds to turtle colors
@@ -357,6 +361,26 @@ end
 
 to-report number-of-accomplices
   report random-poisson 1 ; TODO replace by empirically grounded distribution
+end
+
+to update-meta-links
+  ask meta-links [ die ]
+  nw:with-context persons links [
+    ask persons [
+      let ego self
+      ask other nw:turtles-in-radius 1 [
+        create-meta-link-with myself [
+          if [ family-link-with ego ] of myself       != nobody [ set w w + 1 ]
+          if [ friendship-link-with ego ] of myself   != nobody [ set w w + 1 ]
+          if [ school-link-with ego ] of myself       != nobody [ set w w + 1 ]
+          if [ professional-link-with ego ] of myself != nobody [ set w w + 1 ]
+          if [ criminal-link-with ego ] of myself     != nobody [
+            set w w + [ num-co-offenses ] of [ criminal-link-with ego ] of myself
+          ]
+        ]
+      ]
+    ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
