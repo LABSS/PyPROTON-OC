@@ -46,6 +46,7 @@ globals [
 ]
 
 to profile-setup
+  profiler:reset         ; clear the data
   profiler:start         ; start profiling
   setup                  ; set up the model
   profiler:stop          ; stop profiling
@@ -54,6 +55,7 @@ to profile-setup
 end
 
 to profile-go
+  profiler:reset         ; clear the data
   profiler:start         ; start profiling
   setup                  ; set up the model
   repeat 20 [ go ]
