@@ -1,9 +1,9 @@
 extensions [nw table csv profiler]
 
-breed [employers employer]
 breed [jobs      job]
-breed [persons   person]
+breed [employers employer]
 breed [schools   school]
+breed [persons   person]
 
 undirected-link-breed [family-links       family-link]       ; person <--> person
 undirected-link-breed [friendship-links   friendship-link]   ; person <--> person
@@ -45,6 +45,15 @@ to profile-setup
   profiler:reset         ; clear the data
 end
 
+to profile-go
+  profiler:start         ; start profiling
+  setup                  ; set up the model
+  repeat 20 [ go ]
+  profiler:stop          ; stop profiling
+  print profiler:report  ; view the results
+  profiler:reset         ; clear the data
+end
+
 to setup
   clear-all
   ask patches [ set pcolor white ]
@@ -57,7 +66,11 @@ to setup
   init-students
   init-professional-links
   init-breed-colors
-  ask turtles [ set-turtle-color ]
+  ask turtles [
+    set-turtle-color
+    setxy random-xcor random-ycor
+  ]
+  repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
   update-plots
 end
 
@@ -76,9 +89,9 @@ to setup-default-shapes
 end
 
 to init-breed-colors
-  let breeds ["jobs" "persons" "employers"]
+  let breeds map [ b -> (word b) ] remove-duplicates [ breed ] of turtles
   set breed-colors table:from-list (map [ [b i] ->
-    (list b (hsb ((360 / length breeds) * i) 50 80))
+    (list b lput 80 (hsb ((360 / length breeds) * i) 50 80))
   ] breeds (range length breeds))
 end
 
@@ -96,7 +109,6 @@ to setup-population
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
   nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
-    forward 10                                            ; lays out persons in a circle, but that doesn't really matter
     set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
     set birth-tick 0 - random (70 * ticks-per-year)       ; TODO use a realistic distribution
     set gender one-of ["M" "F"]                           ; TODO use a realistic distribution // could also be 0/1 if it makes things easier
@@ -119,7 +131,6 @@ to setup-employers
   let job-counts reduce sentence csv:from-file word "inputs/palermo/data/" "employer_sizes.csv"
   foreach job-counts [ n ->
     create-employers 1 [
-      setxy random-xcor random-ycor
       hatch-jobs n [
         create-position-link-with myself
         set education-level-required random (num-education-levels - 1) ; TODO: use a realistic distribution
@@ -216,7 +227,7 @@ to assert [ f ]
 end
 
 to output [ str ]
-  if output? [ show str ]
+  if output? [ output-show str ]
 end
 
 to-report education-levels
@@ -272,6 +283,10 @@ to graduate
     ]
   ]
 end
+
+to-report link-color
+  report [50 50 50 50]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -301,10 +316,10 @@ ticks
 30.0
 
 BUTTON
-20
-415
-93
-448
+15
+160
+130
+193
 NIL
 setup
 NIL
@@ -320,23 +335,23 @@ NIL
 SLIDER
 15
 15
-200
+260
 48
 num-persons
 num-persons
 1
 10000
-1119.0
+100.0
 1
 1
 NIL
 HORIZONTAL
 
 MONITOR
-130
-180
-207
-225
+265
+245
+375
+290
 NIL
 count jobs
 17
@@ -344,10 +359,10 @@ count jobs
 11
 
 BUTTON
-20
-450
-137
-484
+265
+160
+375
+235
 move nodes
   if mouse-down? [\n    let candidate min-one-of turtles [distancexy mouse-xcor mouse-ycor]\n    if [distancexy mouse-xcor mouse-ycor] of candidate < 1 [\n      ;; The WATCH primitive puts a \"halo\" around the watched turtle.\n      watch candidate\n      while [mouse-down?] [\n        ;; If we don't force the view to update, the user won't\n        ;; be able to see the turtle moving around.\n        display\n        ;; The SUBJECT primitive reports the turtle being watched.\n        ask subject [ setxy mouse-xcor mouse-ycor ]\n      ]\n      ;; Undoes the effects of WATCH.  Can be abbreviated RP.\n      reset-perspective\n    ]\n  ]
 T
@@ -362,14 +377,14 @@ NIL
 
 SLIDER
 15
-270
-225
-303
+275
+260
+308
 base-opportunity-rate
 base-opportunity-rate
 0
 10
-0.0
+0.1
 0.1
 1
 NIL
@@ -377,24 +392,24 @@ HORIZONTAL
 
 SLIDER
 15
-305
-225
-338
+310
+260
+343
 mean-accomplices-needed
 mean-accomplices-needed
 0
 10
-0.0
+0.1
 0.1
 1
 NIL
 HORIZONTAL
 
 INPUTBOX
-20
-545
-262
-605
+15
+90
+260
+150
 data-folder
 inputs/palermo/data/
 1
@@ -402,10 +417,10 @@ inputs/palermo/data/
 String
 
 SWITCH
-80
-665
-192
-698
+265
+50
+380
+83
 output?
 output?
 0
@@ -413,10 +428,10 @@ output?
 -1000
 
 MONITOR
-225
-180
-307
-225
+265
+295
+375
+340
 NIL
 count links
 17
@@ -424,10 +439,10 @@ count links
 11
 
 BUTTON
-95
-415
-217
-448
+135
+160
+260
+193
 NIL
 profile-setup
 NIL
@@ -443,7 +458,7 @@ NIL
 SLIDER
 15
 50
-200
+260
 83
 num-education-levels
 num-education-levels
@@ -456,10 +471,10 @@ NIL
 HORIZONTAL
 
 INPUTBOX
-205
-15
-290
-75
+265
+90
+380
+150
 ticks-per-year
 12.0
 1
@@ -467,10 +482,10 @@ ticks-per-year
 Number
 
 SLIDER
-25
-100
-267
-133
+15
+240
+260
+273
 prob-of-going-to-university
 prob-of-going-to-university
 0
@@ -480,6 +495,64 @@ prob-of-going-to-university
 1
 NIL
 HORIZONTAL
+
+BUTTON
+15
+200
+70
+233
+NIL
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+0
+
+BUTTON
+75
+200
+130
+233
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+0
+
+BUTTON
+135
+200
+260
+233
+NIL
+profile-go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+OUTPUT
+1090
+10
+1720
+695
+10
 
 @#$#@#$#@
 ## WHAT IS IT?
