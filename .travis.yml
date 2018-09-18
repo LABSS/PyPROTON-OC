@@ -1,0 +1,5 @@
+before_install:
+ - cd proton-oc-tests
+language: scala
+scala:
+   - 2.12.4
