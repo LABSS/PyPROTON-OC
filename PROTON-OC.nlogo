@@ -376,8 +376,8 @@ to-report oc-embeddedness ; person reporter
       update-meta-links agents
       nw:with-context agents meta-links [
         set cached-oc-embeddedness (
-          [ 1 / nw:weighted-distance-to myself w ] of oc-members /
-          [ 1 / nw:weighted-distance-to myself w ] of agents
+          sum [ 1 / nw:weighted-distance-to myself w ] of other oc-members /
+          sum [ 1 / nw:weighted-distance-to myself w ] of other agents
         )
       ]
     ]
@@ -401,6 +401,7 @@ to update-meta-links [ agents ]
           if [ criminal-link-with other-end ] of myself     != nobody [
             set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
           ]
+          set w 1 / w
         ]
       ]
     ]
