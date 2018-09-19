@@ -339,7 +339,7 @@ to commit-crime [ co-offenders ] ; observer command
 end
 
 to-report candidate-weight ; person reporter
-  let r ifelse-value [ oc-member? ] of myself [ 0 ] [ oc-embbededness ]
+  let r ifelse-value [ oc-member? ] of myself [ oc-embeddedness ] [ 0 ]
   report -1 * (social-proximity-with myself + r)
 end
 
@@ -351,7 +351,7 @@ to-report social-proximity-with [ target ] ; person reporter
   report random-float 1 ; TODO
 end
 
-to-report oc-embbededness ; person reporter
+to-report oc-embeddedness ; person reporter
   report random-float 1 ; TODO
 end
 
