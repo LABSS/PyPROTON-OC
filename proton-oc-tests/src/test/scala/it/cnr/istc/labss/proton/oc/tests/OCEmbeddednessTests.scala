@@ -22,7 +22,7 @@ class OCEmbeddednessTests extends OCModelSuite {
         set oc-member? false
       ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe 0
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0
   }
 
   test("A single OC person") { ws =>
@@ -33,7 +33,7 @@ class OCEmbeddednessTests extends OCModelSuite {
         set oc-member? true
       ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe 0
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0
   }
 
   test("A single non-OC person with one family OC member") { ws =>
@@ -46,7 +46,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ask person 1 [ set oc-member? true ]
       ask person 0 [ create-family-link-with person 1 ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe 1
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 1
     ws.rpt("[ w ] of meta-links") shouldBe Seq(1.0).toLogoList
   }
 
@@ -62,7 +62,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ]
       ask person 0 [ create-family-links-with other persons ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe 0.5
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0.5
     ws.rpt("sort [ w ] of meta-links") shouldBe Seq.fill(10)(1.0).toLogoList
   }
 
@@ -77,7 +77,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ask person 1 [ create-family-link-with person 2 ]
       ask person 2 [ set oc-member? true ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe (1.0 / 3.0)
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (1.0 / 3.0)
     ws.rpt("sort [ w ] of meta-links") shouldBe Seq(1.0, 1.0).toLogoList
   }
 
@@ -95,7 +95,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ]
       ask person 2 [ set oc-member? true ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe (2.0 / 3.0)
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (2.0 / 3.0)
     ws.rpt("sort [ w ] of meta-links") shouldBe Seq(0.5, 1.0).toLogoList
   }
 
@@ -113,7 +113,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ]
       ask person 2 [ set oc-member? true ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe (1.0 / 3.0)
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (1.0 / 3.0)
     ws.rpt("sort [ w ] of meta-links") shouldBe Seq(0.5, 1.0).toLogoList
   }
 
@@ -130,7 +130,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ]
       ask person 2 [ set oc-member? true ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe (4.0 / 5.0)
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (4.0 / 5.0)
     ws.rpt("sort [ w ] of meta-links") shouldBe Seq(0.25, 1.0).toLogoList
   }
 
@@ -150,7 +150,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ]
       ask person 5 [ set oc-member? true ]
     """)
-    ws.rpt("[ oc-embbededness ] of person 0") shouldBe 0.5
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0.5
     ws.rpt("sort [ w ] of meta-links") shouldBe Seq(0.25, 1.0, 1.0, 1.0, 1.0).toLogoList
   }
 
