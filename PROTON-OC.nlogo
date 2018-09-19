@@ -33,6 +33,10 @@ schools-own [
   education-level
 ]
 
+criminal-links-own [
+  num-co-offenses
+]
+
 globals [
   breed-colors ; a table from breeds to turtle colors
 ]
@@ -75,7 +79,7 @@ to setup
 end
 
 to go
-
+  commit-crimes
   tick
 end
 
@@ -286,6 +290,73 @@ end
 
 to-report link-color
   report [50 50 50 50]
+end
+
+to commit-crimes ; person procedure
+  let co-offender-groups []
+  ask persons [
+    if random-float 1 < criminal-tendency [
+      let accomplices find-accomplices number-of-accomplices
+      set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
+    ]
+  ]
+  foreach co-offender-groups commit-crime
+  let oc-co-offender-groups filter [ co-offenders ->
+    any? co-offenders with [ oc-member? ]
+  ] co-offender-groups
+  foreach oc-co-offender-groups [ co-offenders ->
+    ask co-offenders [ set oc-member? true ]
+  ]
+end
+
+to-report find-accomplices [ n ] ; person reporter
+  let d 1 ; start with a network distance of 1
+  let accomplices []
+  while [ length accomplices < n and d < max-accomplice-radius ] [
+    let candidates sort-on [
+      candidate-weight
+    ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
+    while [ length accomplices < n and not empty? candidates ] [
+      let candidate first candidates
+      set candidates but-first candidates
+      if random-float 1 < [ criminal-tendency ] of candidate [
+        set accomplices lput candidate accomplices
+      ]
+    ]
+    set d d + 1
+  ]
+  report accomplices
+end
+
+to commit-crime [ co-offenders ] ; observer command
+  ask co-offenders [
+    set num-crimes-committed num-crimes-committed + 1
+    create-criminal-links-with other co-offenders
+  ]
+  nw:with-context co-offenders criminal-links [
+    ask last nw:get-context [ set num-co-offenses num-co-offenses + 1 ]
+  ]
+end
+
+to-report candidate-weight ; person reporter
+  let r ifelse-value [ oc-member? ] of myself [ oc-embeddedness ] [ 0 ]
+  report -1 * (social-proximity-with myself + r)
+end
+
+to-report criminal-tendency ; person reporter
+  report random-float 1 ; TODO
+end
+
+to-report social-proximity-with [ target ] ; person reporter
+  report random-float 1 ; TODO
+end
+
+to-report oc-embeddedness ; person reporter
+  report random-float 1 ; TODO
+end
+
+to-report number-of-accomplices
+  report random-poisson 1 ; TODO replace by empirically grounded distribution
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -553,6 +624,21 @@ OUTPUT
 1720
 695
 10
+
+SLIDER
+15
+345
+260
+378
+max-accomplice-radius
+max-accomplice-radius
+0
+5
+2.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
