@@ -31,7 +31,7 @@ downloadFromZip := {
   }
 }
 
-compile in Test <<= (compile in Test).dependsOn(downloadFromZip)
+compile in Test := (compile in Test).dependsOn(downloadFromZip).value
 
 fork in Test := true
 
