@@ -40,7 +40,10 @@ criminal-links-own [
   num-co-offenses
 ]
 
-meta-links-own [ w ]
+meta-links-own [
+  dist ; the "distance cost" of traversing that link
+       ; (the stronger the link, the samller the distance cost)
+]
 
 globals [
   breed-colors ; a table from breeds to turtle colors
@@ -376,8 +379,8 @@ to-report oc-embeddedness ; person reporter
       update-meta-links agents
       nw:with-context agents meta-links [
         set cached-oc-embeddedness (
-          sum [ 1 / nw:weighted-distance-to myself w ] of other oc-members /
-          sum [ 1 / nw:weighted-distance-to myself w ] of other agents
+          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
+          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
         )
       ]
     ]
@@ -394,6 +397,7 @@ to update-meta-links [ agents ]
     ask agents [
       ask other nw:turtles-in-radius 1 [
         create-meta-link-with myself [ ; if that link already exists, it won't be re-created
+          let w 0
           if [ family-link-with other-end ] of myself       != nobody [ set w w + 1 ]
           if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
           if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
@@ -401,7 +405,7 @@ to update-meta-links [ agents ]
           if [ criminal-link-with other-end ] of myself     != nobody [
             set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
           ]
-          set w 1 / w
+          set dist 1 / w ; the distance cost of the link is the inverse of its weight
         ]
       ]
     ]
