@@ -149,7 +149,7 @@ end
 
 to setup-employers
   output "Setting up employers"
-  let job-counts reduce sentence csv:from-file word "inputs/palermo/data/" "employer_sizes.csv"
+  let job-counts reduce sentence csv:from-file (word "inputs/" data-folder "employer_sizes.csv")
   foreach job-counts [ n ->
     create-employers 1 [
       hatch-jobs n [
@@ -535,7 +535,7 @@ INPUTBOX
 260
 150
 data-folder
-inputs/palermo/data/
+palermo/data/
 1
 0
 String
