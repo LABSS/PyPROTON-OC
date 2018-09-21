@@ -10,6 +10,8 @@ undirected-link-breed [friendship-links   friendship-link]   ; person <--> perso
 undirected-link-breed [criminal-links     criminal-link]     ; person <--> person
 undirected-link-breed [professional-links professional-link] ; person <--> person
 undirected-link-breed [school-links       school-link]       ; person <--> person
+undirected-link-breed [meta-links         meta-link]         ; person <--> person
+
 
 undirected-link-breed [positions-links         position-link]          ; job <--> employer
 undirected-link-breed [job-links               job-link]               ; person <--> job
@@ -24,6 +26,7 @@ persons-own [
   gender
   propensity
   oc-member?
+  cached-oc-embeddedness
 ]
 jobs-own [
   salary
@@ -37,11 +40,17 @@ criminal-links-own [
   num-co-offenses
 ]
 
+meta-links-own [
+  dist ; the "distance cost" of traversing that link
+       ; (the stronger the link, the samller the distance cost)
+]
+
 globals [
   breed-colors ; a table from breeds to turtle colors
 ]
 
 to profile-setup
+  profiler:reset         ; clear the data
   profiler:start         ; start profiling
   setup                  ; set up the model
   profiler:stop          ; stop profiling
@@ -50,6 +59,7 @@ to profile-setup
 end
 
 to profile-go
+  profiler:reset         ; clear the data
   profiler:start         ; start profiling
   setup                  ; set up the model
   repeat 20 [ go ]
@@ -60,6 +70,7 @@ end
 
 to setup
   clear-all
+  nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-population
@@ -74,6 +85,7 @@ to setup
     set-turtle-color
     setxy random-xcor random-ycor
   ]
+  reset-oc-embeddedness
   repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
   update-plots
 end
@@ -81,6 +93,11 @@ end
 to go
   commit-crimes
   tick
+end
+
+to reset-oc-embeddedness
+  ask meta-links [ die ]
+  ask persons [ set cached-oc-embeddedness nobody ]
 end
 
 to setup-default-shapes
@@ -293,6 +310,7 @@ to-report link-color
 end
 
 to commit-crimes ; person procedure
+  reset-oc-embeddedness
   let co-offender-groups []
   ask persons [
     if random-float 1 < criminal-tendency [
@@ -344,7 +362,7 @@ to-report candidate-weight ; person reporter
 end
 
 to-report criminal-tendency ; person reporter
-  report random-float 1 ; TODO
+  report 0.05 ; TODO
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -352,11 +370,46 @@ to-report social-proximity-with [ target ] ; person reporter
 end
 
 to-report oc-embeddedness ; person reporter
-  report random-float 1 ; TODO
+  if cached-oc-embeddedness = nobody [
+    ; only calculate oc-embeddedness if we don't have a cached value
+    set cached-oc-embeddedness 0 ; start with an hypothesis of 0
+    let agents nw:turtles-in-radius oc-embeddedness-radius
+    let oc-members agents with [ oc-member? ]
+    if any? other oc-members [
+      update-meta-links agents
+      nw:with-context agents meta-links [
+        set cached-oc-embeddedness (
+          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
+          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
+        )
+      ]
+    ]
+  ]
+  report cached-oc-embeddedness
 end
 
 to-report number-of-accomplices
   report random-poisson 1 ; TODO replace by empirically grounded distribution
+end
+
+to update-meta-links [ agents ]
+  nw:with-context agents links [ ; limit the context to the agents in the radius of interest
+    ask agents [
+      ask other nw:turtles-in-radius 1 [
+        create-meta-link-with myself [ ; if that link already exists, it won't be re-created
+          let w 0
+          if [ family-link-with other-end ] of myself       != nobody [ set w w + 1 ]
+          if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
+          if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
+          if [ professional-link-with other-end ] of myself != nobody [ set w w + 1 ]
+          if [ criminal-link-with other-end ] of myself     != nobody [
+            set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
+          ]
+          set dist 1 / w ; the distance cost of the link is the inverse of its weight
+        ]
+      ]
+    ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -412,7 +465,7 @@ num-persons
 num-persons
 1
 10000
-100.0
+1000.0
 1
 1
 NIL
@@ -632,6 +685,21 @@ SLIDER
 378
 max-accomplice-radius
 max-accomplice-radius
+0
+5
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+380
+260
+413
+oc-embeddedness-radius
+oc-embeddedness-radius
 0
 5
 2.0
