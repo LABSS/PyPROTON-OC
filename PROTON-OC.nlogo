@@ -129,18 +129,20 @@ to setup-population
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
-    set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-    set birth-tick 0 - random (70 * ticks-per-year)       ; TODO use a realistic distribution
-    set male? one-of [true false]                         ; TODO use a realistic distribution // could also be 0/1 if it makes things easier
-    set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
-    set propensity 0                                      ; TODO find out how this should be initialised
-    set oc-member? false                                  ; the seed OC network should be initialised separately
-    set num-crimes-committed 0                             ; some agents should probably have a few initial crimes at start
-  ]
+  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ init-person ]
   ask persons [
     create-family-links-with n-of 3 other persons ; TODO use https://doi.org/10.1371/journal.pone.0008828 instead...
   ]
+end
+
+to init-person ; person command
+  set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
+  set birth-tick 0 - random (70 * ticks-per-year)       ; TODO use a realistic distribution
+  set male? one-of [true false]                         ; TODO use a realistic distribution // could also be 0/1 if it makes things easier
+  set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
+  set propensity 0                                      ; TODO find out how this should be initialised
+  set oc-member? false                                  ; the seed OC network are initialised separately
+  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
 end
 
 to-report age
