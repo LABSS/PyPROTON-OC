@@ -73,6 +73,7 @@ to setup
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
+  setup-oc-groups
   setup-population
   reset-ticks ; so age can be computed
   setup-employers
@@ -93,6 +94,43 @@ end
 to go
   commit-crimes
   tick
+end
+
+to setup-oc-groups
+  let data filter [ row ->
+    first row = operation
+  ] but-first csv:from-file "inputs/general/data/oc_groups.csv"
+  let groups table:make
+  let families table:make
+  foreach data [ row ->
+    create-persons 1 [
+      init-person ; we start with regular init but will override a few vars
+      put-self-in-table groups   (item 1 row)
+      put-self-in-table families (item 2 row)
+      set birth-tick 0 - ((item 3 row) * ticks-per-year)
+      set oc-member? true
+      set male? true
+    ]
+  ]
+  foreach agentsets-from-table groups [ agents ->
+    ask agents [ create-criminal-links-with other agents ]
+  ]
+  foreach agentsets-from-table families [ agents ->
+    ask agents [ create-family-links-with other agents ]
+  ]
+end
+
+to-report agentsets-from-table [ the-table ]
+  ; given a table havings lists of agents as values,
+  ; reports a list of agentsets.
+  report map [ k ->
+    turtle-set table:get the-table k
+  ] filter [ k -> k != "NA" ] table:keys the-table
+end
+
+to put-self-in-table [ the-table the-key ] ; person command
+  let the-list table:get-or-default the-table the-key []
+  table:put the-table the-key lput self the-list
 end
 
 to reset-oc-embeddedness
