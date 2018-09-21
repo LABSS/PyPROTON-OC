@@ -441,9 +441,9 @@ ticks
 
 BUTTON
 15
-160
+215
 130
-193
+248
 NIL
 setup
 NIL
@@ -501,9 +501,9 @@ NIL
 
 SLIDER
 15
-275
+330
 260
-308
+363
 base-opportunity-rate
 base-opportunity-rate
 0
@@ -516,9 +516,9 @@ HORIZONTAL
 
 SLIDER
 15
-310
+365
 260
-343
+398
 mean-accomplices-needed
 mean-accomplices-needed
 0
@@ -564,9 +564,9 @@ count links
 
 BUTTON
 135
-160
+215
 260
-193
+248
 NIL
 profile-setup
 NIL
@@ -607,9 +607,9 @@ Number
 
 SLIDER
 15
-240
+295
 260
-273
+328
 prob-of-going-to-university
 prob-of-going-to-university
 0
@@ -622,9 +622,9 @@ HORIZONTAL
 
 BUTTON
 15
-200
+255
 70
-233
+288
 NIL
 go
 NIL
@@ -639,9 +639,9 @@ NIL
 
 BUTTON
 75
-200
+255
 130
-233
+288
 NIL
 go
 T
@@ -656,9 +656,9 @@ NIL
 
 BUTTON
 135
-200
+255
 260
-233
+288
 NIL
 profile-go
 NIL
@@ -680,9 +680,9 @@ OUTPUT
 
 SLIDER
 15
-345
+400
 260
-378
+433
 max-accomplice-radius
 max-accomplice-radius
 0
@@ -695,9 +695,9 @@ HORIZONTAL
 
 SLIDER
 15
-380
+435
 260
-413
+468
 oc-embeddedness-radius
 oc-embeddedness-radius
 0
@@ -707,6 +707,16 @@ oc-embeddedness-radius
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+15
+155
+260
+200
+operation
+operation
+"Aemilia" "Crimine" "Infinito" "Minotauro"
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
