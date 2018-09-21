@@ -129,7 +129,7 @@ to setup-population
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ init-person ]
+  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [ init-person ]
   ask persons [
     create-family-links-with n-of 3 other persons ; TODO use https://doi.org/10.1371/journal.pone.0008828 instead...
   ]
@@ -463,8 +463,8 @@ SLIDER
 15
 260
 48
-num-persons
-num-persons
+num-non-oc-persons
+num-non-oc-persons
 1
 10000
 1000.0
