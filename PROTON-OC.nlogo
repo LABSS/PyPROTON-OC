@@ -23,7 +23,7 @@ persons-own [
   education-level
   my-job               ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
-  gender
+  male?
   propensity
   oc-member?
   cached-oc-embeddedness
@@ -73,6 +73,7 @@ to setup
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
+  setup-oc-groups
   setup-population
   reset-ticks ; so age can be computed
   setup-employers
@@ -93,6 +94,43 @@ end
 to go
   commit-crimes
   tick
+end
+
+to setup-oc-groups
+  let data filter [ row ->
+    first row = operation
+  ] but-first csv:from-file "inputs/general/data/oc_groups.csv"
+  let groups table:make
+  let families table:make
+  foreach data [ row ->
+    create-persons 1 [
+      init-person ; we start with regular init but will override a few vars
+      put-self-in-table groups   (item 1 row)
+      put-self-in-table families (item 2 row)
+      set birth-tick 0 - ((item 3 row) * ticks-per-year)
+      set male? (item 4 row)
+      set oc-member? true
+    ]
+  ]
+  foreach agentsets-from-table groups [ agents ->
+    ask agents [ create-criminal-links-with other agents ]
+  ]
+  foreach agentsets-from-table families [ agents ->
+    ask agents [ create-family-links-with other agents ]
+  ]
+end
+
+to-report agentsets-from-table [ the-table ]
+  ; given a table havings lists of agents as values,
+  ; reports a list of agentsets.
+  report map [ k ->
+    turtle-set table:get the-table k
+  ] filter [ k -> k != "NA" ] table:keys the-table
+end
+
+to put-self-in-table [ the-table the-key ] ; person command
+  let the-list table:get-or-default the-table the-key []
+  table:put the-table the-key lput self the-list
 end
 
 to reset-oc-embeddedness
@@ -129,18 +167,20 @@ to setup-population
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
-    set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-    set birth-tick 0 - random (70 * ticks-per-year)       ; TODO use a realistic distribution
-    set gender one-of ["M" "F"]                           ; TODO use a realistic distribution // could also be 0/1 if it makes things easier
-    set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
-    set propensity 0                                      ; TODO find out how this should be initialised
-    set oc-member? false                                  ; the seed OC network should be initialised separately
-    set num-crimes-committed 0                             ; some agents should probably have a few initial crimes at start
-  ]
+  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [ init-person ]
   ask persons [
     create-family-links-with n-of 3 other persons ; TODO use https://doi.org/10.1371/journal.pone.0008828 instead...
   ]
+end
+
+to init-person ; person command
+  set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
+  set birth-tick 0 - random (70 * ticks-per-year)       ; TODO use a realistic distribution
+  set male? one-of [true false]                         ; TODO use a realistic distribution // could also be 0/1 if it makes things easier
+  set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
+  set propensity 0                                      ; TODO find out how this should be initialised
+  set oc-member? false                                  ; the seed OC network are initialised separately
+  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
 end
 
 to-report age
@@ -149,7 +189,7 @@ end
 
 to setup-employers
   output "Setting up employers"
-  let job-counts reduce sentence csv:from-file word "inputs/palermo/data/" "employer_sizes.csv"
+  let job-counts reduce sentence csv:from-file (word "inputs/" data-folder "employer_sizes.csv")
   foreach job-counts [ n ->
     create-employers 1 [
       hatch-jobs n [
@@ -441,9 +481,9 @@ ticks
 
 BUTTON
 15
-160
+215
 130
-193
+248
 NIL
 setup
 NIL
@@ -461,8 +501,8 @@ SLIDER
 15
 260
 48
-num-persons
-num-persons
+num-non-oc-persons
+num-non-oc-persons
 1
 10000
 1000.0
@@ -501,9 +541,9 @@ NIL
 
 SLIDER
 15
-275
+330
 260
-308
+363
 base-opportunity-rate
 base-opportunity-rate
 0
@@ -516,9 +556,9 @@ HORIZONTAL
 
 SLIDER
 15
-310
+365
 260
-343
+398
 mean-accomplices-needed
 mean-accomplices-needed
 0
@@ -535,7 +575,7 @@ INPUTBOX
 260
 150
 data-folder
-inputs/palermo/data/
+palermo/data/
 1
 0
 String
@@ -564,9 +604,9 @@ count links
 
 BUTTON
 135
-160
+215
 260
-193
+248
 NIL
 profile-setup
 NIL
@@ -607,9 +647,9 @@ Number
 
 SLIDER
 15
-240
+295
 260
-273
+328
 prob-of-going-to-university
 prob-of-going-to-university
 0
@@ -622,9 +662,9 @@ HORIZONTAL
 
 BUTTON
 15
-200
+255
 70
-233
+288
 NIL
 go
 NIL
@@ -639,9 +679,9 @@ NIL
 
 BUTTON
 75
-200
+255
 130
-233
+288
 NIL
 go
 T
@@ -656,9 +696,9 @@ NIL
 
 BUTTON
 135
-200
+255
 260
-233
+288
 NIL
 profile-go
 NIL
@@ -680,9 +720,9 @@ OUTPUT
 
 SLIDER
 15
-345
+400
 260
-378
+433
 max-accomplice-radius
 max-accomplice-radius
 0
@@ -695,9 +735,9 @@ HORIZONTAL
 
 SLIDER
 15
-380
+435
 260
-413
+468
 oc-embeddedness-radius
 oc-embeddedness-radius
 0
@@ -707,6 +747,16 @@ oc-embeddedness-radius
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+15
+155
+260
+200
+operation
+operation
+"Aemilia" "Crimine" "Infinito" "Minotauro"
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
