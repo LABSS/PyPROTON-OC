@@ -1,1 +1,3 @@
 *.tmp.nlogo
+.Rhistory
+*.xlsx#
