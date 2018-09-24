@@ -38,4 +38,4 @@ df <- files %>%
   # take a quick look at age distributions...
   ggplot(df, aes(age)) + geom_histogram() + facet_wrap(vars(operation))
 
-  write.csv(df, file = file.path("data", "oc_groups.csv"), row.names = FALSE)
+  write_csv(df, file.path("data", "oc_groups.csv"))
