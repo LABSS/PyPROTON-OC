@@ -113,7 +113,7 @@ to setup-oc-groups
     ]
   ]
   foreach agentsets-from-table groups [ agents ->
-    ask agents [ create-criminal-links-with other agents ]
+    ask agents [ create-criminal-links-with other agents [set num-co-offenses 1]]
   ]
   foreach agentsets-from-table families [ agents ->
     ask agents [ create-family-links-with other agents ]
