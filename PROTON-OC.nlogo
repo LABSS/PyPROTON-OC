@@ -71,12 +71,12 @@ end
 
 to setup
   clear-all
+  reset-ticks ; so age can be computed
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-oc-groups
   setup-population
-  reset-ticks ; so age can be computed
   setup-employers
   assign-jobs
   setup-schools
