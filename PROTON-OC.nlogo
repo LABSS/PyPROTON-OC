@@ -27,6 +27,7 @@ persons-own [
   propensity
   oc-member?
   cached-oc-embeddedness
+  retired?
 ]
 jobs-own [
   salary
@@ -93,6 +94,7 @@ end
 
 to go
   commit-crimes
+  retire-persons
   tick
 end
 
@@ -180,7 +182,8 @@ to init-person ; person command
   set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
   set propensity 0                                      ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
-  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
+  set num-crimes-committed 0                            ; some persons should probably have a few initial crimes at start
+  set retired? age >= retirement-age                    ; persons older than retirement-age are retired
 end
 
 to-report age
@@ -262,7 +265,7 @@ end
 to-report pick-new-employee-from [ the-candidates ] ; job reporter
   let the-job self
   report one-of the-candidates with [
-    interested-in? the-job and qualified-for? the-job
+    not retired? and interested-in? the-job and qualified-for? the-job
   ]
 end
 
@@ -364,6 +367,16 @@ to commit-crimes ; person procedure
   ] co-offender-groups
   foreach oc-co-offender-groups [ co-offenders ->
     ask co-offenders [ set oc-member? true ]
+  ]
+end
+
+to retire-persons
+  ask persons with [ age >= retirement-age and not retired? ] [
+    set retired? true
+    ask my-job-links [ die ]
+    set my-job nobody
+    ask my-professional-links [ die ]
+    ; Figure out how to preserve socio-economic status (see issue #22)
   ]
 end
 
@@ -757,6 +770,21 @@ operation
 operation
 "Aemilia" "Crimine" "Infinito" "Minotauro"
 0
+
+SLIDER
+15
+470
+260
+503
+retirement-age
+retirement-age
+0
+100
+65.0
+1
+1
+years old
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
