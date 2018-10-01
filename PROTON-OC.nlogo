@@ -853,6 +853,24 @@ count prisoners
 1
 11
 
+PLOT
+15
+475
+390
+690
+Age distribution
+age
+count
+0.0
+100.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 1 -16777216 true "" "histogram [ age ] of persons"
+
 @#$#@#$#@
 ## WHAT IS IT?
 
