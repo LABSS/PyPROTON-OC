@@ -129,9 +129,8 @@ to setup-oc-groups
       init-person ; we start with regular init but will override a few vars
       put-self-in-table groups   (item 1 row)
       put-self-in-table families (item 2 row)
-      set birth-tick 0 - ((item 3 row) * ticks-per-year)
-      set retired? age >= retirement-age ; this is necessary because we override the age generated in init-person.
-      set male? (item 4 row)
+      ; call init-person with a "fake" one-row age-gender distribution
+      init-person (list (list (item 3 row) (item 4 row) 1))
       set oc-member? true
     ]
   ]
@@ -185,21 +184,25 @@ end
 to setup-population
   output "Setting up population"
 
+  let age-gender-dist but-first csv:from-file (word data-folder "initial_age_gender_dist.csv")
   ; Using Watts-Strogatz is a bit arbitrary, but it should at least give us
   ; some clustering to start with. The network structure should evolve as the
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [ init-person ]
+  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [
+    init-person age-gender-dist
+  ]
   ask persons [
     create-family-links-with n-of 3 other persons ; TODO use https://doi.org/10.1371/journal.pone.0008828 instead...
   ]
 end
 
-to init-person ; person command
+to init-person [ age-gender-dist ] ; person command
+  let row rnd:weighted-one-of-list age-gender-dist last ; select a row from our age-gender distribution
+  set birth-tick 0 - (item 0 row) * ticks-per-year      ; ...and set age...
+  set male? (item 1 row)                                ; ...and gender according to values in that row.
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-  set birth-tick 0 - random (70 * ticks-per-year)       ; TODO use a realistic distribution
-  set male? one-of [true false]                         ; TODO use a realistic distribution // could also be 0/1 if it makes things easier
   set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
   set propensity 0                                      ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
