@@ -5,7 +5,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 df <-
   file.path("raw", "household-init-data.xlsx") %>%
-  read_excel(sheet = "1a") %>%
+  read_excel(sheet = "1") %>%
   transmute(
     age = as.numeric(Age), # turns "100+" and "Total" rows into NA
     true = `P(A = a, gender = M)`,
