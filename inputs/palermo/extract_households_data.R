@@ -12,7 +12,9 @@ df_size_dist <-
   filter(.[[1]] == "Total") %>%
   select(matches("^\\d+$")) %>%
   gather(size, p) %>%
-  mutate(size = as.numeric(size), p = p / sum(p)) %>%
+  mutate(size = as.numeric(size)) %>%
+  filter(size <= 9) %>% # because we can only generate max. 8 children
+  mutate(p = p / sum(p)) %>%
   write_csv(file.path("data", "household_size_dist.csv"))
 
 df_age_by_size_dist <-
@@ -28,11 +30,12 @@ df_hh_type_by_age <-
   read_excel(file, sheet = "6") %>%
   rename(type = "Typology \\ age of reference person") %>%
   mutate(type = str_match(type, "P\\(([a-z_]+).*")[, 2]) %>%
+  filter(type != "single") %>%
   na.omit() %>%
   gather(age, p, -type) %>%
   transmute(age = as.numeric(age), type, p = as.numeric(p)) %>%
   filter(age >= min_age_of_head) %>%
-  write_csv(file.path("data", "household_type_by_age_dist.csv"))
+  write_csv(file.path("data", "household_type_dist_by_age.csv"))
 
 df_partner_age_dist <-
   read_excel(file, sheet = "7") %>%
