@@ -1,4 +1,4 @@
-extensions [nw table csv profiler]
+extensions [nw table csv profiler rnd]
 
 breed [jobs      job]
 breed [employers employer]
@@ -60,7 +60,8 @@ meta-links-own [
 ]
 
 globals [
-  breed-colors ; a table from breeds to turtle colors
+  breed-colors           ; a table from breeds to turtle colors
+  num-co-offenders-dist  ; a list of probability for different crime sizes
 ]
 
 to profile-setup
@@ -84,6 +85,7 @@ end
 
 to setup
   clear-all
+  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -462,7 +464,9 @@ to-report oc-embeddedness ; person reporter
 end
 
 to-report number-of-accomplices
-  report random-poisson 1 ; TODO replace by empirically grounded distribution
+  ; pick a group size from the num. co-offenders distribution
+  ; and substract one to get the number of accomplices
+  report (first rnd:weighted-one-of-list num-co-offenders-dist last) - 1
 end
 
 to update-meta-links [ agents ]
