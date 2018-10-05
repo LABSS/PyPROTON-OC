@@ -4,6 +4,7 @@ breed [jobs      job]
 breed [employers employer]
 breed [schools   school]
 breed [persons   person]
+breed [prisoners prisoner]
 
 undirected-link-breed [family-links       family-link]       ; person <--> person
 undirected-link-breed [friendship-links   friendship-link]   ; person <--> person
@@ -28,6 +29,19 @@ persons-own [
   oc-member?
   cached-oc-embeddedness
 ]
+
+prisoners-own [
+  num-crimes-committed
+  education-level
+  my-job               ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
+  birth-tick
+  male?
+  propensity
+  oc-member?
+  cached-oc-embeddedness
+  sentence-countdown
+]
+
 jobs-own [
   salary
   education-level-required
@@ -93,6 +107,10 @@ end
 
 to go
   commit-crimes
+  ask prisoners [
+    set sentence-countdown sentence-countdown - 1
+    if sentence-countdown = 0 [ set breed persons ]
+  ]
   tick
 end
 
@@ -365,6 +383,9 @@ to commit-crimes ; person procedure
   foreach oc-co-offender-groups [ co-offenders ->
     ask co-offenders [ set oc-member? true ]
   ]
+  foreach co-offender-groups [ co-offenders ->
+    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+  ]
 end
 
 to-report find-accomplices [ n ] ; person reporter
@@ -393,6 +414,18 @@ to commit-crime [ co-offenders ] ; observer command
   ]
   nw:with-context co-offenders criminal-links [
     ask last nw:get-context [ set num-co-offenses num-co-offenses + 1 ]
+  ]
+end
+
+to get-caught [ co-offenders ]
+  ask co-offenders [
+    set breed prisoners
+    set sentence-countdown random-poisson 3 * ticks-per-year
+    ask my-job-links [ die ]
+    ask my-school-attendance-links [die ]
+    ask my-professional-links [ die ]
+    ask my-school-links [ die ]
+    ; we keep the friendship links for the moment
   ]
 end
 
@@ -505,7 +538,7 @@ num-non-oc-persons
 num-non-oc-persons
 1
 10000
-1000.0
+100.0
 1
 1
 NIL
@@ -757,6 +790,32 @@ operation
 operation
 "Aemilia" "Crimine" "Infinito" "Minotauro"
 0
+
+SLIDER
+15
+470
+260
+503
+probability-of-getting-caught
+probability-of-getting-caught
+0
+1
+0.05
+0.05
+1
+NIL
+HORIZONTAL
+
+MONITOR
+265
+345
+375
+390
+NIL
+count prisoners
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
