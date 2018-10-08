@@ -6,6 +6,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 file <- file.path("raw", "household-init-data.xlsx")
 
 min_age_of_head <- 18
+max_age_of_head <- 102 # because that's the max for which we have partner ages
 
 df_size_dist <-
   read_excel(file, sheet = "4") %>%
@@ -21,14 +22,14 @@ df_age_by_size_dist <-
   read_excel(file, sheet = "4") %>%
   select(age = starts_with("age"), matches("P.*=")) %>%
   mutate(age = as.numeric(age)) %>%
-  filter(age >= min_age_of_head) %>%
+  filter(age >= min_age_of_head & age <= max_age_of_head) %>%
   gather(size, p, -age) %>%
   transmute(size = as.numeric(str_extract(size, "\\d+")), age, p) %>%
   write_csv(file.path("data", "head_age_dist_by_household_size.csv"))
 
 df_hh_type_by_age <-
   read_excel(file, sheet = "6") %>%
-  rename(type = "Typology \\ age of reference person") %>%
+  rename(type = `Typology \\ age of reference person`) %>%
   mutate(type = str_match(type, "P\\(([a-z_]+).*")[, 2]) %>%
   filter(type != "single") %>%
   na.omit() %>%

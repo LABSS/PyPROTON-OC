@@ -191,9 +191,7 @@ to setup-population
   nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [
     init-person age-gender-dist
   ]
-  ask persons [
-    create-family-links-with n-of 3 other persons ; TODO use https://doi.org/10.1371/journal.pone.0008828 instead...
-  ]
+  generate-households
 end
 
 to init-person [ age-gender-dist ] ; person command
@@ -506,53 +504,72 @@ to update-meta-links [ agents ]
 end
 
 to generate-households
+  output "Generating households..."
   ; this mostly follows the third algorithm from Gargiulo et al. 2010
   ; (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
   let hh-size-dist read-csv "household_size_dist"
   let head-age-dist group-by-first-item read-csv "head_age_dist_by_household_size"
-  let proportion-of-male-singles-by-age group-by-first-item read-csv "proportion_of_male_singles_by_age"
+  let proportion-of-male-singles-by-age table:from-list read-csv "proportion_of_male_singles_by_age"
   let hh-type-dist group-by-first-item read-csv "household_type_dist_by_age"
   let partner-age-dist group-by-first-item read-csv "partner_age_dist"
   let children-age-dist make-children-age-dist-table
   let p-single-father first first csv:from-file (word data-folder "proportion_single_fathers.csv")
   let population new-population-table
-  let max-iterations 3 ; num-non-oc-persons ; TODO: not sure if that makes sense; will need to experiment
+  let max-iterations num-non-oc-persons ; this might need to be tweaked...
+  let max-attempts-by-size 100
+  ; We have two levels of iterating: the first level is the general attempts at generating a household
+  ; and the second level is the attempts at generating a household of a particular size before giving up.
   repeat max-iterations [
     ; pick the size of the household
     let hh-size pick-from-pair-list hh-size-dist
-    ; pick the age of the head according to the size of the household
-    let head-age pick-from-pair-list (table:get head-age-dist hh-size)
-    ifelse hh-size = 1 [
-      let male-wanted? random-float 1 < table:get proportion-of-male-singles-by-age head-age
-      let head pick-from-population-table population head-age male-wanted?
-      ; Note that we don't "do" anything with the picked head: the fact that it gets
-      ; removed from the population table when we pick it is sufficient for us.
-    ] [
-      ; For household sizes greater than 1, pick a household type according to age of the head
-      let hh-type pick-from-pair-list (table:get hh-type-dist head-age)
-      let male-head? ifelse-value (hh-type = "single parent") [ random-float 1 < p-single-father ] [ true ]
-      let mother-age ifelse-value male-head? [ pick-from-pair-list (table:get partner-age-dist head-age) ] [ head-age ]
-      let hh-members (list pick-from-population-table population head-age male-head?) ; start a list with the hh head
-      if hh-type = "couple" [
-        let mother pick-from-population-table population mother-age false
-        set hh-members lput mother hh-members
-      ]
-      let num-children (hh-size - length hh-members)
-      foreach range num-children [ child-no ->
-        let child-age pick-from-pair-list (table:get table:get children-age-dist child-no mother-age)
-        let child pick-from-population-table population child-age one-of [ true false ]
-        set hh-members lput child hh-members
-      ]
-      set hh-members filter is-person? hh-members ; exclude nobodies
-      if length hh-members = hh-size [ ; only generate the household if we got everyone we needed
-        if hh-type = "couple" [ ; if it's a couple, partner up the first two members
-          ask item 0 hh-members [ set partner item 1 hh-members ]
-          ask item 1 hh-members [ set partner item 0 hh-members ]
+    let success false
+    let nb-attempts 0
+    while [ not success and nb-attempts < max-attempts-by-size ] [
+      set nb-attempts nb-attempts + 1
+      ; pick the age of the head according to the size of the household
+      let head-age pick-from-pair-list (table:get head-age-dist hh-size)
+      ifelse hh-size = 1 [
+        let male-wanted? random-float 1 < table:get proportion-of-male-singles-by-age head-age
+        let head pick-from-population-table population head-age male-wanted?
+        ; Note that we don't "do" anything with the picked head: the fact that it gets
+        ; removed from the population table when we pick it is sufficient for us.
+        set success (head != nobody)
+      ] [
+        ; For household sizes greater than 1, pick a household type according to age of the head
+        let hh-type pick-from-pair-list (table:get hh-type-dist head-age)
+        let male-head? ifelse-value (hh-type = "single parent") [ random-float 1 < p-single-father ] [ true ]
+        let mother-age ifelse-value male-head? [ pick-from-pair-list (table:get partner-age-dist head-age) ] [ head-age ]
+        let hh-members (list pick-from-population-table population head-age male-head?) ; start a list with the hh head
+        if hh-type = "couple" [
+          let mother pick-from-population-table population mother-age false
+          set hh-members lput mother hh-members
         ]
-        set hh-members turtle-set hh-members
-        ask hh-members [ create-family-links-with other hh-members ]
+        let num-children (hh-size - length hh-members)
+        foreach (range 1 (num-children + 1)) [ child-no ->
+          ifelse table:has-key? table:get children-age-dist child-no mother-age [
+            let child-age pick-from-pair-list (table:get table:get children-age-dist child-no mother-age)
+            let child pick-from-population-table population child-age one-of [ true false ]
+            set hh-members lput child hh-members
+          ] [
+            ; We might not have an age distribution for some combinations of child no / mother age
+            ; (for example, no 18 year-old mother has 8 children), so we add `nobody` to our member
+            ; list in those case, to signal that the household generation has failed
+            set hh-members lput nobody hh-members
+          ]
+        ]
+        set hh-members filter is-person? hh-members ; exclude nobodies
+        if length hh-members = hh-size [ ; only generate the household if we got everyone we needed
+          set success true
+          if hh-type = "couple" [ ; if it's a couple, partner up the first two members
+            ask item 0 hh-members [ set partner item 1 hh-members ]
+            ask item 1 hh-members [ set partner item 0 hh-members ]
+          ]
+          set hh-members turtle-set hh-members
+          ask hh-members [ create-family-links-with other hh-members ]
+        ]
       ]
     ]
+    print nb-attempts
   ]
   ; to generate complex households from the remaining population,
   ; we first flatten it into a list
@@ -686,7 +703,7 @@ num-non-oc-persons
 num-non-oc-persons
 1
 10000
-100.0
+1000.0
 1
 1
 NIL
@@ -997,6 +1014,17 @@ false
 "" ""
 PENS
 "default" 1.0 1 -16777216 true "" "histogram [ age ] of persons"
+
+MONITOR
+265
+395
+375
+440
+NIL
+count family-links
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
