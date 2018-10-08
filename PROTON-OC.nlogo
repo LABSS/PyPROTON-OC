@@ -13,11 +13,9 @@ undirected-link-breed [professional-links professional-link] ; person <--> perso
 undirected-link-breed [school-links       school-link]       ; person <--> person
 undirected-link-breed [meta-links         meta-link]         ; person <--> person
 
-
 undirected-link-breed [positions-links         position-link]          ; job <--> employer
 undirected-link-breed [job-links               job-link]               ; person <--> job
 undirected-link-breed [school-attendance-links school-attendance-link] ; person <--> school
-
 
 persons-own [
   num-crimes-committed
@@ -512,6 +510,7 @@ to generate-households
   ; (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
   let hh-size-dist read-csv "household_size_dist"
   let head-age-dist group-by-first-item read-csv "head_age_dist_by_household_size"
+  let proportion-of-male-singles-by-age group-by-first-item read-csv "proportion_of_male_singles_by_age"
   let hh-type-dist group-by-first-item read-csv "household_type_dist_by_age"
   let partner-age-dist group-by-first-item read-csv "partner_age_dist"
   let children-age-dist make-children-age-dist-table
@@ -524,7 +523,7 @@ to generate-households
     ; pick the age of the head according to the size of the household
     let head-age pick-from-pair-list (table:get head-age-dist hh-size)
     ifelse hh-size = 1 [
-      let male-wanted? one-of [ true false ] ; TODO: use empirical distribution if we can get one
+      let male-wanted? random-float 1 < table:get proportion-of-male-singles-by-age head-age
       let head pick-from-population-table population head-age male-wanted?
       ; Note that we don't "do" anything with the picked head: the fact that it gets
       ; removed from the population table when we pick it is sufficient for us.
@@ -545,7 +544,7 @@ to generate-households
         set hh-members lput child hh-members
       ]
       set hh-members filter is-person? hh-members ; exclude nobodies
-      if length hh-members = hh-size [
+      if length hh-members = hh-size [ ; only generate the household if we got everyone we needed
         if hh-type = "couple" [ ; if it's a couple, partner up the first two members
           ask item 0 hh-members [ set partner item 1 hh-members ]
           ask item 1 hh-members [ set partner item 0 hh-members ]
