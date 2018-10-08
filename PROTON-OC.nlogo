@@ -983,9 +983,9 @@ count prisoners
 
 PLOT
 15
-475
+510
 390
-690
+725
 Age distribution
 age
 count
