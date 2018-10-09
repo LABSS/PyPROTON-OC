@@ -513,13 +513,13 @@ to generate-households
   let partner-age-dist group-by-first-item read-csv "partner_age_dist"
   let children-age-dist make-children-age-dist-table
   let p-single-father first first csv:from-file (word data-folder "proportion_single_fathers.csv")
-  let population new-population-table
-  let sizes household-sizes count persons
+  let population new-population-table persons
+  let hh-sizes household-sizes count persons
   let complex-hh-sizes [] ; will contain the sizes that we fail to generate: we'll reuse those for complex households
-  let max-attempts-by-size 100
+  let max-attempts-by-size 50
   ; We have two levels of iterating: the first level is the general attempts at generating a household
   ; and the second level is the attempts at generating a household of a particular size before giving up.
-  foreach sizes [ hh-size ->
+  foreach hh-sizes [ hh-size ->
     let success false
     let nb-attempts 0
     while [ not success and nb-attempts < max-attempts-by-size ] [
@@ -556,7 +556,7 @@ to generate-households
           ]
         ]
         set hh-members filter is-person? hh-members ; exclude nobodies
-        if length hh-members = hh-size [ ; only generate the household if we got everyone we needed
+        ifelse length hh-members = hh-size [ ; only generate the household if we got everyone we needed
           set success true
           if hh-type = "couple" [ ; if it's a couple, partner up the first two members
             ask item 0 hh-members [ set partner item 1 hh-members ]
@@ -564,6 +564,9 @@ to generate-households
           ]
           set hh-members turtle-set hh-members
           ask hh-members [ create-family-links-with other hh-members ]
+        ] [
+          ; in case of failure, we need to put the selected members back in the population
+          set population new-population-table (turtle-set hh-members (population-pool-to-agentset population))
         ]
       ]
     ]
@@ -571,13 +574,17 @@ to generate-households
   ]
   ; to generate complex households from the remaining population,
   ; we first flatten it into a list
-  set population [ self ] of turtle-set table:values table-map population [ entry -> table:values entry ]
+  set population [ self ] of population-pool-to-agentset population
   foreach complex-hh-sizes [ hh-size ->
     set hh-size min (list hh-size length population)
     let hh-members turtle-set sublist population 0 hh-size       ; grab the first persons in the list,
     set population sublist population hh-size length population  ; remove them from the population
     ask hh-members [ create-family-links-with other hh-members ] ; and link them up.
   ]
+end
+
+to-report population-pool-to-agentset [ population ]
+  report turtle-set table:values table-map population [ entry -> table:values entry ]
 end
 
 to-report household-sizes [ num-persons ]
@@ -617,11 +624,11 @@ to-report group-by-first-item [ csv-data ]
   report table-map table [ rows -> map but-first rows ] ; remove the first item of each row
 end
 
-to-report new-population-table
+to-report new-population-table [ agents ]
   ; Create a two-level table to contain our population of agents, where the
   ; first level is the age and the second level is the gender. Agents inside
   ; the table are stored in lists because we are are going to need fast removal
-  let population table:group-agents persons [ age ]
+  let population table:group-agents agents [ age ]
   foreach table:keys population [ k1 ->
     let agentset table:get population k1
     let sub-table table:group-agents agentset [ male? ]
