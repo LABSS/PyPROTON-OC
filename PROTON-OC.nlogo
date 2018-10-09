@@ -530,7 +530,7 @@ to generate-households
       let head-age pick-from-pair-list (table:get head-age-dist hh-size)
       ifelse hh-size = 1 [
         let male-wanted? random-float 1 < table:get proportion-of-male-singles-by-age head-age
-        let head pick-from-population-table population head-age male-wanted?
+        let head pick-from-population-table-by-age-and-gender population head-age male-wanted?
         ; Note that we don't "do" anything with the picked head: the fact that it gets
         ; removed from the population table when we pick it is sufficient for us.
         set success (head != nobody)
@@ -539,16 +539,16 @@ to generate-households
         let hh-type pick-from-pair-list (table:get hh-type-dist head-age)
         let male-head? ifelse-value (hh-type = "single parent") [ random-float 1 < p-single-father ] [ true ]
         let mother-age ifelse-value male-head? [ pick-from-pair-list (table:get partner-age-dist head-age) ] [ head-age ]
-        let hh-members (list pick-from-population-table population head-age male-head?) ; start a list with the hh head
+        let hh-members (list pick-from-population-table-by-age-and-gender population head-age male-head?) ; start a list with the hh head
         if hh-type = "couple" [
-          let mother pick-from-population-table population mother-age false
+          let mother pick-from-population-table-by-age-and-gender population mother-age false
           set hh-members lput mother hh-members
         ]
         let num-children (hh-size - length hh-members)
         foreach (range 1 (num-children + 1)) [ child-no ->
           ifelse table:has-key? table:get children-age-dist child-no mother-age [
             let child-age pick-from-pair-list (table:get table:get children-age-dist child-no mother-age)
-            let child pick-from-population-table population child-age one-of [ true false ]
+            let child pick-from-population-table-by-age population child-age
             set hh-members lput child hh-members
           ] [
             ; We might not have an age distribution for some combinations of child no / mother age
@@ -622,7 +622,7 @@ to-report new-population-table
   report population
 end
 
-to-report pick-from-population-table [ population age-wanted male-wanted? ]
+to-report pick-from-population-table-by-age-and-gender [ population age-wanted male-wanted? ]
   ; Picks an agent with a given age and gender from the population table
   ; and removes it from the inner agent list. Also takes care of removing
   ; the male-wanted? key from the sub-table if the agent-list becomes empty
@@ -638,6 +638,25 @@ to-report pick-from-population-table [ population age-wanted male-wanted? ]
   if empty? table:get sub-table male-wanted? [
     table:remove sub-table male-wanted?
     if table:length sub-table = 0 [ table:remove population age-wanted ]
+  ]
+  report picked-agent
+end
+
+to-report pick-from-population-table-by-age [ population age-wanted ]
+  ; Picks an agent with a given age and removes it from the inner agent list.
+  ; Also takes care of removing the male-wanted? key from the sub-table if
+  ; the agent-list becomes empty and the age-wanted key from the main table
+  ; if the sub-table becomes empty. Reports `nobody` if you can't find an
+  ; agent with the wanted age
+  if not table:has-key? population age-wanted [ report nobody ]
+  let agent-list [ self ] of turtle-set table:values table:get population age-wanted
+  let i one-of range length agent-list
+  let picked-agent item i agent-list
+  let sub-table table:group-items (remove-item i agent-list) [ a -> [ male? ] of a ]
+  ifelse table:length sub-table > 0 [
+    table:put population age-wanted sub-table
+  ] [
+    table:remove population age-wanted
   ]
   report picked-agent
 end
