@@ -507,7 +507,6 @@ to generate-households
   output "Generating households..."
   ; this mostly follows the third algorithm from Gargiulo et al. 2010
   ; (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
-  let hh-size-dist read-csv "household_size_dist"
   let head-age-dist group-by-first-item read-csv "head_age_dist_by_household_size"
   let proportion-of-male-singles-by-age table:from-list read-csv "proportion_of_male_singles_by_age"
   let hh-type-dist group-by-first-item read-csv "household_type_dist_by_age"
@@ -515,13 +514,12 @@ to generate-households
   let children-age-dist make-children-age-dist-table
   let p-single-father first first csv:from-file (word data-folder "proportion_single_fathers.csv")
   let population new-population-table
-  let max-iterations num-non-oc-persons ; this might need to be tweaked...
+  let sizes household-sizes count persons
+  let complex-hh-sizes [] ; will contain the sizes that we fail to generate: we'll reuse those for complex households
   let max-attempts-by-size 100
   ; We have two levels of iterating: the first level is the general attempts at generating a household
   ; and the second level is the attempts at generating a household of a particular size before giving up.
-  repeat max-iterations [
-    ; pick the size of the household
-    let hh-size pick-from-pair-list hh-size-dist
+  foreach sizes [ hh-size ->
     let success false
     let nb-attempts 0
     while [ not success and nb-attempts < max-attempts-by-size ] [
@@ -569,17 +567,31 @@ to generate-households
         ]
       ]
     ]
-    print nb-attempts
+    if not success [ set complex-hh-sizes lput hh-size complex-hh-sizes ]
   ]
   ; to generate complex households from the remaining population,
   ; we first flatten it into a list
   set population [ self ] of turtle-set table:values table-map population [ entry -> table:values entry ]
-  while [ not empty? population ] [
-    let hh-size min (list (length population) (pick-from-pair-list hh-size-dist))
+  foreach complex-hh-sizes [ hh-size ->
+    set hh-size min (list hh-size length population)
     let hh-members turtle-set sublist population 0 hh-size       ; grab the first persons in the list,
     set population sublist population hh-size length population  ; remove them from the population
     ask hh-members [ create-family-links-with other hh-members ] ; and link them up.
   ]
+end
+
+to-report household-sizes [ num-persons ]
+  let hh-size-dist read-csv "household_size_dist"
+  let sizes []
+  let current-sum 0
+  while [ current-sum < num-persons ] [
+    let hh-size pick-from-pair-list hh-size-dist
+    if current-sum + hh-size <= num-persons [
+      set sizes lput hh-size sizes
+      set current-sum current-sum + hh-size
+    ]
+  ]
+  report sizes
 end
 
 to-report make-children-age-dist-table
