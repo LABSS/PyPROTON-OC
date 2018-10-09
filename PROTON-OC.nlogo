@@ -591,7 +591,7 @@ to-report household-sizes [ num-persons ]
       set current-sum current-sum + hh-size
     ]
   ]
-  report sizes
+  report reverse sort sizes
 end
 
 to-report make-children-age-dist-table
