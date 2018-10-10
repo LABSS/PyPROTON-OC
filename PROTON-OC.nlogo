@@ -566,7 +566,7 @@ to generate-households
           ask hh-members [ create-family-links-with other hh-members ]
         ] [
           ; in case of failure, we need to put the selected members back in the population
-          set population new-population-table (turtle-set hh-members (population-pool-to-agentset population))
+          foreach hh-members [ m -> put-in-population-pool m population ]
         ]
       ]
     ]
@@ -628,17 +628,21 @@ to-report new-population-table [ agents ]
   ; Create a two-level table to contain our population of agents, where the
   ; first level is the age and the second level is the gender. Agents inside
   ; the table are stored in lists because we are are going to need fast removal
-  let population table:group-agents agents [ age ]
-  foreach table:keys population [ k1 ->
-    let agentset table:get population k1
-    let sub-table table:group-agents agentset [ male? ]
-    foreach table:keys sub-table [ k2 ->
-      ; convert agentsets inside the table to lists
-      table:put sub-table k2 sort table:get sub-table k2
-    ]
-    table:put population k1 sub-table
-  ]
+  let population table:make
+  ask agents [ put-in-population-pool self population ]
   report population
+end
+
+to put-in-population-pool [ the-person population ]
+  if not table:has-key? population [ age ] of the-person [
+    table:put population [ age ] of the-person table:make
+  ]
+  let subtable table:get population [ age ] of the-person
+  if not table:has-key? subtable [ male? ] of the-person [
+    table:put subtable [ male? ] of the-person []
+  ]
+  let person-list table:get subtable [ male? ] of the-person
+  table:put subtable [ male? ] of the-person lput the-person person-list
 end
 
 to-report pick-from-population-table-by-age-and-gender [ population age-wanted male-wanted? ]
