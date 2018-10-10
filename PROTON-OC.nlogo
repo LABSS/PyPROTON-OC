@@ -627,7 +627,7 @@ end
 to-report new-population-pool [ agents ]
   ; Create a two-level table to contain our population of agents, where the
   ; first level is the age and the second level is the gender. Agents inside
-  ; the table are stored in lists because we are are going to need fast removal
+  ; the table are stored in lists because we are are going to need fast inserts
   let population table:make
   ask agents [ put-in-population-pool self population ]
   report population
@@ -646,42 +646,43 @@ to put-in-population-pool [ the-person population ]
 end
 
 to-report pick-from-population-pool-by-age-and-gender [ population age-wanted male-wanted? ]
-  ; Picks an agent with a given age and gender from the population table
-  ; and removes it from the inner agent list. Also takes care of removing
-  ; the male-wanted? key from the sub-table if the agent-list becomes empty
-  ; and the age-wanted key from the main table if the sub-table becomes empty.
-  ; Reports `nobody` if you can't find an agent with the wanted age/gender
+  ; Picks an agent with a given age and gender and removes it from the population pool.
+  ; Reports `nobody` if it can't find an agent with the wanted age/gender
   if not table:has-key? population age-wanted [ report nobody ]
   let sub-table table:get population age-wanted
   if not table:has-key? sub-table male-wanted? [ report nobody ]
-  let agent-list table:get sub-table male-wanted?
-  let i one-of range length agent-list
-  let picked-agent item i agent-list
-  table:put sub-table male-wanted? remove-item i agent-list
-  if empty? table:get sub-table male-wanted? [
-    table:remove sub-table male-wanted?
-    if table:length sub-table = 0 [ table:remove population age-wanted ]
-  ]
-  report picked-agent
+  let picked-person one-of table:get sub-table male-wanted?
+  remove-from-population-pool picked-person population
+  report picked-person
 end
 
 to-report pick-from-population-pool-by-age [ population age-wanted ]
-  ; Picks an agent with a given age and removes it from the inner agent list.
-  ; Also takes care of removing the male-wanted? key from the sub-table if
-  ; the agent-list becomes empty and the age-wanted key from the main table
-  ; if the sub-table becomes empty. Reports `nobody` if you can't find an
-  ; agent with the wanted age
+  ; Picks an agent with a given age and removes it from the population pool.
+  ; Reports `nobody` if it can't find an agent with the wanted age.
   if not table:has-key? population age-wanted [ report nobody ]
-  let agent-list [ self ] of turtle-set table:values table:get population age-wanted
-  let i one-of range length agent-list
-  let picked-agent item i agent-list
-  let sub-table table:group-items (remove-item i agent-list) [ a -> [ male? ] of a ]
-  ifelse table:length sub-table > 0 [
-    table:put population age-wanted sub-table
-  ] [
-    table:remove population age-wanted
+  let picked-person one-of turtle-set table:values table:get population age-wanted
+  remove-from-population-pool picked-person population
+  report picked-person
+end
+
+to remove-from-population-pool [ the-person population ]
+  let the-age [ age ] of the-person
+  let is-male? [ male? ] of the-person
+  if table:has-key? population the-age [
+    let sub-table table:get population the-age
+    if table:has-key? sub-table is-male? [
+      let old-list table:get sub-table is-male?
+      let new-list filter [ a -> a != the-person ] old-list
+      ifelse not empty? new-list [
+        table:put sub-table is-male? new-list
+      ] [
+        table:remove sub-table is-male?
+        if table:length sub-table = 0 [
+          table:remove population the-age
+        ]
+      ]
+    ]
   ]
-  report picked-agent
 end
 
 to-report table-map [ tbl fn ]
