@@ -513,7 +513,7 @@ to generate-households
   let partner-age-dist group-by-first-item read-csv "partner_age_dist"
   let children-age-dist make-children-age-dist-table
   let p-single-father first first csv:from-file (word data-folder "proportion_single_fathers.csv")
-  let population new-population-table persons
+  let population new-population-pool persons
   let hh-sizes household-sizes count persons
   let complex-hh-sizes [] ; will contain the sizes that we fail to generate: we'll reuse those for complex households
   let max-attempts-by-size 50
@@ -528,7 +528,7 @@ to generate-households
       let head-age pick-from-pair-list (table:get head-age-dist hh-size)
       ifelse hh-size = 1 [
         let male-wanted? random-float 1 < table:get proportion-of-male-singles-by-age head-age
-        let head pick-from-population-table-by-age-and-gender population head-age male-wanted?
+        let head pick-from-population-pool-by-age-and-gender population head-age male-wanted?
         ; Note that we don't "do" anything with the picked head: the fact that it gets
         ; removed from the population table when we pick it is sufficient for us.
         set success (head != nobody)
@@ -537,16 +537,16 @@ to generate-households
         let hh-type pick-from-pair-list (table:get hh-type-dist head-age)
         let male-head? ifelse-value (hh-type = "single parent") [ random-float 1 < p-single-father ] [ true ]
         let mother-age ifelse-value male-head? [ pick-from-pair-list (table:get partner-age-dist head-age) ] [ head-age ]
-        let hh-members (list pick-from-population-table-by-age-and-gender population head-age male-head?) ; start a list with the hh head
+        let hh-members (list pick-from-population-pool-by-age-and-gender population head-age male-head?) ; start a list with the hh head
         if hh-type = "couple" [
-          let mother pick-from-population-table-by-age-and-gender population mother-age false
+          let mother pick-from-population-pool-by-age-and-gender population mother-age false
           set hh-members lput mother hh-members
         ]
         let num-children (hh-size - length hh-members)
         foreach (range 1 (num-children + 1)) [ child-no ->
           ifelse table:has-key? table:get children-age-dist child-no mother-age [
             let child-age pick-from-pair-list (table:get table:get children-age-dist child-no mother-age)
-            let child pick-from-population-table-by-age population child-age
+            let child pick-from-population-pool-by-age population child-age
             set hh-members lput child hh-members
           ] [
             ; We might not have an age distribution for some combinations of child no / mother age
@@ -624,7 +624,7 @@ to-report group-by-first-item [ csv-data ]
   report table-map table [ rows -> map but-first rows ] ; remove the first item of each row
 end
 
-to-report new-population-table [ agents ]
+to-report new-population-pool [ agents ]
   ; Create a two-level table to contain our population of agents, where the
   ; first level is the age and the second level is the gender. Agents inside
   ; the table are stored in lists because we are are going to need fast removal
@@ -645,7 +645,7 @@ to put-in-population-pool [ the-person population ]
   table:put subtable [ male? ] of the-person lput the-person person-list
 end
 
-to-report pick-from-population-table-by-age-and-gender [ population age-wanted male-wanted? ]
+to-report pick-from-population-pool-by-age-and-gender [ population age-wanted male-wanted? ]
   ; Picks an agent with a given age and gender from the population table
   ; and removes it from the inner agent list. Also takes care of removing
   ; the male-wanted? key from the sub-table if the agent-list becomes empty
@@ -665,7 +665,7 @@ to-report pick-from-population-table-by-age-and-gender [ population age-wanted m
   report picked-agent
 end
 
-to-report pick-from-population-table-by-age [ population age-wanted ]
+to-report pick-from-population-pool-by-age [ population age-wanted ]
   ; Picks an agent with a given age and removes it from the inner agent list.
   ; Also takes care of removing the male-wanted? key from the sub-table if
   ; the agent-list becomes empty and the age-wanted key from the main table
