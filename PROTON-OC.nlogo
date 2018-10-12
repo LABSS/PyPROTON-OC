@@ -28,6 +28,7 @@ persons-own [
   propensity
   oc-member?
   cached-oc-embeddedness
+  retired?
 ]
 
 prisoners-own [
@@ -85,13 +86,13 @@ end
 
 to setup
   clear-all
+  reset-ticks ; so age can be computed
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-oc-groups
   setup-population
-  reset-ticks ; so age can be computed
   setup-employers
   assign-jobs
   setup-schools
@@ -109,6 +110,7 @@ end
 
 to go
   commit-crimes
+  retire-persons
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
@@ -128,6 +130,7 @@ to setup-oc-groups
       put-self-in-table groups   (item 1 row)
       put-self-in-table families (item 2 row)
       set birth-tick 0 - ((item 3 row) * ticks-per-year)
+      set retired? age >= retirement-age ; this is necessary because we override the age generated in init-person.
       set male? (item 4 row)
       set oc-member? true
     ]
@@ -200,7 +203,8 @@ to init-person ; person command
   set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
   set propensity 0                                      ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
-  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
+  set num-crimes-committed 0                            ; some persons should probably have a few initial crimes at start
+  set retired? age >= retirement-age                    ; persons older than retirement-age are retired
 end
 
 to-report age
@@ -282,7 +286,7 @@ end
 to-report pick-new-employee-from [ the-candidates ] ; job reporter
   let the-job self
   report one-of the-candidates with [
-    interested-in? the-job and qualified-for? the-job
+    not retired? and interested-in? the-job and qualified-for? the-job
   ]
 end
 
@@ -387,6 +391,16 @@ to commit-crimes ; person procedure
   ]
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+  ]
+end
+
+to retire-persons
+  ask persons with [ age >= retirement-age and not retired? ] [
+    set retired? true
+    ask my-job-links [ die ]
+    set my-job nobody
+    ask my-professional-links [ die ]
+    ; Figure out how to preserve socio-economic status (see issue #22)
   ]
 end
 
@@ -551,7 +565,7 @@ HORIZONTAL
 MONITOR
 265
 245
-375
+380
 290
 NIL
 count jobs
@@ -631,7 +645,7 @@ output?
 MONITOR
 265
 295
-375
+380
 340
 NIL
 count links
@@ -800,6 +814,21 @@ SLIDER
 470
 260
 503
+retirement-age
+retirement-age
+0
+100
+65.0
+1
+1
+years old
+HORIZONTAL
+
+SLIDER
+15
+505
+260
+538
 probability-of-getting-caught
 probability-of-getting-caught
 0
@@ -813,7 +842,7 @@ HORIZONTAL
 MONITOR
 265
 345
-375
+380
 390
 NIL
 count prisoners
