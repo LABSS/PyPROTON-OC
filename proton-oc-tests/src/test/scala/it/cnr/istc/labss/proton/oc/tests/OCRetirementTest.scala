@@ -17,9 +17,9 @@ class OCRetirementTest extends OCModelSuite {
       setup
       """
     )
-    ws.rpt("not any? persons with [ age >= retirement-age and any? my-professional-links ] ") shouldBe true
+    ws.rpt("not any? persons with [ age >= retirement-age and any? my-professional-links ]") shouldBe true
     ws.rpt("not any? persons with [ age < retirement-age and retired? ]") shouldBe true
-    ws.rpt("not any? persons with [ age >= retirement-age and not retired? ] ") shouldBe true  
+    ws.rpt("not any? persons with [ age >= retirement-age and not retired? ]") shouldBe true
   }
   test("Same, but after a while") { ws =>
     ws.cmd("""
@@ -29,9 +29,9 @@ class OCRetirementTest extends OCModelSuite {
       setup
       repeat 2 * ticks-per-year [ go ]
       """
-    )    
+    )
     ws.rpt("not any? persons with [ age >= retirement-age and any? my-professional-links ]") shouldBe true
     ws.rpt("not any? persons with [ age < retirement-age and retired? ]") shouldBe true
-    ws.rpt("not any? persons with [ age >= retirement-age and not retired? ] ") shouldBe true  
+    ws.rpt("not any? persons with [ age >= retirement-age and not retired? ]") shouldBe true
   }
 }
