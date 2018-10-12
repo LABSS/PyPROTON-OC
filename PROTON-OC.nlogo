@@ -28,6 +28,7 @@ persons-own [
   cached-oc-embeddedness ; only calculated (if needed) when the `oc-embeddedness` reporter is called
   partner                ; the person's significant other
   retired?
+  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
 prisoners-own [
@@ -39,6 +40,8 @@ prisoners-own [
   propensity
   oc-member?
   cached-oc-embeddedness
+  partner                ; the person's significant other
+  retired?
   sentence-countdown
 ]
 
@@ -746,7 +749,7 @@ num-non-oc-persons
 num-non-oc-persons
 1
 10000
-1000.0
+100.0
 1
 1
 NIL
