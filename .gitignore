@@ -1,4 +1,5 @@
 *.tmp.nlogo
 .Rhistory
 *.xlsx#
+*.csv#
 .DS_Store
