@@ -110,7 +110,7 @@ to setup-oc-groups
       put-self-in-table groups   (item 1 row)
       put-self-in-table families (item 2 row)
       set birth-tick 0 - ((item 3 row) * ticks-per-year)
-      set retired? age >= retirement-age
+      set retired? age >= retirement-age ; this is necessary because we override the age generated in init-person.
       set male? (item 4 row)
       set oc-member? true
     ]
