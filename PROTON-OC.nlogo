@@ -1,9 +1,10 @@
-extensions [nw table csv profiler]
+extensions [nw table csv profiler rnd]
 
 breed [jobs      job]
 breed [employers employer]
 breed [schools   school]
 breed [persons   person]
+breed [prisoners prisoner]
 
 undirected-link-breed [family-links       family-link]       ; person <--> person
 undirected-link-breed [friendship-links   friendship-link]   ; person <--> person
@@ -29,6 +30,19 @@ persons-own [
   cached-oc-embeddedness
   retired?
 ]
+
+prisoners-own [
+  num-crimes-committed
+  education-level
+  my-job               ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
+  birth-tick
+  male?
+  propensity
+  oc-member?
+  cached-oc-embeddedness
+  sentence-countdown
+]
+
 jobs-own [
   salary
   education-level-required
@@ -47,7 +61,8 @@ meta-links-own [
 ]
 
 globals [
-  breed-colors ; a table from breeds to turtle colors
+  breed-colors           ; a table from breeds to turtle colors
+  num-co-offenders-dist  ; a list of probability for different crime sizes
 ]
 
 to profile-setup
@@ -72,6 +87,7 @@ end
 to setup
   clear-all
   reset-ticks ; so age can be computed
+  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -95,6 +111,10 @@ end
 to go
   commit-crimes
   retire-persons
+  ask prisoners [
+    set sentence-countdown sentence-countdown - 1
+    if sentence-countdown = 0 [ set breed persons ]
+  ]
   tick
 end
 
@@ -369,6 +389,9 @@ to commit-crimes ; person procedure
   foreach oc-co-offender-groups [ co-offenders ->
     ask co-offenders [ set oc-member? true ]
   ]
+  foreach co-offender-groups [ co-offenders ->
+    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+  ]
 end
 
 to retire-persons
@@ -410,6 +433,18 @@ to commit-crime [ co-offenders ] ; observer command
   ]
 end
 
+to get-caught [ co-offenders ]
+  ask co-offenders [
+    set breed prisoners
+    set sentence-countdown random-poisson 3 * ticks-per-year
+    ask my-job-links [ die ]
+    ask my-school-attendance-links [die ]
+    ask my-professional-links [ die ]
+    ask my-school-links [ die ]
+    ; we keep the friendship links for the moment
+  ]
+end
+
 to-report candidate-weight ; person reporter
   let r ifelse-value [ oc-member? ] of myself [ oc-embeddedness ] [ 0 ]
   report -1 * (social-proximity-with myself + r)
@@ -443,7 +478,9 @@ to-report oc-embeddedness ; person reporter
 end
 
 to-report number-of-accomplices
-  report random-poisson 1 ; TODO replace by empirically grounded distribution
+  ; pick a group size from the num. co-offenders distribution
+  ; and substract one to get the number of accomplices
+  report (first rnd:weighted-one-of-list num-co-offenders-dist last) - 1
 end
 
 to update-meta-links [ agents ]
@@ -519,7 +556,7 @@ num-non-oc-persons
 num-non-oc-persons
 1
 10000
-1000.0
+100.0
 1
 1
 NIL
@@ -786,6 +823,27 @@ retirement-age
 1
 years old
 HORIZONTAL
+
+probability-of-getting-caught
+probability-of-getting-caught
+0
+1
+0.05
+0.05
+1
+NIL
+HORIZONTAL
+
+MONITOR
+265
+345
+375
+390
+NIL
+count prisoners
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
