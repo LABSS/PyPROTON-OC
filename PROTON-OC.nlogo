@@ -565,7 +565,7 @@ HORIZONTAL
 MONITOR
 265
 245
-375
+380
 290
 NIL
 count jobs
@@ -645,7 +645,7 @@ output?
 MONITOR
 265
 295
-375
+380
 340
 NIL
 count links
@@ -824,6 +824,11 @@ retirement-age
 years old
 HORIZONTAL
 
+SLIDER
+15
+505
+260
+538
 probability-of-getting-caught
 probability-of-getting-caught
 0
@@ -837,7 +842,7 @@ HORIZONTAL
 MONITOR
 265
 345
-375
+380
 390
 NIL
 count prisoners
