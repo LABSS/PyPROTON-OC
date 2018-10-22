@@ -113,11 +113,25 @@ end
 to go
   commit-crimes
   retire-persons
+  remove-excess-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
   ]
   tick
+end
+
+to remove-excess-friends
+  ask persons [
+    let num-friends count my-friendship-links
+    if num-friends > dunbar-number [
+      ask n-of (num-friends - dunbar-number) my-friendship-links [ die ]
+    ]
+  ]
+end
+
+to-report dunbar-number ; person reporter
+  report 150 - abs (age - 30)
 end
 
 to setup-oc-groups
