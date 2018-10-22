@@ -1,4 +1,4 @@
-extensions [nw table csv profiler rnd]
+extensions [nw table csv profiler rnd nw]
 
 breed [jobs      job]
 breed [employers employer]
@@ -60,6 +60,7 @@ meta-links-own [
 ]
 
 globals [
+  no_every_how_many      ; every how many we save networks structure
   breed-colors           ; a table from breeds to turtle colors
   num-co-offenders-dist  ; a list of probability for different crime sizes
 ]
@@ -104,6 +105,11 @@ to setup
   ]
   reset-oc-embeddedness
   repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
+
+  let networks_output_parameters csv:from-file "./networks/parameters.csv"
+  foreach networks_output_parameters [ p ->
+    if (item 0 p) = "every_how_many" [ set no_every_how_many (item 1 p)]
+  ]
   update-plots
 end
 
@@ -112,6 +118,12 @@ to go
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
+  ]
+  if save-nets? and ((ticks mod no_every_how_many) = 0)
+  [
+    let no_file_name (word "networks/" "criminal_"  ticks ".graphml")
+    nw:set-context persons criminal-links
+    nw:save-graphml no_file_name
   ]
   tick
 end
@@ -820,6 +832,17 @@ count prisoners
 17
 1
 11
+
+SWITCH
+265
+15
+382
+48
+save-nets?
+save-nets?
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
