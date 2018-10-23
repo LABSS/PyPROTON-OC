@@ -114,11 +114,23 @@ to go
   commit-crimes
   retire-persons
   remove-excess-friends
+  make-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
   ]
   tick
+end
+
+to make-friends
+  ask persons [
+    let num-new-friends min list random-poisson 3 count my-links with [
+      breed != friendship-links and breed != meta-links
+    ]; add slider
+    ask n-of num-new-friends my-links with [
+      breed != friendship-links and breed != meta-links
+    ] [ ask other-end [ create-friendship-link-with other-end ] ]
+  ]
 end
 
 to remove-excess-friends
