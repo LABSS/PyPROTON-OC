@@ -695,6 +695,11 @@ to-report table-map [ tbl fn ]
     list (first entry) (runresult fn last entry)
   ] table:to-list tbl
 end
+
+to-report group-by-first-two-items [ csv-data ]
+  let table table:group-items csv-data [ line -> list first line first but-first line ]; group the rows by lists with the 2 leading items
+  report table-map table [ rows -> map last rows ] ; remove the first item of each row
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
