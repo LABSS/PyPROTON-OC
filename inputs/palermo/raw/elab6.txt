@@ -1,0 +1,12 @@
+FERTILITA' (FAKE)
+age  number-of-offsprings fertility
+18       0				   0.1
+18		 1				   0.1
+19		 0                 0.1
+19		 1                 0.1
+19		 2                 0.01
+19		 3                 0.001
+20		 0                 1.0
+20		 1                 0.1
+20		 2                 0.01
+20		 3                 0.001
