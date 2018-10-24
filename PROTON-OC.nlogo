@@ -28,6 +28,7 @@ persons-own [
   cached-oc-embeddedness ; only calculated (if needed) when the `oc-embeddedness` reporter is called
   partner                ; the person's significant other
   retired?
+  number-of-children
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -42,6 +43,7 @@ prisoners-own [
   cached-oc-embeddedness
   partner                ; the person's significant other
   retired?
+  number-of-children
   sentence-countdown
 ]
 
@@ -65,6 +67,7 @@ meta-links-own [
 globals [
   breed-colors           ; a table from breeds to turtle colors
   num-co-offenders-dist  ; a list of probability for different crime sizes
+  fertility-table        ; a list of fertility rates
 ]
 
 to profile-setup
@@ -90,6 +93,7 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
+  set fertility-table group-by-first-two-items read-csv "fertility"
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -113,6 +117,7 @@ end
 to go
   commit-crimes
   retire-persons
+  make-baby
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
@@ -208,6 +213,7 @@ to init-person [ age-gender-dist ] ; person command
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
+  set number-of-children 0                              ; TODO to be initialized by a dataset
 end
 
 to-report age
@@ -374,6 +380,35 @@ end
 
 to-report link-color
   report [50 50 50 50]
+end
+
+to make-baby
+  ask persons with [ not male? and age >= 14 and age <= 49 ] [
+    if random-float 1 <  p-fertility [
+      hatch-persons 1 [
+        set num-crimes-committed 0
+        set education-level 0
+        set my-job nobody
+        set birth-tick ticks
+        set male? one-of [ true false ]
+        set propensity 0
+        set oc-member? false
+        set cached-oc-embeddedness 0
+        set partner nobody
+        set retired? false
+        set number-of-children 0
+      ]
+    ]
+  ]
+end
+
+to-report p-fertility
+  let the-key list age number-of-children
+  ifelse (table:has-key? fertility-table the-key) [
+    report (table:get fertility-table the-key) / ticks-per-year
+  ] [
+    report 0
+  ]
 end
 
 to commit-crimes ; person procedure
