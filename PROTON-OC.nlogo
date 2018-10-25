@@ -384,7 +384,7 @@ end
 
 to make-baby
   ask persons with [ not male? and age >= 14 and age <= 49 ] [
-    if random-float 1 <  p-fertility [
+    if random-float 1 < p-fertility [
       hatch-persons 1 [
         set num-crimes-committed 0
         set education-level 0
@@ -397,6 +397,8 @@ to make-baby
         set partner nobody
         set retired? false
         set number-of-children 0
+        create-family-links-with turtle-set [ family-link-neighbors ] of myself
+        create-family-link-with myself
       ]
     ]
   ]
@@ -405,7 +407,7 @@ end
 to-report p-fertility
   let the-key list age number-of-children
   ifelse (table:has-key? fertility-table the-key) [
-    report (table:get fertility-table the-key) / ticks-per-year
+    report (item 0 table:get fertility-table the-key) / ticks-per-year
   ] [
     report 0
   ]
