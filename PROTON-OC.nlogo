@@ -1,4 +1,4 @@
-extensions [nw table csv profiler rnd nw]
+extensions [nw table csv profiler rnd]
 
 breed [jobs      job]
 breed [employers employer]
@@ -60,7 +60,9 @@ meta-links-own [
 ]
 
 globals [
-  no_every_how_many      ; every how many we save networks structure
+  network-saving-interval      ; every how many we save networks structure
+  network-saving-list          ; the networks that should be saved
+  model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
   num-co-offenders-dist  ; a list of probability for different crime sizes
 ]
@@ -105,10 +107,13 @@ to setup
   ]
   reset-oc-embeddedness
   repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
-
   let networks_output_parameters csv:from-file "./networks/parameters.csv"
+  set network-saving-list []
   foreach networks_output_parameters [ p ->
-    if (item 0 p) = "every_how_many" [ set no_every_how_many (item 1 p)]
+    let parameterkey (item 0 p)
+    let parametervalue (item 1 p)
+    if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue]
+    if parametervalue = "yes" [set network-saving-list lput parameterkey network-saving-list]
   ]
   update-plots
 end
@@ -119,11 +124,16 @@ to go
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
   ]
-  if save-nets? and ((ticks mod no_every_how_many) = 0)
+  if save-nets? and (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0)
   [
-    let no_file_name (word "networks/" "criminal_"  ticks ".graphml")
-    nw:set-context persons criminal-links
-    nw:save-graphml no_file_name
+    foreach network-saving-list [listname ->
+      let network-agentset links with [breed = runresult listname]
+      if any? network-agentset[
+         let network-file-name (word "networks/" ticks  "_"  listname  ".graphml")
+         nw:set-context turtles runresult listname
+         nw:save-graphml network-file-name
+      ]
+    ]
   ]
   tick
 end
