@@ -107,25 +107,25 @@ to setup
   ]
   reset-oc-embeddedness
   repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
-  let networks_output_parameters csv:from-file "./networks/parameters.csv"
+  let networks-output-parameters csv:from-file "./networks/parameters.csv"
   set network-saving-list []
-  foreach networks_output_parameters [ p ->
+  foreach networks-output-parameters [ p ->
     let parameterkey (item 0 p)
     let parametervalue (item 1 p)
     if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue]
     if parametervalue = "yes" [set network-saving-list lput parameterkey network-saving-list]
   ]
+  let model-output-parameters csv:from-file "./outputs/parameters.csv"
+  foreach model-output-parameters [ p ->
+    let parameterkey (item 0 p)
+    let parametervalue (item 1 p)
+    if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue]
+  ]
   update-plots
 end
 
 to go
-  commit-crimes
-  ask prisoners [
-    set sentence-countdown sentence-countdown - 1
-    if sentence-countdown = 0 [ set breed persons ]
-  ]
-  if save-nets? and (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0)
-  [
+  if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
     foreach network-saving-list [listname ->
       let network-agentset links with [breed = runresult listname]
       if any? network-agentset[
@@ -134,6 +134,15 @@ to go
          nw:save-graphml network-file-name
       ]
     ]
+  ]
+  if (model-saving-interval > 0 ) and ((ticks mod model-saving-interval) = 0)[
+    let model-file-name (word "outputs/" ticks "_model_" ".world")
+    export-world model-file-name
+  ]
+  commit-crimes
+  ask prisoners [
+    set sentence-countdown sentence-countdown - 1
+    if sentence-countdown = 0 [ set breed persons ]
   ]
   tick
 end
@@ -510,6 +519,15 @@ to update-meta-links [ agents ]
     ]
   ]
 end
+
+to load-model
+  let model-file-name user-file
+  if is-string? model-file-name[
+     let file-ext-position position ".world" model-file-name
+     ifelse is-number? file-ext-position [import-world model-file-name]
+                                         [user-message "the file must have the extension .world"]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -843,16 +861,33 @@ count prisoners
 1
 11
 
-SWITCH
+BUTTON
 265
 15
 382
 48
-save-nets?
-save-nets?
-0
+NIL
+load-model
+NIL
 1
--1000
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+265
+400
+375
+445
+NIL
+ticks
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
