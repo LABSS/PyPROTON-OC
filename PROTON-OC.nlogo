@@ -528,6 +528,37 @@ to load-model
                                          [user-message "the file must have the extension .world"]
   ]
 end
+
+to setup-with-family-model
+  clear-all
+  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
+  nw:set-context persons links
+  ask patches [ set pcolor white ]
+  load-model
+  reset-ticks ; so age can be computed
+  init-breed-colors
+  ask turtles [
+    set-turtle-color
+    setxy random-xcor random-ycor
+  ]
+  reset-oc-embeddedness
+  repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
+  let networks-output-parameters csv:from-file "./networks/parameters.csv"
+  set network-saving-list []
+  foreach networks-output-parameters [ p ->
+    let parameterkey (item 0 p)
+    let parametervalue (item 1 p)
+    if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue]
+    if parametervalue = "yes" [set network-saving-list lput parameterkey network-saving-list]
+  ]
+  let model-output-parameters csv:from-file "./outputs/parameters.csv"
+  foreach model-output-parameters [ p ->
+    let parameterkey (item 0 p)
+    let parametervalue (item 1 p)
+    if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue]
+  ]
+  update-plots
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -888,6 +919,23 @@ ticks
 17
 1
 11
+
+BUTTON
+15
+510
+260
+543
+NIL
+setup-with-family-model
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
