@@ -109,37 +109,37 @@ to setup
     setxy random-xcor random-ycor
   ]
   reset-oc-embeddedness
-  repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
   let networks-output-parameters csv:from-file "./networks/parameters.csv"
   set network-saving-list []
   foreach networks-output-parameters [ p ->
     let parameterkey (item 0 p)
     let parametervalue (item 1 p)
-    if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue]
-    if parametervalue = "yes" [set network-saving-list lput parameterkey network-saving-list]
+    if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue ]
+    if parametervalue = "yes" [ set network-saving-list lput parameterkey network-saving-list ]
   ]
   let model-output-parameters csv:from-file "./outputs/parameters.csv"
   foreach model-output-parameters [ p ->
     let parameterkey (item 0 p)
     let parametervalue (item 1 p)
-    if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue]
+    if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue ]
   ]
   update-plots
 end
 
 to go
   if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
-    foreach network-saving-list [listname ->
-      let network-agentset links with [breed = runresult listname]
-      if any? network-agentset[
+    foreach network-saving-list [ listname ->
+      let network-agentset links with [ breed = runresult listname ]
+      if any? network-agentset [
          let network-file-name (word "networks/" ticks  "_"  listname  ".graphml")
-         nw:set-context turtles runresult listname
-         nw:save-graphml network-file-name
+         nw:with-context turtles runresult listname [
+          nw:save-graphml network-file-name
+        ]
       ]
     ]
   ]
-  if (model-saving-interval > 0 ) and ((ticks mod model-saving-interval) = 0)[
-    let model-file-name (word "outputs/" ticks "_model_" ".world")
+  if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
+    let model-file-name (word "outputs/" ticks "_model" ".world")
     export-world model-file-name
   ]
   commit-crimes
@@ -439,6 +439,7 @@ to retire-persons
 end
 
 to-report find-accomplices [ n ] ; person reporter
+  ; make sure it is person context
   let d 1 ; start with a network distance of 1
   let accomplices []
   while [ length accomplices < n and d < max-accomplice-radius ] [
@@ -539,42 +540,11 @@ end
 
 to load-model
   let model-file-name user-file
-  if is-string? model-file-name[
+  if is-string? model-file-name [
      let file-ext-position position ".world" model-file-name
-     ifelse is-number? file-ext-position [import-world model-file-name]
-                                         [user-message "the file must have the extension .world"]
+     ifelse is-number? file-ext-position [ import-world model-file-name ]
+                                         [ user-message "the file must have the extension .world" ]
   ]
-end
-
-to setup-with-family-model
-  clear-all
-  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  nw:set-context persons links
-  ask patches [ set pcolor white ]
-  load-model
-  reset-ticks ; so age can be computed
-  init-breed-colors
-  ask turtles [
-    set-turtle-color
-    setxy random-xcor random-ycor
-  ]
-  reset-oc-embeddedness
-  repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
-  let networks-output-parameters csv:from-file "./networks/parameters.csv"
-  set network-saving-list []
-  foreach networks-output-parameters [ p ->
-    let parameterkey (item 0 p)
-    let parametervalue (item 1 p)
-    if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue]
-    if parametervalue = "yes" [set network-saving-list lput parameterkey network-saving-list]
-  ]
-  let model-output-parameters csv:from-file "./outputs/parameters.csv"
-  foreach model-output-parameters [ p ->
-    let parameterkey (item 0 p)
-    let parametervalue (item 1 p)
-    if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue]
-  ]
-  update-plots
 end
 
 to generate-households
@@ -1142,6 +1112,23 @@ count family-links
 17
 1
 11
+
+BUTTON
+265
+445
+375
+480
+NIL
+load-model
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
