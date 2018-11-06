@@ -13,21 +13,22 @@ undirected-link-breed [professional-links professional-link] ; person <--> perso
 undirected-link-breed [school-links       school-link]       ; person <--> person
 undirected-link-breed [meta-links         meta-link]         ; person <--> person
 
-
 undirected-link-breed [positions-links         position-link]          ; job <--> employer
 undirected-link-breed [job-links               job-link]               ; person <--> job
 undirected-link-breed [school-attendance-links school-attendance-link] ; person <--> school
 
-
 persons-own [
   num-crimes-committed
   education-level
-  my-job               ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
+  my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
   propensity
   oc-member?
-  cached-oc-embeddedness
+  cached-oc-embeddedness ; only calculated (if needed) when the `oc-embeddedness` reporter is called
+  partner                ; the person's significant other
+  retired?
+  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
 prisoners-own [
@@ -39,6 +40,8 @@ prisoners-own [
   propensity
   oc-member?
   cached-oc-embeddedness
+  partner                ; the person's significant other
+  retired?
   sentence-countdown
 ]
 
@@ -88,13 +91,13 @@ end
 
 to setup
   clear-all
+  reset-ticks ; so age can be computed
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-oc-groups
   setup-population
-  reset-ticks ; so age can be computed
   setup-employers
   assign-jobs
   setup-schools
@@ -140,6 +143,7 @@ to go
     export-world model-file-name
   ]
   commit-crimes
+  retire-persons
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
@@ -155,11 +159,10 @@ to setup-oc-groups
   let families table:make
   foreach data [ row ->
     create-persons 1 [
-      init-person ; we start with regular init but will override a few vars
       put-self-in-table groups   (item 1 row)
       put-self-in-table families (item 2 row)
-      set birth-tick 0 - ((item 3 row) * ticks-per-year)
-      set male? (item 4 row)
+      ; call init-person with a "fake" one-row age-gender distribution
+      init-person (list (list (item 3 row) (item 4 row) 1))
       set oc-member? true
     ]
   ]
@@ -213,25 +216,29 @@ end
 to setup-population
   output "Setting up population"
 
+  let age-gender-dist read-csv "initial_age_gender_dist"
   ; Using Watts-Strogatz is a bit arbitrary, but it should at least give us
   ; some clustering to start with. The network structure should evolve as the
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [ init-person ]
-  ask persons [
-    create-family-links-with n-of 3 other persons ; TODO use https://doi.org/10.1371/journal.pone.0008828 instead...
+  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [
+    init-person age-gender-dist
   ]
+  generate-households
 end
 
-to init-person ; person command
+to init-person [ age-gender-dist ] ; person command
+  let row rnd:weighted-one-of-list age-gender-dist last ; select a row from our age-gender distribution
+  set birth-tick 0 - (item 0 row) * ticks-per-year      ; ...and set age...
+  set male? (item 1 row)                                ; ...and gender according to values in that row.
+  set partner nobody                                    ; persons will get paired when generating households
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-  set birth-tick 0 - random (70 * ticks-per-year)       ; TODO use a realistic distribution
-  set male? one-of [true false]                         ; TODO use a realistic distribution // could also be 0/1 if it makes things easier
   set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
   set propensity 0                                      ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
+  set retired? age >= retirement-age                    ; persons older than retirement-age are retired
 end
 
 to-report age
@@ -240,7 +247,7 @@ end
 
 to setup-employers
   output "Setting up employers"
-  let job-counts reduce sentence csv:from-file (word "inputs/" data-folder "employer_sizes.csv")
+  let job-counts reduce sentence csv:from-file (word data-folder "employer_sizes.csv")
   foreach job-counts [ n ->
     create-employers 1 [
       hatch-jobs n [
@@ -313,7 +320,7 @@ end
 to-report pick-new-employee-from [ the-candidates ] ; job reporter
   let the-job self
   report one-of the-candidates with [
-    interested-in? the-job and qualified-for? the-job
+    not retired? and interested-in? the-job and qualified-for? the-job
   ]
 end
 
@@ -418,6 +425,16 @@ to commit-crimes ; person procedure
   ]
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+  ]
+end
+
+to retire-persons
+  ask persons with [ age >= retirement-age and not retired? ] [
+    set retired? true
+    ask my-job-links [ die ]
+    set my-job nobody
+    ask my-professional-links [ die ]
+    ; Figure out how to preserve socio-economic status (see issue #22)
   ]
 end
 
@@ -559,6 +576,196 @@ to setup-with-family-model
   ]
   update-plots
 end
+
+to generate-households
+  output "Generating households..."
+  ; this mostly follows the third algorithm from Gargiulo et al. 2010
+  ; (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
+  let head-age-dist group-by-first-item read-csv "head_age_dist_by_household_size"
+  let proportion-of-male-singles-by-age table:from-list read-csv "proportion_of_male_singles_by_age"
+  let hh-type-dist group-by-first-item read-csv "household_type_dist_by_age"
+  let partner-age-dist group-by-first-item read-csv "partner_age_dist"
+  let children-age-dist make-children-age-dist-table
+  let p-single-father first first csv:from-file (word data-folder "proportion_single_fathers.csv")
+  let population new-population-pool persons
+  let hh-sizes household-sizes count persons
+  let complex-hh-sizes [] ; will contain the sizes that we fail to generate: we'll reuse those for complex households
+  let max-attempts-by-size 50
+  ; We have two levels of iterating: the first level is the general attempts at generating a household
+  ; and the second level is the attempts at generating a household of a particular size before giving up.
+  foreach hh-sizes [ hh-size ->
+    let success false
+    let nb-attempts 0
+    while [ not success and nb-attempts < max-attempts-by-size ] [
+      set nb-attempts nb-attempts + 1
+      ; pick the age of the head according to the size of the household
+      let head-age pick-from-pair-list (table:get head-age-dist hh-size)
+      ifelse hh-size = 1 [
+        let male-wanted? random-float 1 < table:get proportion-of-male-singles-by-age head-age
+        let head pick-from-population-pool-by-age-and-gender population head-age male-wanted?
+        ; Note that we don't "do" anything with the picked head: the fact that it gets
+        ; removed from the population table when we pick it is sufficient for us.
+        set success (head != nobody)
+      ] [
+        ; For household sizes greater than 1, pick a household type according to age of the head
+        let hh-type pick-from-pair-list (table:get hh-type-dist head-age)
+        let male-head? ifelse-value (hh-type = "single parent") [ random-float 1 < p-single-father ] [ true ]
+        let mother-age ifelse-value male-head? [ pick-from-pair-list (table:get partner-age-dist head-age) ] [ head-age ]
+        let hh-members (list pick-from-population-pool-by-age-and-gender population head-age male-head?) ; start a list with the hh head
+        if hh-type = "couple" [
+          let mother pick-from-population-pool-by-age-and-gender population mother-age false
+          set hh-members lput mother hh-members
+        ]
+        let num-children (hh-size - length hh-members)
+        foreach (range 1 (num-children + 1)) [ child-no ->
+          ifelse table:has-key? table:get children-age-dist child-no mother-age [
+            let child-age pick-from-pair-list (table:get table:get children-age-dist child-no mother-age)
+            let child pick-from-population-pool-by-age population child-age
+            set hh-members lput child hh-members
+          ] [
+            ; We might not have an age distribution for some combinations of child no / mother age
+            ; (for example, no 18 year-old mother has 8 children), so we add `nobody` to our member
+            ; list in those case, to signal that the household generation has failed
+            set hh-members lput nobody hh-members
+          ]
+        ]
+        set hh-members filter is-person? hh-members ; exclude nobodies
+        ifelse length hh-members = hh-size [ ; only generate the household if we got everyone we needed
+          set success true
+          if hh-type = "couple" [ ; if it's a couple, partner up the first two members
+            ask item 0 hh-members [ set partner item 1 hh-members ]
+            ask item 1 hh-members [ set partner item 0 hh-members ]
+          ]
+          set hh-members turtle-set hh-members
+          ask hh-members [ create-family-links-with other hh-members ]
+        ] [
+          ; in case of failure, we need to put the selected members back in the population
+          foreach hh-members [ m -> put-in-population-pool m population ]
+        ]
+      ]
+    ]
+    if not success [ set complex-hh-sizes lput hh-size complex-hh-sizes ]
+  ]
+  ; to generate complex households from the remaining population,
+  ; we first flatten it into a list
+  set population [ self ] of population-pool-to-agentset population
+  foreach complex-hh-sizes [ hh-size ->
+    set hh-size min (list hh-size length population)
+    let hh-members turtle-set sublist population 0 hh-size       ; grab the first persons in the list,
+    set population sublist population hh-size length population  ; remove them from the population
+    ask hh-members [ create-family-links-with other hh-members ] ; and link them up.
+  ]
+end
+
+to-report population-pool-to-agentset [ population ]
+  report turtle-set table:values table-map population [ entry -> table:values entry ]
+end
+
+to-report household-sizes [ num-persons ]
+  let hh-size-dist read-csv "household_size_dist"
+  let sizes []
+  let current-sum 0
+  while [ current-sum < num-persons ] [
+    let hh-size pick-from-pair-list hh-size-dist
+    if current-sum + hh-size <= num-persons [
+      set sizes lput hh-size sizes
+      set current-sum current-sum + hh-size
+    ]
+  ]
+  report reverse sort sizes
+end
+
+to-report make-children-age-dist-table
+  ; reports a two-level table where the first level is
+  ; child number and the second level is the mother's age
+  let csv-data read-csv "children_age_dist"
+  report table-map (group-by-first-item csv-data) [ entry ->
+    group-by-first-item entry
+  ]
+end
+
+to-report pick-from-pair-list [ pairs ]
+  ; picks the first item of a pair using the last item as the weight
+  report first rnd:weighted-one-of-list pairs last
+end
+
+to-report read-csv [ base-file-name ]
+  report but-first csv:from-file (word data-folder base-file-name ".csv")
+end
+
+to-report group-by-first-item [ csv-data ]
+  let table table:group-items csv-data first ; group the rows by their first item
+  report table-map table [ rows -> map but-first rows ] ; remove the first item of each row
+end
+
+to-report new-population-pool [ agents ]
+  ; Create a two-level table to contain our population of agents, where the
+  ; first level is the age and the second level is the gender. Agents inside
+  ; the table are stored in lists because we are are going to need fast inserts
+  let population table:make
+  ask agents [ put-in-population-pool self population ]
+  report population
+end
+
+to put-in-population-pool [ the-person population ]
+  if not table:has-key? population [ age ] of the-person [
+    table:put population [ age ] of the-person table:make
+  ]
+  let subtable table:get population [ age ] of the-person
+  if not table:has-key? subtable [ male? ] of the-person [
+    table:put subtable [ male? ] of the-person []
+  ]
+  let person-list table:get subtable [ male? ] of the-person
+  table:put subtable [ male? ] of the-person lput the-person person-list
+end
+
+to-report pick-from-population-pool-by-age-and-gender [ population age-wanted male-wanted? ]
+  ; Picks an agent with a given age and gender and removes it from the population pool.
+  ; Reports `nobody` if it can't find an agent with the wanted age/gender
+  if not table:has-key? population age-wanted [ report nobody ]
+  let sub-table table:get population age-wanted
+  if not table:has-key? sub-table male-wanted? [ report nobody ]
+  let picked-person one-of table:get sub-table male-wanted?
+  remove-from-population-pool picked-person population
+  report picked-person
+end
+
+to-report pick-from-population-pool-by-age [ population age-wanted ]
+  ; Picks an agent with a given age and removes it from the population pool.
+  ; Reports `nobody` if it can't find an agent with the wanted age.
+  if not table:has-key? population age-wanted [ report nobody ]
+  let picked-person one-of turtle-set table:values table:get population age-wanted
+  remove-from-population-pool picked-person population
+  report picked-person
+end
+
+to remove-from-population-pool [ the-person population ]
+  let the-age [ age ] of the-person
+  let is-male? [ male? ] of the-person
+  if table:has-key? population the-age [
+    let sub-table table:get population the-age
+    if table:has-key? sub-table is-male? [
+      let old-list table:get sub-table is-male?
+      let new-list filter [ a -> a != the-person ] old-list
+      ifelse not empty? new-list [
+        table:put sub-table is-male? new-list
+      ] [
+        table:remove sub-table is-male?
+        if table:length sub-table = 0 [
+          table:remove population the-age
+        ]
+      ]
+    ]
+  ]
+end
+
+to-report table-map [ tbl fn ]
+  ; from https://github.com/NetLogo/Table-Extension/issues/6#issuecomment-276109136
+  ; (if `table:map` is ever added to the table extension, this could be replaced by it)
+  report table:from-list map [ entry ->
+    list (first entry) (runresult fn last entry)
+  ] table:to-list tbl
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -683,7 +890,7 @@ INPUTBOX
 260
 150
 data-folder
-palermo/data/
+inputs/palermo/data/
 1
 0
 String
@@ -871,6 +1078,21 @@ SLIDER
 470
 260
 503
+retirement-age
+retirement-age
+0
+100
+65.0
+1
+1
+years old
+HORIZONTAL
+
+SLIDER
+15
+505
+260
+538
 probability-of-getting-caught
 probability-of-getting-caught
 0
@@ -892,50 +1114,34 @@ count prisoners
 1
 11
 
-BUTTON
-265
+PLOT
 15
-382
-48
-NIL
-load-model
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+545
+390
+760
+Age distribution
+age
+count
+0.0
+100.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 1 -16777216 true "" "histogram [ age ] of persons"
 
 MONITOR
 265
-400
+395
 375
-445
+440
 NIL
-ticks
+count family-links
 17
 1
 11
-
-BUTTON
-15
-510
-260
-543
-NIL
-setup-with-family-model
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
 
 @#$#@#$#@
 ## WHAT IS IT?
