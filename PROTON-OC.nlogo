@@ -121,12 +121,38 @@ to go
   commit-crimes
   retire-persons
   make-baby
+  remove-excess-friends
+  make-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
   ]
   make-people-die
   tick
+end
+
+to make-friends
+  ask persons [
+    let num-new-friends min list random-poisson 3 count my-links with [
+      breed != friendship-links and breed != meta-links
+    ]; add slider
+    ask n-of num-new-friends my-links with [
+      breed != friendship-links and breed != meta-links
+    ] [ ask other-end [ create-friendship-link-with other-end ] ]
+  ]
+end
+
+to remove-excess-friends
+  ask persons [
+    let num-friends count my-friendship-links
+    if num-friends > dunbar-number [
+      ask n-of (num-friends - dunbar-number) my-friendship-links [ die ]
+    ]
+  ]
+end
+
+to-report dunbar-number ; person reporter
+  report 150 - abs (age - 30)
 end
 
 to setup-oc-groups
