@@ -68,6 +68,8 @@ globals [
   breed-colors           ; a table from breeds to turtle colors
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
+  mortality-table
+  number-deceased
 ]
 
 to profile-setup
@@ -94,6 +96,7 @@ to setup
   reset-ticks ; so age can be computed
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   set fertility-table group-by-first-two-items read-csv "fertility"
+  set mortality-table group-by-first-two-items read-csv "mortality"
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -110,7 +113,7 @@ to setup
     setxy random-xcor random-ycor
   ]
   reset-oc-embeddedness
-  repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
+  ;repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
   update-plots
 end
 
@@ -122,6 +125,7 @@ to go
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
   ]
+  make-people-die
   tick
 end
 
@@ -401,6 +405,24 @@ to make-baby
         create-family-link-with myself
       ]
     ]
+  ]
+end
+
+to make-people-die
+  ask persons [
+    if random-float 1 < p-mortality [
+      set number-deceased number-deceased + 1
+      die
+    ]
+  ]
+end
+
+to-report p-mortality
+  let the-key list age male?
+  ifelse (table:has-key? mortality-table the-key) [
+    report (item 0 table:get mortality-table the-key) / ticks-per-year
+  ] [
+    report 1 ; it there's no key, we remove the agent
   ]
 end
 
@@ -1110,6 +1132,17 @@ MONITOR
 440
 NIL
 count family-links
+17
+1
+11
+
+MONITOR
+265
+445
+375
+490
+NIL
+number-deceased
 17
 1
 11
