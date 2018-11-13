@@ -365,13 +365,6 @@ to-report education-levels
     set output-schools lput (list index new-row) output-schools
     set index index + 1
   ]
-  ; TODO this should come from real data
-  ; report table:from-list (list
-    ;     level            start-age  end-age  prob-of-attending  num-schools
-    ; (list     1   (list            6       11                1.0           13))
-    ; (list     2   (list           12       17                1.0            5))
-    ; (list     3   (list           18       25                0.1            1))
-  ; )
   report table:from-list output-schools
 end
 
