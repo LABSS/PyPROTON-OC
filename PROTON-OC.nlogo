@@ -355,13 +355,17 @@ to output [ str ]
 end
 
 to-report education-levels
-  ; TODO this should come from real data
-  report table:from-list (list
-    ;     level            start-age  end-age  prob-of-attending  num-schools
-    (list     1   (list            6       11                1.0           10))
-    (list     2   (list           12       17                1.0            5))
-    (list     3   (list           18       25                0.1            1))
-  )
+  let list-schools csv:from-file "inputs/palermo/data/schools.csv"
+  let output-schools []
+  let index 1
+  foreach list-schools [ row ->
+    let x ceiling ( ((item 3 row) / (item 4 row)) *  (count persons) )
+    let new-row replace-item 3 row x
+    set new-row remove-item 4 new-row
+    set output-schools lput (list index new-row) output-schools
+    set index index + 1
+  ]
+  report table:from-list output-schools
 end
 
 to setup-schools
