@@ -70,6 +70,9 @@ globals [
   fertility-table        ; a list of fertility rates
   mortality-table
   number-deceased
+  punishment-length-list
+  male-punishment-length-list
+  female-punishment-length-list
 ]
 
 to profile-setup
@@ -97,6 +100,9 @@ to setup
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   set fertility-table group-by-first-two-items read-csv "fertility"
   set mortality-table group-by-first-two-items read-csv "mortality"
+  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
+  set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
+  set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -528,7 +534,10 @@ end
 to get-caught [ co-offenders ]
   ask co-offenders [
     set breed prisoners
-    set sentence-countdown random-poisson 3 * ticks-per-year
+    ifelse male? [
+      set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [[p] -> last p ] ] [
+      set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
+    ]
     ask my-job-links [ die ]
     ask my-school-attendance-links [die ]
     ask my-professional-links [ die ]
