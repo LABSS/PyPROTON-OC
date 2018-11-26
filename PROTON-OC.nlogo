@@ -138,9 +138,9 @@ to setup
     let parametervalue (item 1 p)
     if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue ]
   ]
-  set this-is-a-big-crime       3.0
+  set this-is-a-big-crime       3
   set good-guy-threshold        0.6
-  set big-crime-from-small-fish 0.0; to add in behaviorspace reporters
+  set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   update-plots
 end
 
@@ -984,7 +984,7 @@ SWITCH
 83
 output?
 output?
-1
+0
 1
 -1000
 
