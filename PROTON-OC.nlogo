@@ -1113,23 +1113,6 @@ count family-links
 1
 11
 
-BUTTON
-265
-445
-375
-480
-NIL
-load-model
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
 @#$#@#$#@
 ## WHAT IS IT?
 
