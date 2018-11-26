@@ -477,7 +477,7 @@ to make-baby
 end
 
 to make-people-die
-  ask persons [
+  ask (turtle-set persons prisoners) [
     if random-float 1 < p-mortality [
       set number-deceased number-deceased + 1
       die
