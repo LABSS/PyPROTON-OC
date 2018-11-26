@@ -503,13 +503,17 @@ to-report p-fertility
   ]
 end
 
-to commit-crimes ; person procedure
+to commit-crimes
   reset-oc-embeddedness
   let co-offender-groups []
   ask persons [
     if random-float 1 < criminal-tendency [
       let accomplices find-accomplices number-of-accomplices
       set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
+      ; check for big crimes started from a normal guy
+      if count accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+        set weird-crimes weird-crimes +  1
+      ]
     ]
   ]
   foreach co-offender-groups commit-crime
