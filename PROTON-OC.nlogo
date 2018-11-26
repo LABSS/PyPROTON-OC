@@ -76,6 +76,7 @@ globals [
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
+  this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
 ]
 
 to profile-setup
@@ -137,6 +138,9 @@ to setup
     let parametervalue (item 1 p)
     if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue ]
   ]
+  set this-is-a-big-crime       3.0
+  set good-guy-threshold        0.6
+  set big-crime-from-small-fish 0.0; to add in behaviorspace reporters
   update-plots
 end
 
@@ -511,8 +515,8 @@ to commit-crimes
       let accomplices find-accomplices number-of-accomplices
       set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
       ; check for big crimes started from a normal guy
-      if count accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
-        set weird-crimes weird-crimes +  1
+      if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+        set big-crime-from-small-fish big-crime-from-small-fish +  1
       ]
     ]
   ]
@@ -589,7 +593,7 @@ to-report candidate-weight ; person reporter
 end
 
 to-report criminal-tendency ; person reporter
-  report 0.05 ; TODO
+  report 0.4 ; TODO
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -896,10 +900,10 @@ SLIDER
 48
 num-non-oc-persons
 num-non-oc-persons
-1
+0
 10000
 100.0
-1
+50
 1
 NIL
 HORIZONTAL
@@ -956,7 +960,7 @@ mean-accomplices-needed
 mean-accomplices-needed
 0
 10
-0.1
+6.0
 0.1
 1
 NIL
@@ -1228,6 +1232,17 @@ MONITOR
 490
 NIL
 number-deceased
+17
+1
+11
+
+MONITOR
+265
+495
+375
+540
+crimes
+sum [ num-crimes-committed ] of persons
 17
 1
 11
