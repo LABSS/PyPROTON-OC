@@ -3,3 +3,4 @@
 *.xlsx#
 *.csv#
 .DS_Store
+*.icloud
