@@ -28,6 +28,7 @@ persons-own [
   cached-oc-embeddedness ; only calculated (if needed) when the `oc-embeddedness` reporter is called
   partner                ; the person's significant other
   retired?
+  number-of-children
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -42,6 +43,7 @@ prisoners-own [
   cached-oc-embeddedness
   partner                ; the person's significant other
   retired?
+  number-of-children
   sentence-countdown
 ]
 
@@ -68,6 +70,12 @@ globals [
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
   num-co-offenders-dist  ; a list of probability for different crime sizes
+  fertility-table        ; a list of fertility rates
+  mortality-table
+  number-deceased
+  punishment-length-list
+  male-punishment-length-list
+  female-punishment-length-list
 ]
 
 to profile-setup
@@ -93,6 +101,11 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
+  set fertility-table group-by-first-two-items read-csv "fertility"
+  set mortality-table group-by-first-two-items read-csv "mortality"
+  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
+  set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
+  set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -109,6 +122,7 @@ to setup
     setxy random-xcor random-ycor
   ]
   reset-oc-embeddedness
+  ;repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
   let networks-output-parameters csv:from-file "./networks/parameters.csv"
   set network-saving-list []
   foreach networks-output-parameters [ p ->
@@ -144,11 +158,39 @@ to go
   ]
   commit-crimes
   retire-persons
+  make-baby
+  remove-excess-friends
+  make-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
     if sentence-countdown = 0 [ set breed persons ]
   ]
+  make-people-die
   tick
+end
+
+to make-friends
+  ask persons [
+    let num-new-friends min list random-poisson 3 count my-links with [
+      breed != friendship-links and breed != meta-links
+    ]; add slider
+    ask n-of num-new-friends my-links with [
+      breed != friendship-links and breed != meta-links
+    ] [ ask other-end [ create-friendship-link-with other-end ] ]
+  ]
+end
+
+to remove-excess-friends
+  ask persons [
+    let num-friends count my-friendship-links
+    if num-friends > dunbar-number [
+      ask n-of (num-friends - dunbar-number) my-friendship-links [ die ]
+    ]
+  ]
+end
+
+to-report dunbar-number ; person reporter
+  report 150 - abs (age - 30)
 end
 
 to setup-oc-groups
@@ -239,6 +281,7 @@ to init-person [ age-gender-dist ] ; person command
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
+  set number-of-children 0                              ; TODO to be initialized by a dataset
 end
 
 to-report age
@@ -350,13 +393,17 @@ to output [ str ]
 end
 
 to-report education-levels
-  ; TODO this should come from real data
-  report table:from-list (list
-    ;     level            start-age  end-age  prob-of-attending  num-schools
-    (list     1   (list            6       11                1.0           10))
-    (list     2   (list           12       17                1.0            5))
-    (list     3   (list           18       25                0.1            1))
-  )
+  let list-schools csv:from-file "inputs/palermo/data/schools.csv"
+  let output-schools []
+  let index 1
+  foreach list-schools [ row ->
+    let x ceiling ( ((item 3 row) / (item 4 row)) *  (count persons) )
+    let new-row replace-item 3 row x
+    set new-row remove-item 4 new-row
+    set output-schools lput (list index new-row) output-schools
+    set index index + 1
+  ]
+  report table:from-list output-schools
 end
 
 to setup-schools
@@ -405,6 +452,55 @@ end
 
 to-report link-color
   report [50 50 50 50]
+end
+
+to make-baby
+  ask persons with [ not male? and age >= 14 and age <= 49 ] [
+    if random-float 1 < p-fertility [
+      hatch-persons 1 [
+        set num-crimes-committed 0
+        set education-level 0
+        set my-job nobody
+        set birth-tick ticks
+        set male? one-of [ true false ]
+        set propensity 0
+        set oc-member? false
+        set cached-oc-embeddedness 0
+        set partner nobody
+        set retired? false
+        set number-of-children 0
+        create-family-links-with turtle-set [ family-link-neighbors ] of myself
+        create-family-link-with myself
+      ]
+    ]
+  ]
+end
+
+to make-people-die
+  ask (turtle-set persons prisoners) [
+    if random-float 1 < p-mortality [
+      set number-deceased number-deceased + 1
+      die
+    ]
+  ]
+end
+
+to-report p-mortality
+  let the-key list age male?
+  ifelse (table:has-key? mortality-table the-key) [
+    report (item 0 table:get mortality-table the-key) / ticks-per-year
+  ] [
+    report 1 ; it there's no key, we remove the agent
+  ]
+end
+
+to-report p-fertility
+  let the-key list age number-of-children
+  ifelse (table:has-key? fertility-table the-key) [
+    report (item 0 table:get fertility-table the-key) / ticks-per-year
+  ] [
+    report 0
+  ]
 end
 
 to commit-crimes ; person procedure
@@ -471,7 +567,10 @@ end
 to get-caught [ co-offenders ]
   ask co-offenders [
     set breed prisoners
-    set sentence-countdown random-poisson 3 * ticks-per-year
+    ifelse male? [
+      set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [[p] -> last p ] ] [
+      set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
+    ]
     ask my-job-links [ die ]
     ask my-school-attendance-links [die ]
     ask my-professional-links [ die ]
@@ -736,6 +835,11 @@ to-report table-map [ tbl fn ]
     list (first entry) (runresult fn last entry)
   ] table:to-list tbl
 end
+
+to-report group-by-first-two-items [ csv-data ]
+  let table table:group-items csv-data [ line -> list first line first but-first line ]; group the rows by lists with the 2 leading items
+  report table-map table [ rows -> map last rows ] ; remove the first item of each row
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -872,7 +976,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
@@ -1109,6 +1213,17 @@ MONITOR
 440
 NIL
 count family-links
+17
+1
+11
+
+MONITOR
+265
+445
+375
+490
+NIL
+number-deceased
 17
 1
 11
