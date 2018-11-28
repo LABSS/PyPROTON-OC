@@ -583,7 +583,7 @@ to get-caught [ co-offenders ]
     ask my-school-attendance-links [die ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
-    ; we keep the friendship links for the moment
+    ; we keep the friendship links and the OC links for the moment
   ]
 end
 
@@ -1609,6 +1609,59 @@ NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="basic" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="100"/>
+    <metric>big-crime-from-small-fish</metric>
+    <metric>count prisoners</metric>
+    <metric>number-deceased</metric>
+    <metric>sum [ num-crimes-committed ] of persons</metric>
+    <metric>count (turtle-set persons prisoners) with [ oc-member? ]</metric>
+    <metric>[ age ] of (turtle-set persons prisoners)</metric>
+    <metric>[ oc-embeddedness ] of (turtle-set persons prisoners)</metric>
+    <enumeratedValueSet variable="data-folder">
+      <value value="&quot;inputs/palermo/data/&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="output?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-opportunity-rate">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-year">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-accomplice-radius">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="operation">
+      <value value="&quot;Aemilia&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-education-levels">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-non-oc-persons">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="probability-of-getting-caught">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean-accomplices-needed">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prob-of-going-to-university">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="retirement-age">
+      <value value="65"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="oc-embeddedness-radius">
+      <value value="2"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
