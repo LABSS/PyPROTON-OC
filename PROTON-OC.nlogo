@@ -76,6 +76,7 @@ globals [
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
+  this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
 ]
 
 to profile-setup
@@ -137,6 +138,9 @@ to setup
     let parametervalue (item 1 p)
     if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue ]
   ]
+  set this-is-a-big-crime       3
+  set good-guy-threshold        0.6
+  set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   update-plots
 end
 
@@ -503,13 +507,17 @@ to-report p-fertility
   ]
 end
 
-to commit-crimes ; person procedure
+to commit-crimes
   reset-oc-embeddedness
   let co-offender-groups []
   ask persons [
     if random-float 1 < criminal-tendency [
       let accomplices find-accomplices number-of-accomplices
       set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
+      ; check for big crimes started from a normal guy
+      if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+        set big-crime-from-small-fish big-crime-from-small-fish +  1
+      ]
     ]
   ]
   foreach co-offender-groups commit-crime
@@ -575,7 +583,7 @@ to get-caught [ co-offenders ]
     ask my-school-attendance-links [die ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
-    ; we keep the friendship links for the moment
+    ; we keep the friendship links and the OC links for the moment
   ]
 end
 
@@ -585,7 +593,7 @@ to-report candidate-weight ; person reporter
 end
 
 to-report criminal-tendency ; person reporter
-  report 0.05 ; TODO
+  report 0.4 ; TODO
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -892,10 +900,10 @@ SLIDER
 48
 num-non-oc-persons
 num-non-oc-persons
-1
+0
 10000
 100.0
-1
+50
 1
 NIL
 HORIZONTAL
@@ -952,7 +960,7 @@ mean-accomplices-needed
 mean-accomplices-needed
 0
 10
-0.1
+6.0
 0.1
 1
 NIL
@@ -976,7 +984,7 @@ SWITCH
 83
 output?
 output?
-1
+0
 1
 -1000
 
@@ -1224,6 +1232,17 @@ MONITOR
 490
 NIL
 number-deceased
+17
+1
+11
+
+MONITOR
+265
+495
+375
+540
+crimes
+sum [ num-crimes-committed ] of persons
 17
 1
 11
@@ -1590,6 +1609,59 @@ NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="basic" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="100"/>
+    <metric>big-crime-from-small-fish</metric>
+    <metric>count prisoners</metric>
+    <metric>number-deceased</metric>
+    <metric>sum [ num-crimes-committed ] of persons</metric>
+    <metric>count (turtle-set persons prisoners) with [ oc-member? ]</metric>
+    <metric>[ age ] of (turtle-set persons prisoners)</metric>
+    <metric>[ oc-embeddedness ] of (turtle-set persons prisoners)</metric>
+    <enumeratedValueSet variable="data-folder">
+      <value value="&quot;inputs/palermo/data/&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="output?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="base-opportunity-rate">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ticks-per-year">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-accomplice-radius">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="operation">
+      <value value="&quot;Aemilia&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-education-levels">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-non-oc-persons">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="probability-of-getting-caught">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean-accomplices-needed">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prob-of-going-to-university">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="retirement-age">
+      <value value="65"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="oc-embeddedness-radius">
+      <value value="2"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
