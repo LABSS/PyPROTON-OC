@@ -848,6 +848,19 @@ to-report group-by-first-two-items [ csv-data ]
   let table table:group-items csv-data [ line -> list first line first but-first line ]; group the rows by lists with the 2 leading items
   report table-map table [ rows -> map last rows ] ; remove the first item of each row
 end
+
+to-report the-families
+  let components no-turtles
+  nw:with-context persons family-links [
+    set components nw:weak-component-clusters
+  ]
+  report components
+end
+
+to-report families-size-and-OC
+  let families the-families
+  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] families
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -984,7 +997,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
