@@ -20,6 +20,7 @@ undirected-link-breed [school-attendance-links school-attendance-link] ; person 
 persons-own [
   num-crimes-committed
   education-level
+  wealth-level
   my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
@@ -35,6 +36,7 @@ persons-own [
 prisoners-own [
   num-crimes-committed
   education-level
+  wealth-level
   my-job               ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
@@ -48,7 +50,7 @@ prisoners-own [
 ]
 
 jobs-own [
-  salary
+  job-position
   education-level-required
 ]
 schools-own [
@@ -111,7 +113,7 @@ to setup
   setup-default-shapes
   setup-oc-groups
   setup-population
-  setup-employers
+  setup-employers-jobs
   assign-jobs
   setup-schools
   init-students
@@ -288,7 +290,7 @@ to-report age
   report floor ((ticks - birth-tick) / ticks-per-year)
 end
 
-to setup-employers
+to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence csv:from-file (word data-folder "employer_sizes.csv")
   foreach job-counts [ n ->
@@ -296,7 +298,7 @@ to setup-employers
       hatch-jobs n [
         create-position-link-with myself
         set education-level-required random (num-education-levels - 1) ; TODO: use a realistic distribution
-        set salary max (list 10000 (random-normal 30000 1000))         ; TODO: use a realistic distribution
+        set job-position   1      ; TODO: use a realistic distribution
         set label self
       ]
       set label self
@@ -310,7 +312,7 @@ to assign-jobs
   let old-jobs-to-fill no-turtles
   let jobs-to-fill runresult find-jobs-to-fill
   while [ any? jobs-to-fill and jobs-to-fill != old-jobs-to-fill ] [
-    foreach sort-on [ 0 - salary ] jobs-to-fill [ the-job ->
+    foreach sort-on [ 0 - job-position ] jobs-to-fill [ the-job ->
       ; start with highest salary jobs, the decrease the amount of job hopping
       ask the-job [ assign-job ]
     ]
@@ -461,6 +463,7 @@ to make-baby
         set num-crimes-committed 0
         set education-level 0
         set my-job nobody
+        set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
         set male? one-of [ true false ]
         set propensity 0
