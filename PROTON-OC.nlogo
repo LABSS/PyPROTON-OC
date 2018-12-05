@@ -67,17 +67,24 @@ meta-links-own [
 ]
 
 globals [
+  ; operation
   network-saving-interval      ; every how many we save networks structure
   network-saving-list          ; the networks that should be saved
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
+  ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
   mortality-table
-  number-deceased
+  edu_by_wealth_lvl
+  work_status_by_edu_lvl
+  wealth_quintile_by_work_status
+  criminal_propensity_by_wealth_quintile
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
+  ; outputs
+  number-deceased
 ]
 
 to profile-setup
@@ -102,12 +109,7 @@ end
 to setup
   clear-all
   reset-ticks ; so age can be computed
-  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "fertility"
-  set mortality-table group-by-first-two-items read-csv "mortality"
-  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
-  set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
-  set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
+  load-stats-tables
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -140,6 +142,20 @@ to setup
     if parameterkey = "model-saving-interval" [ set model-saving-interval parametervalue ]
   ]
   update-plots
+end
+
+to load-stats-tables
+  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
+  set fertility-table group-by-first-two-items read-csv "fertility"
+  set mortality-table group-by-first-two-items read-csv "mortality"
+  set edu_by_wealth_lvl group-by-first-three-items read-csv "edu_by_wealth_lvl"
+  set work_status_by_edu_lvl group-by-first-three-items read-csv "work_status_by_edu_lvl"
+  set wealth_quintile_by_work_status group-by-first-three-items read-csv "wealth_quintile_by_work_status"
+  set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
+  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
+  set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
+  set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
+
 end
 
 to go
@@ -313,7 +329,7 @@ to assign-jobs
   let jobs-to-fill runresult find-jobs-to-fill
   while [ any? jobs-to-fill and jobs-to-fill != old-jobs-to-fill ] [
     foreach sort-on [ 0 - job-position ] jobs-to-fill [ the-job ->
-      ; start with highest salary jobs, the decrease the amount of job hopping
+      ; start with highest position jobs, the decrease the amount of job hopping
       ask the-job [ assign-job ]
     ]
     set old-jobs-to-fill jobs-to-fill
@@ -375,7 +391,7 @@ end
 
 to-report interested-in? [ the-job ] ; person reporter
   report ifelse-value (my-job = nobody) [ true ] [
-    [ salary ] of the-job > [ salary ] of my-job
+    [ job-position ] of the-job > [ job-position ] of my-job
   ]
 end
 
@@ -841,7 +857,12 @@ end
 
 to-report group-by-first-two-items [ csv-data ]
   let table table:group-items csv-data [ line -> list first line first but-first line ]; group the rows by lists with the 2 leading items
-  report table-map table [ rows -> map last rows ] ; remove the first item of each row
+  report table-map table [ rows -> map last rows ] ; remove the first two items of each row
+end
+
+to-report group-by-first-three-items [ csv-data ]
+  let table table:group-items csv-data [ line -> (list first line first but-first line first but-first but-first line)]; group the rows by lists with the 3 leading items
+  report table-map table [ rows -> map last rows ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW

@@ -7,26 +7,32 @@ df <-
   file.path("raw", "SES mechanism  (without firing & hirings).xlsx") %>%
   read_excel(sheet = "4. Distribution_matrices") 
 
-names(df)
-for(i in c(
-  "edu_by_wealth_lvl", 
+ymeans <- c("wealth", "edu_level", "work_status", "wealth")
+xmeans <- c("edu_level", "work_status", "wealth", "criminal_propensity")
+tablename <- c("edu_by_wealth_lvl", 
   "work_status_by_edu_lvl",
   "wealth_quintile_by_work_status", 
-  "criminal_propensity_by_wealth_quintile")) 
+  "criminal_propensity_by_wealth_quintile")
+
+names(df)
+for(i in  1:length(tablename))
   {
   df1 <- 
-    filter(df, `Distribution (compact name)` == i,
+    filter(df, `Distribution (compact name)` == tablename[i],
            `% / abs_val` == "%", 
            sex != "all", y != "SUM") %>%
     transmute(
-      `x=1`,`x=2`,`x=3`,`x=4`,`x=5`,y,sex ) %>%
-    gather(key = class, value =  rate, -sex, -y) %>%
+      `x=1`,`x=2`,`x=3`,`x=4`,`x=5`,y, 
+      gender = ifelse(sex == "M", TRUE, FALSE) ) %>%
+    gather(key = class, value =  rate, -gender, -y) %>%
     mutate(class= 
               class %>%
               str_extract("\\d+") %>%
               as.numeric(),
               y = as.numeric(y)
             ) %>%
-    write_csv(file.path("data", paste(i,".csv",sep="")))
+    rename(!! sym(ymeans[i]) := y,
+           !! sym(xmeans[i]) := class)  %>%  # pure magic. Required 20 attempts to guess.
+    write_csv(file.path("data", paste(tablename[i],".csv",sep="")))
   }
 
