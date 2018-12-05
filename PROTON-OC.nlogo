@@ -160,6 +160,7 @@ to go
     let model-file-name (word "outputs/" ticks "_model" ".world")
     export-world model-file-name
   ]
+  graduate
   commit-crimes
   retire-persons
   make-baby
@@ -437,14 +438,28 @@ end
 to maybe-enroll-to-school [ level ] ; person command
   let prob item 2 table:get education-levels level
   if random-float 1 < prob [
-    create-school-attendance-link-with one-of schools with [ education-level = level ]
+    let theschool nobody
+    let thefamily family-link-neighbors
+    ask thefamily [
+      ask my-school-attendance-links [
+        let potential-school [end2] of self
+        if ([education-level] of potential-school) = level and (random-float 1 > 0.2)[
+          set theschool potential-school
+        ]
+      ]
+    ]
+    if theschool = nobody [
+       set theschool one-of schools with [ education-level = level ]
+    ]
+    create-school-attendance-link-with theschool
   ]
 end
 
 to graduate
-  let levels table:from-list map [ row -> list first row row ] education-levels
+  ; let levels table:from-list map [ row -> list first row row ] education-levels
+  let levels education-levels
   ask schools [
-    let end-age item 2 table:get levels education-level
+    let end-age item 1 table:get levels education-level
     ask school-attendance-link-neighbors with [ age > end-age ] [
       ask link-with myself [ die ]
       if table:has-key? education-levels (education-level + 1) [
