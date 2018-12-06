@@ -20,7 +20,9 @@ undirected-link-breed [school-attendance-links school-attendance-link] ; person 
 persons-own [
   num-crimes-committed
   education-level
+  max-education-level
   wealth-level
+  job-level
   my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
@@ -36,7 +38,9 @@ persons-own [
 prisoners-own [
   num-crimes-committed
   education-level
+  max-education-level
   wealth-level
+  job-level
   my-job               ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
@@ -306,12 +310,16 @@ to init-person [ age-gender-dist ] ; person command
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
   set number-of-children 0                              ; TODO to be initialized by a dataset
-  set wealth-level pick-from-pair-list table:get group-by-first-of-three read-csv "wealth_quintile" male?
-  set education-level ifelse-value (table:has-key? edu_by_wealth_lvl list wealth-level male?) [
-    pick-from-pair-list table:get edu_by_wealth_lvl list wealth-level male? ] [
-    0 ]
-  if education-level = 1 and wealth-level = 2 [ print "eccheccazzo"]
-  ;limit-education-by-age                                ; no graduate 3-y-o
+  set max-education-level pick-from-pair-list table:get group-by-first-of-three read-csv "edu" male?
+  set education-level max-education-level
+  limit-education-by-age
+  ifelse age > 16 [
+    set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+    set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+  ] [
+    set job-level 1
+    set wealth-level 1 ; this will be updated by family membership
+  ]
 end
 
 ; this deforms a little the initial setup
@@ -758,11 +766,12 @@ to generate-households
         ifelse length hh-members = hh-size [ ; only generate the household if we got everyone we needed
           set success true
           if hh-type = "couple" [ ; if it's a couple, partner up the first two members
+            let family-wealth-level [ wealth-level ] of item 0 hh-members
             ask item 0 hh-members [ set partner item 1 hh-members ]
             ask item 1 hh-members [ set partner item 0 hh-members ]
           ]
           set hh-members turtle-set hh-members
-          ask hh-members [ create-family-links-with other hh-members ]
+          ask hh-members [ create-family-links-with other hh-members set wealth-level family-wealth-level ]
         ] [
           ; in case of failure, we need to put the selected members back in the population
           foreach hh-members [ m -> put-in-population-pool m population ]
@@ -913,7 +922,6 @@ end
 to-report edu-wealth-table
   let w-levels [ 1 2 3 4 5 ]
   let e-levels [ 1 2 3 4 ]
-  let normalize 0
   report map [ ed ->
     map [ wealth ->
       count persons with [ education-level = ed and wealth-level = wealth ] /
