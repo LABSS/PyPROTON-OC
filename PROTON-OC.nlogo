@@ -80,6 +80,10 @@ globals [
   work_status_by_edu_lvl
   wealth_quintile_by_work_status
   criminal_propensity_by_wealth_quintile
+  edu
+  work_status
+  wealth_quintile
+  criminal_propensity
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
@@ -132,8 +136,8 @@ to setup
   foreach networks-output-parameters [ p ->
     let parameterkey (item 0 p)
     let parametervalue (item 1 p)
-    if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue ]
-    if parametervalue = "yes" [ set network-saving-list lput parameterkey network-saving-list ]
+    if  parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue ]
+    if  parametervalue = "yes" [ set network-saving-list lput parameterkey network-saving-list ]
   ]
   let model-output-parameters csv:from-file "./outputs/parameters.csv"
   foreach model-output-parameters [ p ->
@@ -152,10 +156,13 @@ to load-stats-tables
   set work_status_by_edu_lvl group-by-first-three-items read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-by-first-three-items read-csv "wealth_quintile_by_work_status"
   set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
+  set edu group-by-first-two-items read-csv "edu"
+  set work_status group-by-first-two-items read-csv "work_status"
+  set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
+  set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
   set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
-
 end
 
 to go
@@ -294,12 +301,22 @@ to init-person [ age-gender-dist ] ; person command
   set male? (item 1 row)                                ; ...and gender according to values in that row.
   set partner nobody                                    ; persons will get paired when generating households
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-  set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
   set propensity 0                                      ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
   set number-of-children 0                              ; TODO to be initialized by a dataset
+  set wealth-level pick-from-pair-list table:get group-by-first-of-three read-csv "wealth_quintile" male?
+  set education-level pick-from-pair-list table:get group-by-first-of-three read-csv "wealth_quintile" male?
+  limit-education-by-age                                ; no graduate 3-y-o
+end
+
+; this deforms a little the initial setup
+to limit-education-by-age ; person command
+  foreach reverse sort table:keys education-levels [ i ->
+    let max-age first but-first table:get education-levels i
+    if age < max-age [ set education-level i - 1 ]
+  ]
 end
 
 to-report age
@@ -410,8 +427,9 @@ to output [ str ]
   if output? [ output-show str ]
 end
 
+; this could be cached
 to-report education-levels
-  let list-schools csv:from-file "inputs/palermo/data/schools.csv"
+  let list-schools read-csv "schools"
   let output-schools []
   let index 1
   foreach list-schools [ row ->
@@ -453,6 +471,21 @@ to maybe-enroll-to-school [ level ] ; person command
   if random-float 1 < prob [
     create-school-attendance-link-with one-of schools with [ education-level = level ]
   ]
+end
+
+to maybe-enroll-to-school-ses [ level ] ; person command
+  let levels (range 1 (level + 1))
+  ; summing up all probabilities lower than current one
+  let prob (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list wealth-level male? i) ] levels))
+  print prob
+  if random-float 1 < prob [
+    create-school-attendance-link-with one-of schools with [ education-level = level ]
+  ]
+end
+
+to test-enroll [ level ]
+  let levels (range 1 (level + 1))
+  print  (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list 1 true i) ] levels))
 end
 
 to graduate
@@ -863,6 +896,11 @@ end
 to-report group-by-first-three-items [ csv-data ]
   let table table:group-items csv-data [ line -> (list first line first but-first line first but-first but-first line)]; group the rows by lists with the 3 leading items
   report table-map table [ rows -> map last rows ]
+end
+
+to-report group-by-first-of-three [ csv-data ]
+  let table table:group-items csv-data [ line -> (first line)]; group the rows by lists with the 1st item
+  report table-map table [ rows -> map [ i -> (list last but-last i last i) ] rows ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
