@@ -10,8 +10,8 @@ df <-
   file.path("raw", "SES mechanism  (without firing & hirings).xlsx") %>%
   read_excel(sheet = "4. Distribution_matrices") 
 
-ymeans <- c("wealth", "edu_level", "work_status", "wealth")
-xmeans <- c("edu_level", "work_status", "wealth", "criminal_propensity")
+xmeans <- c("wealth", "edu_level", "work_status", "wealth")
+ymeans <- c("edu_level", "work_status", "wealth", "criminal_propensity")
 tablename <- c("edu_by_wealth_lvl", 
   "work_status_by_edu_lvl",
   "wealth_quintile_by_work_status", 
@@ -41,8 +41,9 @@ for(i in  1:length(tablename))
               as.numeric(),
               y = as.numeric(y)
             ) %>%
-    rename(!! sym(ymeans[i]) := y,
-           !! sym(xmeans[i]) := class)  %>%  # pure magic. Required 20 attempts to guess.
+    select(!! sym(xmeans[i]) := class, gender,
+           !! sym(ymeans[i]) := y, 
+           rate)  %>%  # pure magic. Required 20 attempts to guess.
     write_csv(file.path("data", paste(tablename[i],".csv",sep="")))
   }
 
@@ -55,7 +56,7 @@ for(i in  1:length(marginalname))
     transmute(
       `SUM`,y, 
     gender = ifelse(sex == "M", TRUE, FALSE) ) %>%
-    select(gender, !! sym(xmeans[i]) := y,
+    select(gender, !! sym(ymeans[i]) := y,
            rate = SUM) %>% # !! sym pure magic. Required 20 attempts to guess.
     write_csv(file.path("data", paste(marginalname[i],".csv",sep="")))
   }

@@ -152,9 +152,9 @@ to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   set fertility-table group-by-first-two-items read-csv "fertility"
   set mortality-table group-by-first-two-items read-csv "mortality"
-  set edu_by_wealth_lvl group-by-first-three-items read-csv "edu_by_wealth_lvl"
-  set work_status_by_edu_lvl group-by-first-three-items read-csv "work_status_by_edu_lvl"
-  set wealth_quintile_by_work_status group-by-first-three-items read-csv "wealth_quintile_by_work_status"
+  set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
+  set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
+  set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
   set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
   set edu group-by-first-two-items read-csv "edu"
   set work_status group-by-first-two-items read-csv "work_status"
@@ -307,8 +307,11 @@ to init-person [ age-gender-dist ] ; person command
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
   set number-of-children 0                              ; TODO to be initialized by a dataset
   set wealth-level pick-from-pair-list table:get group-by-first-of-three read-csv "wealth_quintile" male?
-  set education-level pick-from-pair-list table:get group-by-first-of-three read-csv "wealth_quintile" male?
-  limit-education-by-age                                ; no graduate 3-y-o
+  set education-level ifelse-value (table:has-key? edu_by_wealth_lvl list wealth-level male?) [
+    pick-from-pair-list table:get edu_by_wealth_lvl list wealth-level male? ] [
+    0 ]
+  if education-level = 1 and wealth-level = 2 [ print "eccheccazzo"]
+  ;limit-education-by-age                                ; no graduate 3-y-o
 end
 
 ; this deforms a little the initial setup
@@ -488,6 +491,7 @@ to test-enroll [ level ]
   print  (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list 1 true i) ] levels))
 end
 
+; does not update education level of student. Ouch.
 to graduate
   let levels table:from-list map [ row -> list first row row ] education-levels
   ask schools [
@@ -893,14 +897,29 @@ to-report group-by-first-two-items [ csv-data ]
   report table-map table [ rows -> map last rows ] ; remove the first two items of each row
 end
 
-to-report group-by-first-three-items [ csv-data ]
-  let table table:group-items csv-data [ line -> (list first line first but-first line first but-first but-first line)]; group the rows by lists with the 3 leading items
-  report table-map table [ rows -> map last rows ]
-end
-
 to-report group-by-first-of-three [ csv-data ]
   let table table:group-items csv-data [ line -> (first line)]; group the rows by lists with the 1st item
   report table-map table [ rows -> map [ i -> (list last but-last i last i) ] rows ]
+end
+
+to-report group-couples-by-2-keys [ csv-data ]
+  let table table:group-items csv-data [ line -> (list first line first but-first line)]; group the rows by lists with initial 2 items
+  report table-map table [ rows -> map [ i -> (list last but-last i last i) ] rows ]
+end
+
+; reporter to check that the table is respected at the beginning,
+; and to study how it will change in time.
+; it should return the same data we have in Niccolo's "SES mechanism  (without firing & hirings)" file
+to-report edu-wealth-table
+  let w-levels [ 1 2 3 4 5 ]
+  let e-levels [ 1 2 3 4 ]
+  let normalize 0
+  report map [ ed ->
+    map [ wealth ->
+      count persons with [ education-level = ed and wealth-level = wealth ] /
+      count persons with [ wealth-level = wealth ]
+    ] w-levels
+  ] e-levels
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
