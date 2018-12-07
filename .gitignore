@@ -5,6 +5,6 @@
 *.doc#
 *.docx#
 .DS_Store
-*.iclouA
+*.icloud
 *.world
 *.graphml
