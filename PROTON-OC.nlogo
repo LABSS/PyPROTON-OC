@@ -919,28 +919,31 @@ end
 ; reporter to check that the table is respected at the beginning,
 ; and to study how it will change in time.
 ; it should return the same data we have in Niccolo's "SES mechanism  (without firing & hirings)" file
-to-report edu-wealth-table
-  let w-levels [ 1 2 3 4 5 ]
-  let e-levels [ 1 2 3 4 ]
-  report map [ ed ->
-    map [ wealth ->
-      count persons with [ education-level = ed and wealth-level = wealth ] /
-      count persons with [ wealth-level = wealth ]
-    ] w-levels
-  ] e-levels
+; note that data comes out in a sequence wealth / gender / edu in which the right variable vary first
+; in other words, for wealth/gender, [[1 true] [1 false] [2 true] [2 false]
+; and it will need to be sorted for comparison (Niccolo's data comes gender/edu/wealth
+; input should be one of our couple-indexed tables, that is, edu_by_wealth_lvl,  work_status_by_edu_lvl, wealth_quintile_by_work_status, criminal_propensity_by_wealth_quintile
+to-report ses-stat-table [ three-variable-indexed-by-first-two-table ]
+  report
+  map [    key ->
+    map [ line ->
+      count persons with [ male? = item 1 key and education-level = item 0 line and wealth-level = item 0 key and age > 25 and age < 44] /
+      count persons with [ male? and wealth-level = item 0 key and age > 25 and age < 44]
+    ] table:get three-variable-indexed-by-first-two-table key
+  ] table:keys three-variable-indexed-by-first-two-table
 end
 
 to-report compare-edu-wealth-table
-  let x reduce sentence
-  map [ key ->
-    map [     line ->
+  report reduce sentence
+  map [    key ->
+    map [ line ->
       (item 1 line -
       count persons with [ male? = item 1 key and education-level = item 0 line and wealth-level = item 0 key and age > 25 and age < 44] /
       count persons with [ male? and wealth-level = item 0 key and age > 25 and age < 44])
     ] table:get edu_by_wealth_lvl key
   ] table:keys edu_by_wealth_lvl
-  report x
 end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
