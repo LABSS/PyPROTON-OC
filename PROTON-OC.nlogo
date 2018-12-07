@@ -765,8 +765,8 @@ to generate-households
         set hh-members filter is-person? hh-members ; exclude nobodies
         ifelse length hh-members = hh-size [ ; only generate the household if we got everyone we needed
           set success true
+          let family-wealth-level [ wealth-level ] of item 0 hh-members
           if hh-type = "couple" [ ; if it's a couple, partner up the first two members
-            let family-wealth-level [ wealth-level ] of item 0 hh-members
             ask item 0 hh-members [ set partner item 1 hh-members ]
             ask item 1 hh-members [ set partner item 0 hh-members ]
           ]
@@ -928,6 +928,18 @@ to-report edu-wealth-table
       count persons with [ wealth-level = wealth ]
     ] w-levels
   ] e-levels
+end
+
+to-report compare-edu-wealth-table
+  let x reduce sentence
+  map [ key ->
+    map [     line ->
+      (item 1 line -
+      count persons with [ male? = item 1 key and education-level = item 0 line and wealth-level = item 0 key and age > 25 and age < 44] /
+      count persons with [ male? and wealth-level = item 0 key and age > 25 and age < 44])
+    ] table:get edu_by_wealth_lvl key
+  ] table:keys edu_by_wealth_lvl
+  report x
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
