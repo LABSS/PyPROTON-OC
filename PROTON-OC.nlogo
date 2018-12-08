@@ -92,6 +92,7 @@ globals [
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
+  jobs_by_company_size
   ; outputs
   number-deceased
 ]
@@ -171,6 +172,7 @@ to load-stats-tables
   set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
+  set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
 end
 
 to go

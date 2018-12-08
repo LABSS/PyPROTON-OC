@@ -39,7 +39,7 @@ df1 <-
       level = str_extract(X__1, "\\d+")
    ) %>%
    unnest(size) %>%
-   select(-class, -X__1) %>%
+   select(size, level, rate) %>%
    write_csv(file.path("data", "jobs_by_company_size.csv"))
 
  #      class %>%
