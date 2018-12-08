@@ -54,8 +54,7 @@ prisoners-own [
 ]
 
 jobs-own [
-  job-position
-  education-level-required
+  job-level
 ]
 schools-own [
   education-level
@@ -347,13 +346,17 @@ to setup-employers-jobs
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
-        set education-level-required random (num-education-levels - 1) ; TODO: use a realistic distribution
-        set job-position   1      ; TODO: use a realistic distribution
+        ;set education-level-required random-education-level n
+        set job-level random-level-by-size n
         set label self
       ]
       set label self
     ]
   ]
+end
+
+to-report random-level-by-size [ employer-size ]
+  report pick-from-pair-list table:get jobs_by_company_size employer-size
 end
 
 to assign-jobs
@@ -362,7 +365,7 @@ to assign-jobs
   let old-jobs-to-fill no-turtles
   let jobs-to-fill runresult find-jobs-to-fill
   while [ any? jobs-to-fill and jobs-to-fill != old-jobs-to-fill ] [
-    foreach sort-on [ 0 - job-position ] jobs-to-fill [ the-job ->
+    foreach sort-on [ 0 - job-level ] jobs-to-fill [ the-job ->
       ; start with highest position jobs, the decrease the amount of job hopping
       ask the-job [ assign-job ]
     ]
@@ -419,13 +422,14 @@ to-report pick-new-employee-from [ the-candidates ] ; job reporter
   ]
 end
 
+; phasing out the old system. There's no such a thing as qualification
 to-report qualified-for? [ the-job ] ; person reporter
-  report education-level >= [ education-level-required ] of the-job
+  report true
 end
 
 to-report interested-in? [ the-job ] ; person reporter
   report ifelse-value (my-job = nobody) [ true ] [
-    [ job-position ] of the-job > [ job-position ] of my-job
+    [ job-level ] of the-job > [ job-level ] of my-job
   ]
 end
 
