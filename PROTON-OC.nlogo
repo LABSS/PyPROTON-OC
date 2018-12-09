@@ -341,12 +341,13 @@ end
 
 to setup-employers-jobs
   output "Setting up employers"
-  let job-counts reduce sentence csv:from-file (word data-folder "employer_sizes.csv")
-  foreach job-counts [ n ->
+  let job-counts reduce sentence read-csv "employer_sizes"
+  let jobs-target count persons with [ job-level != 1 ]
+  while [ count jobs < jobs-target ] [
+    let n one-of job-counts
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
-        ;set education-level-required random-education-level n
         set job-level random-level-by-size n
         set label self
       ]
@@ -957,7 +958,6 @@ to-report compare-edu-wealth-table
     ] table:get edu_by_wealth_lvl key
   ] table:keys edu_by_wealth_lvl
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
