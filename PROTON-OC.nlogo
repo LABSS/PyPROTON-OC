@@ -552,7 +552,7 @@ to make-baby
 end
 
 to make-people-die
-  ask (turtle-set persons prisoners) [
+  ask all-persons [
     if random-float 1 < p-mortality [
       set number-deceased number-deceased + 1
       die
@@ -958,6 +958,16 @@ to-report compare-edu-wealth-table
     ] table:get edu_by_wealth_lvl key
   ] table:keys edu_by_wealth_lvl
 end
+
+; https://en.wikipedia.org/wiki/Atkinson_index
+to-report atkinson-inequality-index [ epsilon person-reporter ]
+  let mean-income sum [ wealth-level ] of all-persons / count all-persons
+  report 1 - ((sum [ runresult person-reporter ] of all-persons) / count all-persons )^(1 - (1 - epsilon)) / mean-income
+end
+
+to-report all-persons report (turtle-set persons prisoners) end
+
+to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1094,7 +1104,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
