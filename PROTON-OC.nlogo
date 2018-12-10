@@ -54,8 +54,7 @@ prisoners-own [
 ]
 
 jobs-own [
-  job-position
-  education-level-required
+  job-level
 ]
 schools-own [
   education-level
@@ -92,6 +91,7 @@ globals [
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
+  jobs_by_company_size
   ; outputs
   number-deceased
 ]
@@ -171,6 +171,7 @@ to load-stats-tables
   set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
+  set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
 end
 
 to go
@@ -340,18 +341,23 @@ end
 
 to setup-employers-jobs
   output "Setting up employers"
-  let job-counts reduce sentence csv:from-file (word data-folder "employer_sizes.csv")
-  foreach job-counts [ n ->
+  let job-counts reduce sentence read-csv "employer_sizes"
+  let jobs-target count persons with [ job-level != 1 ]
+  while [ count jobs < jobs-target ] [
+    let n one-of job-counts
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
-        set education-level-required random (num-education-levels - 1) ; TODO: use a realistic distribution
-        set job-position   1      ; TODO: use a realistic distribution
+        set job-level random-level-by-size n
         set label self
       ]
       set label self
     ]
   ]
+end
+
+to-report random-level-by-size [ employer-size ]
+  report pick-from-pair-list table:get jobs_by_company_size employer-size
 end
 
 to assign-jobs
@@ -360,7 +366,7 @@ to assign-jobs
   let old-jobs-to-fill no-turtles
   let jobs-to-fill runresult find-jobs-to-fill
   while [ any? jobs-to-fill and jobs-to-fill != old-jobs-to-fill ] [
-    foreach sort-on [ 0 - job-position ] jobs-to-fill [ the-job ->
+    foreach sort-on [ 0 - job-level ] jobs-to-fill [ the-job ->
       ; start with highest position jobs, the decrease the amount of job hopping
       ask the-job [ assign-job ]
     ]
@@ -417,13 +423,14 @@ to-report pick-new-employee-from [ the-candidates ] ; job reporter
   ]
 end
 
+; phasing out the old system. There's no such a thing as qualification
 to-report qualified-for? [ the-job ] ; person reporter
-  report education-level >= [ education-level-required ] of the-job
+  report true
 end
 
 to-report interested-in? [ the-job ] ; person reporter
   report ifelse-value (my-job = nobody) [ true ] [
-    [ job-position ] of the-job > [ job-position ] of my-job
+    [ job-level ] of the-job > [ job-level ] of my-job
   ]
 end
 
@@ -545,7 +552,7 @@ to make-baby
 end
 
 to make-people-die
-  ask (turtle-set persons prisoners) [
+  ask all-persons [
     if random-float 1 < p-mortality [
       set number-deceased number-deceased + 1
       die
@@ -952,6 +959,15 @@ to-report compare-edu-wealth-table
   ] table:keys edu_by_wealth_lvl
 end
 
+; https://en.wikipedia.org/wiki/Atkinson_index
+to-report atkinson-inequality-index [ epsilon person-reporter ]
+  let mean-income sum [ wealth-level ] of all-persons / count all-persons
+  report 1 - ((sum [ runresult person-reporter ] of all-persons) / count all-persons )^(1 - (1 - epsilon)) / mean-income
+end
+
+to-report all-persons report (turtle-set persons prisoners) end
+
+to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1088,7 +1104,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
