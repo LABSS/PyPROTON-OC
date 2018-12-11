@@ -160,7 +160,9 @@ to go
     let model-file-name (word "outputs/" ticks "_model" ".world")
     export-world model-file-name
   ]
-  graduate
+  if ((ticks mod ticks-per-year) = 0) [
+    graduate
+  ]
   commit-crimes
   retire-persons
   make-baby
@@ -442,8 +444,8 @@ to maybe-enroll-to-school [ level ] ; person command
     let thefamily family-link-neighbors
     ask thefamily [
       ask my-school-attendance-links [
-        let potential-school [end2] of self
-        if ([education-level] of potential-school) = level and (random-float 1 > 0.2)[
+        let potential-school [ end2 ] of self
+        if ([ education-level ] of potential-school) = level and (theschool = nobody)[
           set theschool potential-school
         ]
       ]
@@ -451,6 +453,7 @@ to maybe-enroll-to-school [ level ] ; person command
     if theschool = nobody [
        set theschool one-of schools with [ education-level = level ]
     ]
+    set education-level level
     create-school-attendance-link-with theschool
   ]
 end
@@ -458,9 +461,13 @@ end
 to graduate
   ; let levels table:from-list map [ row -> list first row row ] education-levels
   let levels education-levels
+  let primary-age item 0 table:get levels 1
+  ask persons with [ education-level = 0 and age = primary-age] [
+    set education-level 1
+  ]
   ask schools [
     let end-age item 1 table:get levels education-level
-    ask school-attendance-link-neighbors with [ age > end-age ] [
+    ask school-attendance-link-neighbors with [ age = (end-age + 1)] [
       ask link-with myself [ die ]
       if table:has-key? education-levels (education-level + 1) [
         maybe-enroll-to-school (education-level + 1)
@@ -862,6 +869,14 @@ end
 to-report group-by-first-two-items [ csv-data ]
   let table table:group-items csv-data [ line -> list first line first but-first line ]; group the rows by lists with the 2 leading items
   report table-map table [ rows -> map last rows ] ; remove the first item of each row
+end
+
+to-report school-attendance-report
+  let output-list []
+  ask school-attendance-links [
+    set output-list lput ([ education-level] of end2) output-list
+  ]
+  report output-list
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
