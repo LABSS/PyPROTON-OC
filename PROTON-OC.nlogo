@@ -679,12 +679,12 @@ to-report social-proximity-with [ target ] ; person reporter
   report totale / normalization
 end
 
-to-report variable-weights-n ; to be finished
+to-report variable-weights-n ; to be finished - check wheights!
   report (list
     ;     var-name     weight    normalized-reporter
     (list "age"        1.0       [ -> ifelse-value (age - [ age ] of myself > 18) [ 1 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ]) ; to check!
     (list "gender"     1.0       [ -> ifelse-value (male? = [male?] of myself) [ 1 ][ 0 ]])
-    (list "wealth"     1.0       [ -> ifelse-value (wealth-level = [wealth-level] of myself) [ 1 ][ 0 ]])
+    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [wealth-level] of myself) [ 1 ][ 0 ]])
     (list "job"        0.7       [ -> ifelse-value (job-level = [job-level] of myself) [ 1 ][ 0 ]])
     (list "education"  0.5       [ -> ifelse-value (education-level = [education-level] of myself) [ 1 ][ 0 ]])
     (list "retired"    0.3       [ -> ifelse-value (retired? = [retired?] of myself) [ 1 ][ 0 ]])
