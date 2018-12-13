@@ -440,21 +440,12 @@ end
 to maybe-enroll-to-school [ level ] ; person command
   let prob item 2 table:get education-levels level
   if random-float 1 < prob [
-    let theschool nobody
-    let thefamily family-link-neighbors
-    ask thefamily [
-      ask my-school-attendance-links [
-        let potential-school [ end2 ] of self
-        if ([ education-level ] of potential-school) = level and (theschool = nobody)[
-          set theschool potential-school
-        ]
-      ]
+    let potential-schools turtle-set [ [ end2 ] of my-school-attendance-links ] of family-link-neighbors
+    ifelse any? potential-schools with [ education-level = level ] [
+      create-school-attendance-link-with one-of potential-schools
+    ] [
+      create-school-attendance-link-with one-of schools with [ education-level = level ]
     ]
-    if theschool = nobody [
-       set theschool one-of schools with [ education-level = level ]
-    ]
-    set education-level level
-    create-school-attendance-link-with theschool
   ]
 end
 
