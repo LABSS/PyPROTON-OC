@@ -206,11 +206,13 @@ end
 to make-friends
   ask persons [
     let num-new-friends min list random-poisson 3 count my-links with [
-      breed != friendship-links and breed != meta-links
-    ]; add slider
-    ask n-of num-new-friends my-links with [
-      breed != friendship-links and breed != meta-links
-    ] [ ask other-end [ create-friendship-link-with other-end ] ]
+      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+    ] ; add slider
+    ask rnd:weighted-n-of num-new-friends (my-links with [
+      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+    ]) [
+      [ social-proximity-with other-end ] of myself ] [
+      ask other-end [ create-friendship-link-with other-end ] ]
   ]
 end
 
@@ -668,7 +670,27 @@ to-report criminal-tendency ; person reporter
 end
 
 to-report social-proximity-with [ target ] ; person reporter
-  report random-float 1 ; TODO
+  let totale 0
+  let normalization 0
+  ask target [
+    foreach variable-weights-n [ x ->
+      set totale (totale + (item 1 x) * (runresult item 2 x))
+      set normalization (normalization + (item 1 x))
+    ]
+  ]
+  report totale / normalization
+end
+
+to-report variable-weights-n
+  report (list
+    ;     var-name     weight    normalized-reporter
+    (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of myself) > 18) [ 0 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ])
+    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ]])
+    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ]])
+    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ]])
+    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ]])
+    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ]])
+)
 end
 
 to-report oc-embeddedness ; person reporter
