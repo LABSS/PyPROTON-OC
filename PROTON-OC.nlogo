@@ -283,7 +283,7 @@ to init-person [ age-gender-dist ] ; person command
   set male? (item 1 row)                                ; ...and gender according to values in that row.
   set partner nobody                                    ; persons will get paired when generating households
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-  set education-level random (num-education-levels - 1) ; TODO use a realistic distribution
+  set education-level -1                                ; we set starting education level in init-students
   set propensity 0                                      ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
@@ -400,9 +400,9 @@ to output [ str ]
 end
 
 to-report education-levels
-  let list-schools csv:from-file "inputs/palermo/data/schools.csv"
+  let list-schools (but-first csv:from-file "inputs/palermo/data/schools.csv")
   let output-schools []
-  let index 1
+  let index 0
   foreach list-schools [ row ->
     let x ceiling ( ((item 3 row) / (item 4 row)) *  (count persons) )
     let new-row replace-item 3 row x
@@ -422,11 +422,22 @@ to setup-schools
 end
 
 to init-students
+  let starting-row table:get education-levels 0
+  let starting-point item 0 starting-row
+  let ending-point item 1 starting-row
+  ask persons with [  age > ending-point ] [
+    set education-level 1
+  ]
   foreach table:keys education-levels [ level ->
     let row table:get education-levels level
     let start-age item 0 row
     let end-age   item 1 row
     let prob      item 2 row
+    if level = (num-education-levels - 1) [
+      ask persons with [ (age > end-age) ] [
+        if random-float 1 < prob [ set education-level (num-education-levels - 1)] ;; set some graduate
+      ]
+    ]
     ask persons with [ age >= start-age and age <= end-age ] [
       maybe-enroll-to-school level
     ]
@@ -446,22 +457,26 @@ to maybe-enroll-to-school [ level ] ; person command
     ] [
       create-school-attendance-link-with one-of schools with [ education-level = level ]
     ]
+    set education-level (level - 1)
   ]
 end
 
 to graduate
   ; let levels table:from-list map [ row -> list first row row ] education-levels
   let levels education-levels
-  let primary-age item 0 table:get levels 1
-  ask persons with [ education-level = 0 and age = primary-age] [
-    set education-level 1
+  let primary-age item 0 table:get levels 0
+  ask persons with [ education-level = -1 and age = primary-age] [
+    maybe-enroll-to-school 0
   ]
   ask schools [
     let end-age item 1 table:get levels education-level
+    let school-education-level education-level
     ask school-attendance-link-neighbors with [ age = (end-age + 1)] [
       ask link-with myself [ die ]
-      if table:has-key? education-levels (education-level + 1) [
-        maybe-enroll-to-school (education-level + 1)
+      ifelse table:has-key? education-levels (school-education-level + 1) [
+        maybe-enroll-to-school (school-education-level + 1)
+      ][
+        set education-level school-education-level
       ]
     ]
   ]
@@ -476,7 +491,7 @@ to make-baby
     if random-float 1 < p-fertility [
       hatch-persons 1 [
         set num-crimes-committed 0
-        set education-level 0
+        set education-level -1
         set my-job nobody
         set birth-tick ticks
         set male? one-of [ true false ]
@@ -862,12 +877,17 @@ to-report group-by-first-two-items [ csv-data ]
   report table-map table [ rows -> map last rows ] ; remove the first item of each row
 end
 
-to-report school-attendance-report
+to  school-attendance-report
   let output-list []
   ask school-attendance-links [
-    set output-list lput ([ education-level] of end2) output-list
+    set output-list lput ([ education-level ] of end2) output-list
+    ask end1 [ set output-list lput age output-list ]
+    ask end1 [ set output-list lput education-level output-list ]
   ]
-  report output-list
+  ask persons [
+    set output-list lput (list age education-level) output-list
+  ]
+  show  output-list
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -1046,7 +1066,7 @@ num-education-levels
 num-education-levels
 1
 10
-3.0
+4.0
 1
 1
 NIL
