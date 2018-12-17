@@ -20,6 +20,9 @@ undirected-link-breed [school-attendance-links school-attendance-link] ; person 
 persons-own [
   num-crimes-committed
   education-level
+  max-education-level
+  wealth-level
+  job-level
   my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
@@ -35,6 +38,9 @@ persons-own [
 prisoners-own [
   num-crimes-committed
   education-level
+  max-education-level
+  wealth-level
+  job-level
   my-job               ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
@@ -48,8 +54,7 @@ prisoners-own [
 ]
 
 jobs-own [
-  salary
-  education-level-required
+  job-level
 ]
 schools-own [
   education-level
@@ -65,18 +70,30 @@ meta-links-own [
 ]
 
 globals [
+  ; operation
   network-saving-interval      ; every how many we save networks structure
   network-saving-list          ; the networks that should be saved
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
+  this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
+  ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
   mortality-table
-  number-deceased
+  edu_by_wealth_lvl
+  work_status_by_edu_lvl
+  wealth_quintile_by_work_status
+  criminal_propensity_by_wealth_quintile
+  edu
+  work_status
+  wealth_quintile
+  criminal_propensity
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
-  this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
+  jobs_by_company_size
+  ; outputs
+  number-deceased
 ]
 
 to profile-setup
@@ -101,18 +118,13 @@ end
 to setup
   clear-all
   reset-ticks ; so age can be computed
-  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "fertility"
-  set mortality-table group-by-first-two-items read-csv "mortality"
-  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
-  set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
-  set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
+  load-stats-tables
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-oc-groups
   setup-population
-  setup-employers
+  setup-employers-jobs
   assign-jobs
   setup-schools
   init-students
@@ -129,8 +141,8 @@ to setup
   foreach networks-output-parameters [ p ->
     let parameterkey (item 0 p)
     let parametervalue (item 1 p)
-    if parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue ]
-    if parametervalue = "yes" [ set network-saving-list lput parameterkey network-saving-list ]
+    if  parameterkey = "network-saving-interval" [ set network-saving-interval parametervalue ]
+    if  parametervalue = "yes" [ set network-saving-list lput parameterkey network-saving-list ]
   ]
   let model-output-parameters csv:from-file "./outputs/parameters.csv"
   foreach model-output-parameters [ p ->
@@ -142,6 +154,24 @@ to setup
   set good-guy-threshold        0.6
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   update-plots
+end
+
+to load-stats-tables
+  set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
+  set fertility-table group-by-first-two-items read-csv "fertility"
+  set mortality-table group-by-first-two-items read-csv "mortality"
+  set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
+  set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
+  set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
+  set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
+  set edu group-by-first-two-items read-csv "edu"
+  set work_status group-by-first-two-items read-csv "work_status"
+  set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
+  set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
+  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
+  set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
+  set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
+  set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
 end
 
 to go
@@ -179,11 +209,13 @@ end
 to make-friends
   ask persons [
     let num-new-friends min list random-poisson 3 count my-links with [
-      breed != friendship-links and breed != meta-links
-    ]; add slider
-    ask n-of num-new-friends my-links with [
-      breed != friendship-links and breed != meta-links
-    ] [ ask other-end [ create-friendship-link-with other-end ] ]
+      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+    ] ; add slider
+    ask rnd:weighted-n-of num-new-friends (my-links with [
+      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+    ]) [
+      [ social-proximity-with other-end ] of myself ] [
+      ask other-end [ create-friendship-link-with other-end ] ]
   ]
 end
 
@@ -289,26 +321,49 @@ to init-person [ age-gender-dist ] ; person command
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
   set number-of-children 0                              ; TODO to be initialized by a dataset
+  set max-education-level pick-from-pair-list table:get group-by-first-of-three read-csv "edu" male?
+  set education-level max-education-level
+  limit-education-by-age
+  ifelse age > 16 [
+    set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+    set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+  ] [
+    set job-level 1
+    set wealth-level 1 ; this will be updated by family membership
+  ]
+end
+
+; this deforms a little the initial setup
+to limit-education-by-age ; person command
+  foreach reverse sort table:keys education-levels [ i ->
+    let max-age first but-first table:get education-levels i
+    if age < max-age [ set education-level i - 1 ]
+  ]
 end
 
 to-report age
   report floor ((ticks - birth-tick) / ticks-per-year)
 end
 
-to setup-employers
+to setup-employers-jobs
   output "Setting up employers"
-  let job-counts reduce sentence csv:from-file (word data-folder "employer_sizes.csv")
-  foreach job-counts [ n ->
+  let job-counts reduce sentence read-csv "employer_sizes"
+  let jobs-target count persons with [ job-level != 1 ]
+  while [ count jobs < jobs-target ] [
+    let n one-of job-counts
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
-        set education-level-required random (num-education-levels - 1) ; TODO: use a realistic distribution
-        set salary max (list 10000 (random-normal 30000 1000))         ; TODO: use a realistic distribution
+        set job-level random-level-by-size n
         set label self
       ]
       set label self
     ]
   ]
+end
+
+to-report random-level-by-size [ employer-size ]
+  report pick-from-pair-list table:get jobs_by_company_size employer-size
 end
 
 to assign-jobs
@@ -317,8 +372,8 @@ to assign-jobs
   let old-jobs-to-fill no-turtles
   let jobs-to-fill runresult find-jobs-to-fill
   while [ any? jobs-to-fill and jobs-to-fill != old-jobs-to-fill ] [
-    foreach sort-on [ 0 - salary ] jobs-to-fill [ the-job ->
-      ; start with highest salary jobs, the decrease the amount of job hopping
+    foreach sort-on [ 0 - job-level ] jobs-to-fill [ the-job ->
+      ; start with highest position jobs, the decrease the amount of job hopping
       ask the-job [ assign-job ]
     ]
     set old-jobs-to-fill jobs-to-fill
@@ -374,13 +429,14 @@ to-report pick-new-employee-from [ the-candidates ] ; job reporter
   ]
 end
 
+; phasing out the old system. There's no such a thing as qualification
 to-report qualified-for? [ the-job ] ; person reporter
-  report education-level >= [ education-level-required ] of the-job
+  report true
 end
 
 to-report interested-in? [ the-job ] ; person reporter
   report ifelse-value (my-job = nobody) [ true ] [
-    [ salary ] of the-job > [ salary ] of my-job
+    [ job-level ] of the-job > [ job-level ] of my-job
   ]
 end
 
@@ -399,8 +455,9 @@ to output [ str ]
   if output? [ output-show str ]
 end
 
+; this could be cached
 to-report education-levels
-  let list-schools (but-first csv:from-file "inputs/palermo/data/schools.csv")
+  let list-schools read-csv "schools"
   let output-schools []
   let index 0
   foreach list-schools [ row ->
@@ -461,6 +518,22 @@ to maybe-enroll-to-school [ level ] ; person command
   ]
 end
 
+to maybe-enroll-to-school-ses [ level ] ; person command
+  let levels (range 1 (level + 1))
+  ; summing up all probabilities lower than current one
+  let prob (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list wealth-level male? i) ] levels))
+  print prob
+  if random-float 1 < prob [
+    create-school-attendance-link-with one-of schools with [ education-level = level ]
+  ]
+end
+
+to test-enroll [ level ]
+  let levels (range 1 (level + 1))
+  print  (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list 1 true i) ] levels))
+end
+
+; does not update education level of student. Ouch.
 to graduate
   ; let levels table:from-list map [ row -> list first row row ] education-levels
   let levels education-levels
@@ -493,6 +566,7 @@ to make-baby
         set num-crimes-committed 0
         set education-level -1
         set my-job nobody
+        set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
         set male? one-of [ true false ]
         set propensity 0
@@ -509,7 +583,7 @@ to make-baby
 end
 
 to make-people-die
-  ask (turtle-set persons prisoners) [
+  ask all-persons [
     if random-float 1 < p-mortality [
       set number-deceased number-deceased + 1
       die
@@ -625,7 +699,27 @@ to-report criminal-tendency ; person reporter
 end
 
 to-report social-proximity-with [ target ] ; person reporter
-  report random-float 1 ; TODO
+  let totale 0
+  let normalization 0
+  ask target [
+    foreach variable-weights-n [ x ->
+      set totale (totale + (item 1 x) * (runresult item 2 x))
+      set normalization (normalization + (item 1 x))
+    ]
+  ]
+  report totale / normalization
+end
+
+to-report variable-weights-n
+  report (list
+    ;     var-name     weight    normalized-reporter
+    (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of myself) > 18) [ 0 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ])
+    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ]])
+    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ]])
+    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ]])
+    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ]])
+    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ]])
+)
 end
 
 to-report oc-embeddedness ; person reporter
@@ -737,12 +831,13 @@ to generate-households
         set hh-members filter is-person? hh-members ; exclude nobodies
         ifelse length hh-members = hh-size [ ; only generate the household if we got everyone we needed
           set success true
+          let family-wealth-level [ wealth-level ] of item 0 hh-members
           if hh-type = "couple" [ ; if it's a couple, partner up the first two members
             ask item 0 hh-members [ set partner item 1 hh-members ]
             ask item 1 hh-members [ set partner item 0 hh-members ]
           ]
           set hh-members turtle-set hh-members
-          ask hh-members [ create-family-links-with other hh-members ]
+          ask hh-members [ create-family-links-with other hh-members set wealth-level family-wealth-level ]
         ] [
           ; in case of failure, we need to put the selected members back in the population
           foreach hh-members [ m -> put-in-population-pool m population ]
@@ -874,7 +969,12 @@ end
 
 to-report group-by-first-two-items [ csv-data ]
   let table table:group-items csv-data [ line -> list first line first but-first line ]; group the rows by lists with the 2 leading items
-  report table-map table [ rows -> map last rows ] ; remove the first item of each row
+  report table-map table [ rows -> map last rows ] ; remove the first two items of each row
+end
+
+to-report group-by-first-of-three [ csv-data ]
+  let table table:group-items csv-data [ line -> (first line)]; group the rows by lists with the 1st item
+  report table-map table [ rows -> map [ i -> (list last but-last i last i) ] rows ]
 end
 
 to  school-attendance-report
@@ -889,6 +989,50 @@ to  school-attendance-report
   ]
   show  output-list
 end
+
+to-report group-couples-by-2-keys [ csv-data ]
+  let table table:group-items csv-data [ line -> (list first line first but-first line)]; group the rows by lists with initial 2 items
+  report table-map table [ rows -> map [ i -> (list last but-last i last i) ] rows ]
+end
+
+; reporter to check that the table is respected at the beginning,
+; and to study how it will change in time.
+; it should return the same data we have in Niccolo's "SES mechanism  (without firing & hirings)" file
+; note that data comes out in a sequence wealth / gender / edu in which the right variable vary first
+; in other words, for wealth/gender, [[1 true] [1 false] [2 true] [2 false]
+; and it will need to be sorted for comparison (Niccolo's data comes gender/edu/wealth
+; input should be one of our couple-indexed tables, that is, edu_by_wealth_lvl,  work_status_by_edu_lvl, wealth_quintile_by_work_status, criminal_propensity_by_wealth_quintile
+to-report ses-stat-table [ three-variable-indexed-by-first-two-table ]
+  report
+  map [    key ->
+    map [ line ->
+      count persons with [ male? = item 1 key and education-level = item 0 line and wealth-level = item 0 key and age > 25 and age < 44] /
+      count persons with [ male? and wealth-level = item 0 key and age > 25 and age < 44]
+    ] table:get three-variable-indexed-by-first-two-table key
+  ] table:keys three-variable-indexed-by-first-two-table
+end
+
+to-report compare-edu-wealth-table
+  report reduce sentence
+  map [    key ->
+    map [ line ->
+      (item 1 line -
+      count persons with [ male? = item 1 key and education-level = item 0 line and wealth-level = item 0 key and age > 25 and age < 44] /
+      count persons with [ male? and wealth-level = item 0 key and age > 25 and age < 44])
+    ] table:get edu_by_wealth_lvl key
+  ] table:keys edu_by_wealth_lvl
+end
+
+; https://en.wikipedia.org/wiki/Atkinson_index
+to-report atkinson-inequality-index [ epsilon person-reporter ]
+  let mean-income sum [ wealth-level ] of all-persons / count all-persons
+  report 1 - ((sum [ runresult person-reporter ] of all-persons) / count all-persons )^(1 - (1 - epsilon)) / mean-income
+end
+
+to-report all-persons report (turtle-set persons prisoners) end
+
+to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1025,7 +1169,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
