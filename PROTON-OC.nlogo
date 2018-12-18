@@ -92,6 +92,7 @@ globals [
   male-punishment-length-list
   female-punishment-length-list
   jobs_by_company_size
+  education-levels  ; table from education level to data
   ; outputs
   number-deceased
 ]
@@ -122,12 +123,13 @@ to setup
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
+  setup-education-levels
   setup-oc-groups
   setup-population
-  setup-employers-jobs
-  assign-jobs
   setup-schools
   init-students
+  setup-employers-jobs
+  assign-jobs
   init-professional-links
   init-breed-colors
   ask turtles [
@@ -189,6 +191,9 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     let model-file-name (word "outputs/" ticks "_model" ".world")
     export-world model-file-name
+  ]
+  if ((ticks mod ticks-per-year) = 0) [
+    graduate
   ]
   commit-crimes
   retire-persons
@@ -312,6 +317,7 @@ to init-person [ age-gender-dist ] ; person command
   set male? (item 1 row)                                ; ...and gender according to values in that row.
   set partner nobody                                    ; persons will get paired when generating households
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
+  set education-level -1                                ; we set starting education level in init-students
   set propensity 0                                      ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
@@ -390,9 +396,9 @@ to assign-job ; job command
     ; First give a chance to current employees to upgrade if they are qualified.
     [ -> employees ]
     ; Then, look for candidates in the immediate network of current employees.
-    [ -> turtle-set [ person-neighbors ] of employees ]
+    [ -> (turtle-set [ person-neighbors ] of employees) with [ not any? my-school-attendance-links and age >= 18 ] ]
     ; Then look for anyone qualified in the general population.
-    [ -> persons ]
+    [ -> persons with [ not any? my-school-attendance-links and age >= 18] ]
   )
 
   let new-employee nobody
@@ -406,6 +412,7 @@ to assign-job ; job command
     ask my-job-links [ die ]
     set my-job myself
     create-job-link-with myself
+    assert [ -> not any? my-school-attendance-links ]
   ]
 
 end
@@ -451,19 +458,28 @@ to output [ str ]
   if output? [ output-show str ]
 end
 
-; this could be cached
-to-report education-levels
+to setup-education-levels
   let list-schools read-csv "schools"
-  let output-schools []
-  let index 1
+  set education-levels []
+  let index 0
   foreach list-schools [ row ->
-    let x ceiling ( ((item 3 row) / (item 4 row)) *  (count persons) )
+    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-non-oc-persons) ) ; warning: doesn't take OC pop into account
     let new-row replace-item 3 row x
     set new-row remove-item 4 new-row
-    set output-schools lput (list index new-row) output-schools
+    set education-levels lput (list index new-row) education-levels
     set index index + 1
   ]
-  report table:from-list output-schools
+  set education-levels table:from-list education-levels
+end
+
+to-report min-age-edu-level [ the-level ] report item 0 table:get education-levels the-level end
+to-report max-age-edu-level [ the-level ] report item 1 table:get education-levels the-level end
+to-report possible-school-level ; person command
+  let the-level -1
+  foreach table:keys education-levels [ i ->
+    if age <= max-age-edu-level i and age >= min-age-edu-level i [ set the-level i ]
+  ]
+  report the-level
 end
 
 to setup-schools
@@ -475,11 +491,22 @@ to setup-schools
 end
 
 to init-students
+  let starting-row table:get education-levels 0
+  let starting-point item 0 starting-row
+  let ending-point item 1 starting-row
+  ask persons with [  age > ending-point ] [
+    set education-level 1
+  ]
   foreach table:keys education-levels [ level ->
     let row table:get education-levels level
     let start-age item 0 row
     let end-age   item 1 row
     let prob      item 2 row
+    if level = (num-education-levels - 1) [
+      ask persons with [ (age > end-age) ] [
+        if random-float 1 < prob [ set education-level (num-education-levels - 1)] ; set some graduate
+      ]
+    ]
     ask persons with [ age >= start-age and age <= end-age ] [
       maybe-enroll-to-school level
     ]
@@ -493,7 +520,15 @@ end
 to maybe-enroll-to-school [ level ] ; person command
   let prob item 2 table:get education-levels level
   if random-float 1 < prob [
-    create-school-attendance-link-with one-of schools with [ education-level = level ]
+    let potential-schools (turtle-set [
+      [ end2 ] of my-school-attendance-links
+    ] of family-link-neighbors) with [ education-level = level ]
+    ifelse any? potential-schools [
+      create-school-attendance-link-with one-of potential-schools
+    ] [
+      create-school-attendance-link-with one-of schools with [ education-level = level ]
+    ]
+    set education-level (level - 1)
   ]
 end
 
@@ -512,15 +547,20 @@ to test-enroll [ level ]
   print  (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list 1 true i) ] levels))
 end
 
-; does not update education level of student. Ouch.
 to graduate
-  let levels table:from-list map [ row -> list first row row ] education-levels
+  let levels education-levels
+  let primary-age item 0 table:get levels 0
+  ask persons with [ education-level = -1 and age = primary-age ] [
+    maybe-enroll-to-school 0
+  ]
   ask schools [
-    let end-age item 2 table:get levels education-level
-    ask school-attendance-link-neighbors with [ age > end-age ] [
+    let end-age item 1 table:get levels education-level
+    let school-education-level education-level
+    ask school-attendance-link-neighbors with [ age = (end-age + 1)] [
       ask link-with myself [ die ]
-      if table:has-key? education-levels (education-level + 1) [
-        maybe-enroll-to-school (education-level + 1)
+      set education-level school-education-level
+      if table:has-key? education-levels (school-education-level + 1) [
+        maybe-enroll-to-school (school-education-level + 1)
       ]
     ]
   ]
@@ -535,7 +575,7 @@ to make-baby
     if random-float 1 < p-fertility [
       hatch-persons 1 [
         set num-crimes-committed 0
-        set education-level 0
+        set education-level -1
         set my-job nobody
         set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
@@ -653,7 +693,7 @@ to get-caught [ co-offenders ]
       set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
     ]
     ask my-job-links [ die ]
-    ask my-school-attendance-links [die ]
+    ask my-school-attendance-links [ die ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
     ; we keep the friendship links and the OC links for the moment
@@ -1167,7 +1207,7 @@ num-education-levels
 num-education-levels
 1
 10
-3.0
+4.0
 1
 1
 NIL
