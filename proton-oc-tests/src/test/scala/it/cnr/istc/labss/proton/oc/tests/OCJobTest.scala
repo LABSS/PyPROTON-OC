@@ -11,7 +11,7 @@ class OCJobTest extends OCModelSuite {
   // that's why we use age > retirement-age and not >=.
   test("People should not work underage ") { ws =>
     ws.cmd("""
-      set num-non-oc-persons 1000
+      set num-non-oc-persons 500
       set operation "Aemilia"
       setup
       """
