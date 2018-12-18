@@ -16,8 +16,10 @@ class OCJobTest extends OCModelSuite {
       setup
       """
     )
-    ws.rpt("any? persons with [ any? job-link-neighbors and age < 18 ] ") shouldBe false
-    ws.cmd("repeat 2 * ticks-per-year [ go ]")
-    ws.rpt("any? persons with [ any? job-link-neighbors and age < 18 ] ") shouldBe false
+    for (fid <- 1 to 36) {
+      println(fid)
+      ws.cmd("go")
+      ws.rpt("any? persons with [ any? job-link-neighbors and age < 18 ] ") shouldBe false
+    }
   }
 }
