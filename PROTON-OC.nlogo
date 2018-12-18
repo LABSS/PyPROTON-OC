@@ -92,6 +92,7 @@ globals [
   male-punishment-length-list
   female-punishment-length-list
   jobs_by_company_size
+  education-levels  ; table from education level to data
   ; outputs
   number-deceased
 ]
@@ -122,12 +123,13 @@ to setup
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
+  setup-education-levels
   setup-oc-groups
   setup-population
-  setup-employers-jobs
-  assign-jobs
   setup-schools
   init-students
+  setup-employers-jobs
+  assign-jobs
   init-professional-links
   init-breed-colors
   ask turtles [
@@ -394,9 +396,9 @@ to assign-job ; job command
     ; First give a chance to current employees to upgrade if they are qualified.
     [ -> employees ]
     ; Then, look for candidates in the immediate network of current employees.
-    [ -> turtle-set [ person-neighbors ] of employees ]
+    [ -> (turtle-set [ person-neighbors ] of employees) with [ not any? my-school-attendance-links and age >= 18 ] ]
     ; Then look for anyone qualified in the general population.
-    [ -> persons ]
+    [ -> persons with [ not any? my-school-attendance-links and age >= 18] ]
   )
 
   let new-employee nobody
@@ -410,6 +412,7 @@ to assign-job ; job command
     ask my-job-links [ die ]
     set my-job myself
     create-job-link-with myself
+    assert [ -> not any? my-school-attendance-links ]
   ]
 
 end
@@ -455,19 +458,28 @@ to output [ str ]
   if output? [ output-show str ]
 end
 
-; this could be cached
-to-report education-levels
+to setup-education-levels
   let list-schools read-csv "schools"
-  let output-schools []
+  set education-levels []
   let index 0
   foreach list-schools [ row ->
-    let x ceiling ( ((item 3 row) / (item 4 row)) *  (count persons) )
+    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-non-oc-persons) ) ; warning: doesn't take OC pop into account
     let new-row replace-item 3 row x
     set new-row remove-item 4 new-row
-    set output-schools lput (list index new-row) output-schools
+    set education-levels lput (list index new-row) education-levels
     set index index + 1
   ]
-  report table:from-list output-schools
+  set education-levels table:from-list education-levels
+end
+
+to-report min-age-edu-level [ the-level ] report item 0 table:get education-levels the-level end
+to-report max-age-edu-level [ the-level ] report item 1 table:get education-levels the-level end
+to-report possible-school-level ; person command
+  let the-level -1
+  foreach table:keys education-levels [ i ->
+    if age <= max-age-edu-level i and age >= min-age-edu-level i [ set the-level i ]
+  ]
+  report the-level
 end
 
 to setup-schools
@@ -492,7 +504,7 @@ to init-students
     let prob      item 2 row
     if level = (num-education-levels - 1) [
       ask persons with [ (age > end-age) ] [
-        if random-float 1 < prob [ set education-level (num-education-levels - 1)] ;; set some graduate
+        if random-float 1 < prob [ set education-level (num-education-levels - 1)] ; set some graduate
       ]
     ]
     ask persons with [ age >= start-age and age <= end-age ] [
@@ -508,8 +520,10 @@ end
 to maybe-enroll-to-school [ level ] ; person command
   let prob item 2 table:get education-levels level
   if random-float 1 < prob [
-    let potential-schools turtle-set [ [ end2 ] of my-school-attendance-links ] of family-link-neighbors
-    ifelse any? potential-schools with [ education-level = level ] [
+    let potential-schools (turtle-set [
+      [ end2 ] of my-school-attendance-links
+    ] of family-link-neighbors) with [ education-level = level ]
+    ifelse any? potential-schools [
       create-school-attendance-link-with one-of potential-schools
     ] [
       create-school-attendance-link-with one-of schools with [ education-level = level ]
@@ -533,12 +547,10 @@ to test-enroll [ level ]
   print  (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list 1 true i) ] levels))
 end
 
-; does not update education level of student. Ouch.
 to graduate
-  ; let levels table:from-list map [ row -> list first row row ] education-levels
   let levels education-levels
   let primary-age item 0 table:get levels 0
-  ask persons with [ education-level = -1 and age = primary-age] [
+  ask persons with [ education-level = -1 and age = primary-age ] [
     maybe-enroll-to-school 0
   ]
   ask schools [
@@ -546,10 +558,9 @@ to graduate
     let school-education-level education-level
     ask school-attendance-link-neighbors with [ age = (end-age + 1)] [
       ask link-with myself [ die ]
-      ifelse table:has-key? education-levels (school-education-level + 1) [
+      set education-level school-education-level
+      if table:has-key? education-levels (school-education-level + 1) [
         maybe-enroll-to-school (school-education-level + 1)
-      ][
-        set education-level school-education-level
       ]
     ]
   ]
@@ -682,7 +693,7 @@ to get-caught [ co-offenders ]
       set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
     ]
     ask my-job-links [ die ]
-    ask my-school-attendance-links [die ]
+    ask my-school-attendance-links [ die ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
     ; we keep the friendship links and the OC links for the moment
@@ -977,19 +988,6 @@ to-report group-by-first-of-three [ csv-data ]
   report table-map table [ rows -> map [ i -> (list last but-last i last i) ] rows ]
 end
 
-to  school-attendance-report
-  let output-list []
-  ask school-attendance-links [
-    set output-list lput ([ education-level ] of end2) output-list
-    ask end1 [ set output-list lput age output-list ]
-    ask end1 [ set output-list lput education-level output-list ]
-  ]
-  ask persons [
-    set output-list lput (list age education-level) output-list
-  ]
-  show  output-list
-end
-
 to-report group-couples-by-2-keys [ csv-data ]
   let table table:group-items csv-data [ line -> (list first line first but-first line)]; group the rows by lists with initial 2 items
   report table-map table [ rows -> map [ i -> (list last but-last i last i) ] rows ]
@@ -1032,7 +1030,6 @@ end
 to-report all-persons report (turtle-set persons prisoners) end
 
 to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
