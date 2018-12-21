@@ -1010,6 +1010,19 @@ to-report ses-stat-table [ three-variable-indexed-by-first-two-table ]
   ] table:keys three-variable-indexed-by-first-two-table
 end
 
+to-report the-families
+  let components no-turtles
+  nw:with-context persons family-links [
+    set components nw:weak-component-clusters
+  ]
+  report components
+end
+
+to-report families-size-and-OC
+  let families the-families
+  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] families
+end
+
 to-report compare-edu-wealth-table
   report reduce sentence
   map [    key ->
@@ -1030,6 +1043,7 @@ end
 to-report all-persons report (turtle-set persons prisoners) end
 
 to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
