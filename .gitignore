@@ -2,7 +2,11 @@
 .Rhistory
 *.xlsx#
 *.csv#
+*.doc#
+*.docx#
 .DS_Store
 *.icloud
+*.world
+*.graphml
 *.graphml
 *.world
