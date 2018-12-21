@@ -75,8 +75,10 @@ globals [
   network-saving-list          ; the networks that should be saved
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
+  num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
   epsilon_c                    ; table holding the correction factor for c calculation.
+  operation
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
@@ -123,6 +125,7 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
+  set operation "Aemilia" ; to tune out
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -135,12 +138,9 @@ to setup
   assign-jobs
   init-professional-links
   init-breed-colors
-  ask turtles [
-    set-turtle-color
-    setxy random-xcor random-ycor
-  ]
   reset-oc-embeddedness
-  ;repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
+  ask turtles [ set-turtle-color-pos ]
+  ask links [ set-link-color ]
   let networks-output-parameters csv:from-file "./networks/parameters.csv"
   set network-saving-list []
   foreach networks-output-parameters [ p ->
@@ -208,8 +208,10 @@ to go
   make-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
-    if sentence-countdown = 0 [ set breed persons ]
+    if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
+  ask links [ hide-link ]
+  if view-crim? [ show-criminal-network ]
   make-people-die
   tick
 end
@@ -297,9 +299,16 @@ to init-breed-colors
   ] breeds (range length breeds))
 end
 
-to set-turtle-color ; turtle command
+to set-turtle-color-pos ; turtle command
   set color table:get-or-default breed-colors (word breed) grey
   set label-color hsb (item 0 extract-hsb color) 50 20
+  setxy random-xcor random-ycor
+  hide-turtle
+end
+
+to set-link-color ; turtle command
+  set color table:get-or-default breed-colors (word breed) grey
+  hide-link
 end
 
 to setup-population
@@ -594,6 +603,7 @@ to make-baby
         set number-of-children 0
         create-family-links-with turtle-set [ family-link-neighbors ] of myself
         create-family-link-with myself
+        set-turtle-color-pos
       ]
     ]
   ]
@@ -694,6 +704,7 @@ end
 to get-caught [ co-offenders ]
   ask co-offenders [
     set breed prisoners
+    set shape "face sad"
     ifelse male? [
       set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [[p] -> last p ] ] [
       set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
@@ -1092,6 +1103,14 @@ to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 1 1)
 end
 
+to show-criminal-network
+  let criminals persons with [ oc-member? ]
+  let c-links links with [ all? both-ends [  member? self criminals ] and (breed = family-links or breed = criminal-links) ]
+  ask criminals [ show-turtle ]
+  ask c-links [ show-link ]
+  layout-spring criminals c-links 1 0.1 0.1
+end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1144,7 +1163,7 @@ SLIDER
 48
 num-non-oc-persons
 num-non-oc-persons
-0
+100
 10000
 100.0
 50
@@ -1180,41 +1199,11 @@ NIL
 NIL
 0
 
-SLIDER
-15
-330
-260
-363
-base-opportunity-rate
-base-opportunity-rate
-0
-10
-0.1
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-15
-365
-260
-398
-mean-accomplices-needed
-mean-accomplices-needed
-0
-10
-6.0
-0.1
-1
-NIL
-HORIZONTAL
-
 INPUTBOX
 15
-90
+55
 260
-150
+115
 data-folder
 inputs/palermo/data/
 1
@@ -1260,21 +1249,6 @@ NIL
 NIL
 1
 
-SLIDER
-15
-50
-260
-83
-num-education-levels
-num-education-levels
-1
-10
-4.0
-1
-1
-NIL
-HORIZONTAL
-
 INPUTBOX
 265
 90
@@ -1285,21 +1259,6 @@ ticks-per-year
 1
 0
 Number
-
-SLIDER
-15
-295
-260
-328
-prob-of-going-to-university
-prob-of-going-to-university
-0
-1
-0.1
-0.01
-1
-NIL
-HORIZONTAL
 
 BUTTON
 15
@@ -1361,14 +1320,14 @@ OUTPUT
 
 SLIDER
 15
-400
+295
 260
-433
+328
 max-accomplice-radius
 max-accomplice-radius
 0
 5
-2.0
+3.0
 1
 1
 NIL
@@ -1376,9 +1335,9 @@ HORIZONTAL
 
 SLIDER
 15
-435
+330
 260
-468
+363
 oc-embeddedness-radius
 oc-embeddedness-radius
 0
@@ -1389,21 +1348,11 @@ oc-embeddedness-radius
 NIL
 HORIZONTAL
 
-CHOOSER
-15
-155
-260
-200
-operation
-operation
-"Aemilia" "Crimine" "Infinito" "Minotauro"
-0
-
 SLIDER
 15
-470
+365
 260
-503
+398
 retirement-age
 retirement-age
 0
@@ -1416,9 +1365,9 @@ HORIZONTAL
 
 SLIDER
 15
-505
+400
 260
-538
+433
 probability-of-getting-caught
 probability-of-getting-caught
 0
@@ -1490,6 +1439,17 @@ sum [ num-crimes-committed ] of persons
 17
 1
 11
+
+SWITCH
+265
+15
+387
+48
+view-crim?
+view-crim?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
