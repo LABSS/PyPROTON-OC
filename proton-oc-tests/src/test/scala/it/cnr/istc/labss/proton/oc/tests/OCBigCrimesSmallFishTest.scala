@@ -14,7 +14,6 @@ class OCBigCrimesSmallFishTest extends OCModelSuite {
       set num-non-oc-persons 100
       set operation "Aemilia"
       set retirement-age 65
-      set base-opportunity-rate 0.5
       set mean-accomplices-needed 6.0
       setup
       repeat 50 * ticks-per-year [ go ]
