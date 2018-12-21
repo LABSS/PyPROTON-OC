@@ -1,18 +1,18 @@
 Gender    agerange  p
-(Female | <13) 0.001
-(Female | 14-17) 0.026
-(Female | 18-24) 0.056
-(Female | 25-34) 0.067
-(Female | 35-44) 0.066
-(Female | 45-54) 0.050
-(Female | 55-64) 0.031
-(Female | 65+) 0.011
-(Male | <13) 0.002
-(Male | 14-17) 0.168
-(Male | 18-24) 0.327
-(Male | 25-34) 0.320
-(Male | 35-44) 0.285
-(Male | 45-54) 0.204
-(Male | 55-64) 0.027
-(Male | 65+) 0.054
+Female  <13 0.001
+Female  14-17 0.026
+Female  18-24 0.056
+Female  25-34 0.067
+Female  35-44 0.066
+Female  45-54 0.050
+Female  55-64 0.031
+Female  65+ 0.011
+Male  <13 0.002
+Male  14-17 0.168
+Male  18-24 0.327
+Male  25-34 0.320
+Male  35-44 0.285
+Male  45-54 0.204
+Male  55-64 0.027
+Male  65+ 0.054
 
