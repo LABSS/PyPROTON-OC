@@ -42,5 +42,6 @@ df <-
       TRUE ~ age_from
     )
   ) %>%
+  select(`male?`,age_from,age_to,p) %>%
   write_csv(file.path("data", "crime_rate_by_gender_and_age_range.csv"))  
 
