@@ -76,6 +76,7 @@ globals [
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
+  epsilon_c                    ; table holding the correction factor for c calculation.
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
@@ -93,6 +94,8 @@ globals [
   female-punishment-length-list
   jobs_by_company_size
   education-levels  ; table from education level to data
+  c-by-age-and-sex
+  c-range-by-age-and-sex
   ; outputs
   number-deceased
 ]
@@ -174,6 +177,8 @@ to load-stats-tables
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
+  set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
+  set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
 end
 
 to go
@@ -705,31 +710,59 @@ to-report candidate-weight ; person reporter
   report -1 * (social-proximity-with myself + r)
 end
 
+to calculate-criminal-tendency
+  set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
+  foreach table:keys c-range-by-age-and-sex [ genderage ->
+    let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
+    print count subpop
+    print genderage
+    if any? subpop [
+      let c-subpop mean [ criminal-tendency ] of subpop
+    let rangep table:get c-range-by-age-and-sex genderage
+    foreach (range item 1 genderage item 0 item 0 rangep) [ the-age ->
+      table:put epsilon_c list item 0 genderage the-age -1 * (c-subpop - item 1 item 0 table:get c-range-by-age-and-sex genderage)
+    ]
+    ]
+  ]
+end
+
 to-report criminal-tendency ; person reporter
-  report 0.4 ; TODO
+  let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
+  foreach c-modifier [ x ->
+      set c c * (runresult item 1 x)
+    ]
+  report c
 end
 
 to-report social-proximity-with [ target ] ; person reporter
-  let totale 0
+  let total 0
   let normalization 0
   ask target [
     foreach variable-weights-n [ x ->
-      set totale (totale + (item 1 x) * (runresult item 2 x))
+      set total (total + (item 1 x) * (runresult item 2 x))
       set normalization (normalization + (item 1 x))
     ]
   ]
-  report totale / normalization
+  report total / normalization
 end
 
 to-report variable-weights-n
   report (list
     ;     var-name     weight    normalized-reporter
     (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of myself) > 18) [ 0 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ])
-    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ]])
-    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ]])
-    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ]])
-    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ]])
-    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ]])
+    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ] ])
+    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ] ])
+    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ] ])
+    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ] ])
+    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ] ])
+)
+end
+
+to-report c-modifier
+  report (list
+    ;     var-name     normalized-reporter
+    (list "age"        [ -> ifelse-value (age > 25) [ 1.0 ] [ 0.9 ] ])
+    (list "gender"     [ -> ifelse-value male?      [ 1.3 ] [ 1.0 ] ])
 )
 end
 
@@ -1043,7 +1076,6 @@ end
 to-report all-persons report (turtle-set persons prisoners) end
 
 to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
