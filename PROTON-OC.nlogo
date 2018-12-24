@@ -333,7 +333,7 @@ to init-person [ age-gender-dist ] ; person command
   set partner nobody                                    ; persons will get paired when generating households
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
   set education-level -1                                ; we set starting education level in init-students
-  set propensity random 2                               ; TODO find out how this should be initialised
+  set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
@@ -595,7 +595,7 @@ to make-baby
         set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
         set male? one-of [ true false ]
-        set propensity random 2
+        set propensity lognormal nat-propensity-m nat-propensity-sigma
         set oc-member? false
         set cached-oc-embeddedness 0
         set partner nobody
@@ -774,13 +774,16 @@ end
 to-report factors-c
   report (list
     ;     var-name     normalized-reporter
-    (list "employment" [ -> ifelse-value (my-job = nobody)                    [ 1.3 ] [ 1.0 ] ])
+    (list "employment" [ -> ifelse-value (my-job = nobody)                   [ 1.30 ] [ 1.0 ] ])
     (list "education"    [ -> ifelse-value (education-level >= 2)            [ 0.94 ] [ 1.0 ] ])
-    (list "propensity"   [ -> ifelse-value (propensity = 1)                  [ 1.97 ] [ 1.0 ] ])
+    (list "propensity"   [ -> ifelse-value (propensity >
+    exp (nat-propensity-m - nat-propensity-sigma ^ 2 / 2) + nat-propensity-threshold *
+      sqrt (exp nat-propensity-sigma ^ 2 - 1) * exp (nat-propensity-m + nat-propensity-sigma ^ 2 / 2))
+                                                                             [ 1.97 ] [ 1.0 ] ])
     (list "crim-hist"    [ -> ifelse-value (num-crimes-committed >= 0)       [ 1.62 ] [ 1.0 ] ])
     (list "crim-fam"     [ -> ifelse-value
       (any? family-link-neighbors and count family-link-neighbors with [ num-crimes-committed > 0 ] /
-        count family-link-neighbors  > 0.5)                                   [ 1.45 ] [ 1.0 ] ])
+        count family-link-neighbors  > 0.5)                                  [ 1.45 ] [ 1.0 ] ])
     (list "crim-neigh"     [ -> ifelse-value
       ( (any? friendship-link-neighbors or any? professional-link-neighbors) and
         (count friendship-link-neighbors with [ num-crimes-committed > 0 ] +
@@ -1100,7 +1103,7 @@ to-report all-persons report (turtle-set persons prisoners) end
 to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
 
 to-report lognormal [ mu sigma ]
-  report exp (mu + sigma * random-normal 1 1)
+  report exp (mu + sigma * random-normal 0 1)
 end
 
 to show-criminal-network
@@ -1110,7 +1113,6 @@ to show-criminal-network
   ask c-links [ show-link ]
   layout-spring criminals c-links 1 0.1 0.1
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1450,6 +1452,51 @@ view-crim?
 1
 1
 -1000
+
+SLIDER
+15
+435
+260
+468
+nat-propensity-m
+nat-propensity-m
+0
+10
+1.0
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+470
+260
+503
+nat-propensity-sigma
+nat-propensity-sigma
+0
+10
+0.25
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+505
+262
+538
+nat-propensity-threshold
+nat-propensity-threshold
+0
+2
+1.0
+0.1
+1
+sd
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
