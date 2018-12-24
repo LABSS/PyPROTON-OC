@@ -199,6 +199,7 @@ to go
   ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
+    calculate-criminal-tendency
   ]
   commit-crimes
   retire-persons
@@ -323,7 +324,7 @@ to init-person [ age-gender-dist ] ; person command
   set partner nobody                                    ; persons will get paired when generating households
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
   set education-level -1                                ; we set starting education level in init-students
-  set propensity 0                                      ; TODO find out how this should be initialised
+  set propensity random 2                               ; TODO find out how this should be initialised
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
@@ -585,7 +586,7 @@ to make-baby
         set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
         set male? one-of [ true false ]
-        set propensity 0
+        set propensity random 2
         set oc-member? false
         set cached-oc-embeddedness 0
         set partner nobody
@@ -714,21 +715,19 @@ to calculate-criminal-tendency
   set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
   foreach table:keys c-range-by-age-and-sex [ genderage ->
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
-    print count subpop
-    print genderage
     if any? subpop [
       let c-subpop mean [ criminal-tendency ] of subpop
-    let rangep table:get c-range-by-age-and-sex genderage
-    foreach (range item 1 genderage item 0 item 0 rangep) [ the-age ->
-      table:put epsilon_c list item 0 genderage the-age -1 * (c-subpop - item 1 item 0 table:get c-range-by-age-and-sex genderage)
-    ]
+      let rangep table:get c-range-by-age-and-sex genderage
+      foreach (range item 1 genderage item 0 item 0 rangep) [ the-age ->
+        table:put epsilon_c list item 0 genderage the-age -1 * (c-subpop - item 1 item 0 table:get c-range-by-age-and-sex genderage)
+      ]
     ]
   ]
 end
 
 to-report criminal-tendency ; person reporter
   let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
-  foreach c-modifier [ x ->
+  foreach  factors-c [ x ->
       set c c * (runresult item 1 x)
     ]
   report c
@@ -738,7 +737,7 @@ to-report social-proximity-with [ target ] ; person reporter
   let total 0
   let normalization 0
   ask target [
-    foreach variable-weights-n [ x ->
+    foreach factors-social-proximity [ x ->
       set total (total + (item 1 x) * (runresult item 2 x))
       set normalization (normalization + (item 1 x))
     ]
@@ -746,7 +745,7 @@ to-report social-proximity-with [ target ] ; person reporter
   report total / normalization
 end
 
-to-report variable-weights-n
+to-report factors-social-proximity
   report (list
     ;     var-name     weight    normalized-reporter
     (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of myself) > 18) [ 0 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ])
@@ -758,12 +757,25 @@ to-report variable-weights-n
 )
 end
 
-to-report c-modifier
+; we do no track time of crime so for now the requirement of
+; "at least one crime in the last 2 years." is not feasible.
+; for now we use just "at least one crime"
+to-report factors-c
   report (list
     ;     var-name     normalized-reporter
-    (list "age"        [ -> ifelse-value (age > 25) [ 1.0 ] [ 0.9 ] ])
-    (list "gender"     [ -> ifelse-value male?      [ 1.3 ] [ 1.0 ] ])
-)
+    (list "employment" [ -> ifelse-value (my-job = nobody)                    [ 1.3 ] [ 1.0 ] ])
+    (list "education"    [ -> ifelse-value (education-level >= 2)            [ 0.94 ] [ 1.0 ] ])
+    (list "propensity"   [ -> ifelse-value (propensity = 1)                  [ 1.97 ] [ 1.0 ] ])
+    (list "crim-hist"    [ -> ifelse-value (num-crimes-committed >= 0)       [ 1.62 ] [ 1.0 ] ])
+    (list "crim-fam"     [ -> ifelse-value
+      (any? family-link-neighbors and count family-link-neighbors with [ num-crimes-committed > 0 ] /
+        count family-link-neighbors  > 0.5)                                   [ 1.45 ] [ 1.0 ] ])
+    (list "crim-neigh"     [ -> ifelse-value
+      ( (any? friendship-link-neighbors or any? professional-link-neighbors) and
+        (count friendship-link-neighbors with [ num-crimes-committed > 0 ] +
+        count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
+        (count friendship-link-neighbors + count professional-link-neighbors) > 0.5) [ 1.81 ] [ 1.0 ] ])
+  )
 end
 
 to-report oc-embeddedness ; person reporter
@@ -1052,8 +1064,7 @@ to-report the-families
 end
 
 to-report families-size-and-OC
-  let families the-families
-  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] families
+  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] the-families
 end
 
 to-report compare-edu-wealth-table
@@ -1076,6 +1087,11 @@ end
 to-report all-persons report (turtle-set persons prisoners) end
 
 to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
+
+to-report lognormal [ mu sigma ]
+  report exp (mu + sigma * random-normal 1 1)
+end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 400

@@ -5,12 +5,14 @@
 library(tidyverse)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-
+rm(df)
 df <-
   file.path("raw", "CrimeYearlyByGenderAgePalermo.csv") %>%
-  read_delim(" ") %>%
-  select(c(1,4,3)) %>%
-  rename("male?" = 1, "age" = 3, "p" = 2) %>%
+  read_csv(col_names=TRUE) %>%
+  rename("male?" = 1, "age" = 2, "p" = 3)
+
+df2<-df %>%
+  #select(c(1,4,3)) %>%
   mutate(
     age = case_when(
         age == "<13" ~ "0-13",
@@ -22,17 +24,14 @@ df <-
       str_extract_all("\\d+") %>%
       map(as.numeric) %>%
       map((lift(seq))), 
-    `male?` = if_else(`male?`=="Female",FALSE, TRUE)
+    `male?` = if_else(`male?`=="Female",FALSE, TRUE),
+    p = as.numeric(p)
   ) %>%
   unnest(age) %>%
   select(`male?`,age,p) %>%
   write_csv(file.path("data", "crime_rate_by_gender_and_age.csv"))  
 
-df <-
-  file.path("raw", "CrimeYearlyByGenderAgePalermo.csv") %>%
-  read_delim(" ") %>%
-  select(c(1,4,3)) %>%
-  rename("male?" = 1, "age" = 3, "p" = 2) %>%
+df3 <- df %>%
   mutate(age = str_replace_all(age,"\\<|\\+", "")) %>%
   separate(age, into = c("age_from", "age_to"), sep = "-") %>%
   mutate(
@@ -47,7 +46,8 @@ df <-
       age_from == 13 ~ 0,
       TRUE ~ age_from
     ),
-    `male?` = if_else(`male?`=="Female",FALSE, TRUE)
+    `male?` = if_else(`male?`=="Female",FALSE, TRUE),
+    p = as.numeric(p)
   ) %>%
   select(`male?`,age_from,age_to,p) %>%
   write_csv(file.path("data", "crime_rate_by_gender_and_age_range.csv"))  
