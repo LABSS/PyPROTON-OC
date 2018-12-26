@@ -774,21 +774,22 @@ end
 to-report factors-c
   report (list
     ;     var-name     normalized-reporter
-    (list "employment" [ -> ifelse-value (my-job = nobody)                   [ 1.30 ] [ 1.0 ] ])
+    (list "employment"   [ -> ifelse-value (my-job = nobody)                 [ 1.30 ] [ 1.0 ] ])
     (list "education"    [ -> ifelse-value (education-level >= 2)            [ 0.94 ] [ 1.0 ] ])
     (list "propensity"   [ -> ifelse-value (propensity >
-    exp (nat-propensity-m - nat-propensity-sigma ^ 2 / 2) + nat-propensity-threshold *
+      exp (nat-propensity-m - nat-propensity-sigma ^ 2 / 2) + nat-propensity-threshold *
       sqrt (exp nat-propensity-sigma ^ 2 - 1) * exp (nat-propensity-m + nat-propensity-sigma ^ 2 / 2))
-                                                                             [ 1.97 ] [ 1.0 ] ])
+      [ 1.97 ] [ 1.0 ] ])
     (list "crim-hist"    [ -> ifelse-value (num-crimes-committed >= 0)       [ 1.62 ] [ 1.0 ] ])
     (list "crim-fam"     [ -> ifelse-value
       (any? family-link-neighbors and count family-link-neighbors with [ num-crimes-committed > 0 ] /
         count family-link-neighbors  > 0.5)                                  [ 1.45 ] [ 1.0 ] ])
-    (list "crim-neigh"     [ -> ifelse-value
+    (list "crim-neigh"   [ -> ifelse-value
       ( (any? friendship-link-neighbors or any? professional-link-neighbors) and
         (count friendship-link-neighbors with [ num-crimes-committed > 0 ] +
-        count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
-        (count friendship-link-neighbors + count professional-link-neighbors) > 0.5) [ 1.81 ] [ 1.0 ] ])
+          count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
+        (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
+                                                                             [ 1.81 ] [ 1.0 ] ])
   )
 end
 
