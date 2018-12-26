@@ -597,7 +597,7 @@ to make-baby
         set male? one-of [ true false ]
         set propensity lognormal nat-propensity-m nat-propensity-sigma
         set oc-member? false
-        set cached-oc-embeddedness 0
+        set cached-oc-embeddedness nobody
         set partner nobody
         set retired? false
         set number-of-children 0
