@@ -75,7 +75,10 @@ globals [
   network-saving-list          ; the networks that should be saved
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
+  num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
+  epsilon_c                    ; table holding the correction factor for c calculation.
+  operation
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
@@ -93,6 +96,8 @@ globals [
   female-punishment-length-list
   jobs_by_company_size
   education-levels  ; table from education level to data
+  c-by-age-and-sex
+  c-range-by-age-and-sex
   ; outputs
   number-deceased
 ]
@@ -120,6 +125,7 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
+  set operation "Aemilia" ; to tune out
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -132,12 +138,9 @@ to setup
   assign-jobs
   init-professional-links
   init-breed-colors
-  ask turtles [
-    set-turtle-color
-    setxy random-xcor random-ycor
-  ]
   reset-oc-embeddedness
-  ;repeat 30 [ layout-spring turtles links 1 0.1 0.1 ]
+  ask turtles [ set-turtle-color-pos ]
+  ask links [ set-link-color ]
   let networks-output-parameters csv:from-file "./networks/parameters.csv"
   set network-saving-list []
   foreach networks-output-parameters [ p ->
@@ -174,6 +177,8 @@ to load-stats-tables
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
+  set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
+  set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
 end
 
 to go
@@ -194,6 +199,7 @@ to go
   ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
+    calculate-criminal-tendency
   ]
   commit-crimes
   retire-persons
@@ -202,8 +208,10 @@ to go
   make-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
-    if sentence-countdown = 0 [ set breed persons ]
+    if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
+  ask links [ hide-link ]
+  if view-crim? [ show-criminal-network ]
   make-people-die
   tick
 end
@@ -291,9 +299,16 @@ to init-breed-colors
   ] breeds (range length breeds))
 end
 
-to set-turtle-color ; turtle command
+to set-turtle-color-pos ; turtle command
   set color table:get-or-default breed-colors (word breed) grey
   set label-color hsb (item 0 extract-hsb color) 50 20
+  setxy random-xcor random-ycor
+  hide-turtle
+end
+
+to set-link-color ; turtle command
+  set color table:get-or-default breed-colors (word breed) grey
+  hide-link
 end
 
 to setup-population
@@ -318,7 +333,7 @@ to init-person [ age-gender-dist ] ; person command
   set partner nobody                                    ; persons will get paired when generating households
   set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
   set education-level -1                                ; we set starting education level in init-students
-  set propensity 0                                      ; TODO find out how this should be initialised
+  set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime
   set oc-member? false                                  ; the seed OC network are initialised separately
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
@@ -580,14 +595,15 @@ to make-baby
         set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
         set male? one-of [ true false ]
-        set propensity 0
+        set propensity lognormal nat-propensity-m nat-propensity-sigma
         set oc-member? false
-        set cached-oc-embeddedness 0
+        set cached-oc-embeddedness nobody
         set partner nobody
         set retired? false
         set number-of-children 0
         create-family-links-with turtle-set [ family-link-neighbors ] of myself
         create-family-link-with myself
+        set-turtle-color-pos
       ]
     ]
   ]
@@ -688,6 +704,7 @@ end
 to get-caught [ co-offenders ]
   ask co-offenders [
     set breed prisoners
+    set shape "face sad"
     ifelse male? [
       set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [[p] -> last p ] ] [
       set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
@@ -705,32 +722,75 @@ to-report candidate-weight ; person reporter
   report -1 * (social-proximity-with myself + r)
 end
 
+to calculate-criminal-tendency
+  set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
+  foreach table:keys c-range-by-age-and-sex [ genderage ->
+    let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
+    if any? subpop [
+      let c-subpop mean [ criminal-tendency ] of subpop
+      let rangep table:get c-range-by-age-and-sex genderage
+      foreach (range item 1 genderage item 0 item 0 rangep) [ the-age ->
+        table:put epsilon_c list item 0 genderage the-age -1 * (c-subpop - item 1 item 0 table:get c-range-by-age-and-sex genderage)
+      ]
+    ]
+  ]
+end
+
 to-report criminal-tendency ; person reporter
-  report 0.4 ; TODO
+  let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
+  foreach  factors-c [ x ->
+      set c c * (runresult item 1 x)
+    ]
+  report c
 end
 
 to-report social-proximity-with [ target ] ; person reporter
-  let totale 0
+  let total 0
   let normalization 0
   ask target [
-    foreach variable-weights-n [ x ->
-      set totale (totale + (item 1 x) * (runresult item 2 x))
+    foreach factors-social-proximity [ x ->
+      set total (total + (item 1 x) * (runresult item 2 x))
       set normalization (normalization + (item 1 x))
     ]
   ]
-  report totale / normalization
+  report total / normalization
 end
 
-to-report variable-weights-n
+to-report factors-social-proximity
   report (list
     ;     var-name     weight    normalized-reporter
     (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of myself) > 18) [ 0 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ])
-    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ]])
-    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ]])
-    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ]])
-    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ]])
-    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ]])
+    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ] ])
+    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ] ])
+    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ] ])
+    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ] ])
+    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ] ])
 )
+end
+
+; we do no track time of crime so for now the requirement of
+; "at least one crime in the last 2 years." is not feasible.
+; for now we use just "at least one crime"
+to-report factors-c
+  report (list
+    ;     var-name     normalized-reporter
+    (list "employment"   [ -> ifelse-value (my-job = nobody)                 [ 1.30 ] [ 1.0 ] ])
+    (list "education"    [ -> ifelse-value (education-level >= 2)            [ 0.94 ] [ 1.0 ] ])
+    (list "propensity"   [ -> ifelse-value (propensity >
+      exp (nat-propensity-m - nat-propensity-sigma ^ 2 / 2) + nat-propensity-threshold *
+      sqrt (exp nat-propensity-sigma ^ 2 - 1) * exp (nat-propensity-m + nat-propensity-sigma ^ 2 / 2))
+      [ 1.97 ] [ 1.0 ] ])
+    (list "crim-hist"    [ -> ifelse-value (num-crimes-committed >= 0)       [ 1.62 ] [ 1.0 ] ])
+    (list "crim-fam"     [ -> ifelse-value
+      (any? family-link-neighbors and count family-link-neighbors with [ num-crimes-committed > 0 ] /
+        count family-link-neighbors  > 0.5)                                  [ 1.45 ] [ 1.0 ] ])
+    (list "crim-neigh"   [ -> ifelse-value
+      ( (any? friendship-link-neighbors or any? professional-link-neighbors) and
+        (count friendship-link-neighbors with [ num-crimes-committed > 0 ] +
+          count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
+        (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
+                                                                             [ 1.81 ] [ 1.0 ] ])
+  )
 end
 
 to-report oc-embeddedness ; person reporter
@@ -1019,8 +1079,7 @@ to-report the-families
 end
 
 to-report families-size-and-OC
-  let families the-families
-  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] families
+  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] the-families
 end
 
 to-report compare-edu-wealth-table
@@ -1044,6 +1103,17 @@ to-report all-persons report (turtle-set persons prisoners) end
 
 to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
 
+to-report lognormal [ mu sigma ]
+  report exp (mu + sigma * random-normal 0 1)
+end
+
+to show-criminal-network
+  let criminals persons with [ oc-member? ]
+  let c-links links with [ all? both-ends [  member? self criminals ] and (breed = family-links or breed = criminal-links) ]
+  ask criminals [ show-turtle ]
+  ask c-links [ show-link ]
+  layout-spring criminals c-links 1 0.1 0.1
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1096,7 +1166,7 @@ SLIDER
 48
 num-non-oc-persons
 num-non-oc-persons
-0
+100
 10000
 100.0
 50
@@ -1132,41 +1202,11 @@ NIL
 NIL
 0
 
-SLIDER
-15
-330
-260
-363
-base-opportunity-rate
-base-opportunity-rate
-0
-10
-0.1
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-15
-365
-260
-398
-mean-accomplices-needed
-mean-accomplices-needed
-0
-10
-6.0
-0.1
-1
-NIL
-HORIZONTAL
-
 INPUTBOX
 15
-90
+55
 260
-150
+115
 data-folder
 inputs/palermo/data/
 1
@@ -1212,21 +1252,6 @@ NIL
 NIL
 1
 
-SLIDER
-15
-50
-260
-83
-num-education-levels
-num-education-levels
-1
-10
-4.0
-1
-1
-NIL
-HORIZONTAL
-
 INPUTBOX
 265
 90
@@ -1237,21 +1262,6 @@ ticks-per-year
 1
 0
 Number
-
-SLIDER
-15
-295
-260
-328
-prob-of-going-to-university
-prob-of-going-to-university
-0
-1
-0.1
-0.01
-1
-NIL
-HORIZONTAL
 
 BUTTON
 15
@@ -1313,14 +1323,14 @@ OUTPUT
 
 SLIDER
 15
-400
+295
 260
-433
+328
 max-accomplice-radius
 max-accomplice-radius
 0
 5
-2.0
+3.0
 1
 1
 NIL
@@ -1328,9 +1338,9 @@ HORIZONTAL
 
 SLIDER
 15
-435
+330
 260
-468
+363
 oc-embeddedness-radius
 oc-embeddedness-radius
 0
@@ -1341,21 +1351,11 @@ oc-embeddedness-radius
 NIL
 HORIZONTAL
 
-CHOOSER
-15
-155
-260
-200
-operation
-operation
-"Aemilia" "Crimine" "Infinito" "Minotauro"
-0
-
 SLIDER
 15
-470
+365
 260
-503
+398
 retirement-age
 retirement-age
 0
@@ -1368,9 +1368,9 @@ HORIZONTAL
 
 SLIDER
 15
-505
+400
 260
-538
+433
 probability-of-getting-caught
 probability-of-getting-caught
 0
@@ -1442,6 +1442,62 @@ sum [ num-crimes-committed ] of persons
 17
 1
 11
+
+SWITCH
+265
+15
+387
+48
+view-crim?
+view-crim?
+1
+1
+-1000
+
+SLIDER
+15
+435
+260
+468
+nat-propensity-m
+nat-propensity-m
+0
+10
+1.0
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+470
+260
+503
+nat-propensity-sigma
+nat-propensity-sigma
+0
+10
+0.25
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+505
+262
+538
+nat-propensity-threshold
+nat-propensity-threshold
+0
+2
+1.0
+0.1
+1
+sd
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

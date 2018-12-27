@@ -11,15 +11,15 @@ class OCBigCrimesSmallFishTest extends OCModelSuite {
   // that's why we use age > retirement-age and not >=.
   test("A large crime organized by a small fish is reported.") { ws =>
     ws.cmd("""
-      set num-non-oc-persons 100
-      set operation "Aemilia"
-      set retirement-age 65
-      set base-opportunity-rate 0.5
-      set mean-accomplices-needed 6.0
+      set num-non-oc-persons 500
+      set num-co-offenders-dist [ [ 5 0.5 ] [ 6 0.5 ] [ 10 0.5 ] ]
       setup
-      repeat 50 * ticks-per-year [ go ]
       """
     )
-    ws.rpt("big-crime-from-small-fish > 0") shouldBe true
+     for (fid <- 1 to 30) {
+      println(fid)
+      ws.cmd("go")
+    }
+   ws.rpt("big-crime-from-small-fish > 0") shouldBe true
   }
 }

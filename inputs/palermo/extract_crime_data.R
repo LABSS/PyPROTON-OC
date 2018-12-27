@@ -3,61 +3,52 @@
 # creates 4 files for the marginal distributions (2 keys, class and gender)
 
 library(tidyverse)
-library(readxl)
+
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-
+rm(df)
 df <-
-  file.path("raw", "SES mechanism  (without firing & hirings).xlsx") %>%
-  read_excel(sheet = "4. Distribution_matrices") 
+  file.path("raw", "CrimeYearlyByGenderAgePalermo.csv") %>%
+  read_csv(col_names=TRUE) %>%
+  rename("male?" = 1, "age" = 2, "p" = 3)
 
-xmeans <- c("wealth", "edu_level", "work_status", "wealth")
-ymeans <- c("edu_level", "work_status", "wealth", "criminal_propensity")
-tablename <- c("edu_by_wealth_lvl", 
-  "work_status_by_edu_lvl",
-  "wealth_quintile_by_work_status", 
-  "criminal_propensity_by_wealth_quintile")
-marginalname <- lapply( tablename,
-  function(x){paste(
-    strsplit(x, "_")[[1]][
-      1:(length(strsplit(x, "_")[[1]])-3)
-    ], collapse = "_"
-  )}
- )
+df2<-df %>%
+  #select(c(1,4,3)) %>%
+  mutate(
+    age = case_when(
+        age == "<13" ~ "0-13",
+        age == "65+" ~ "65-200",
+        TRUE ~ age 
+      ),
+    age =
+      age %>%
+      str_extract_all("\\d+") %>%
+      map(as.numeric) %>%
+      map((lift(seq))), 
+    `male?` = if_else(`male?`=="Female",FALSE, TRUE),
+    p = as.numeric(p)
+  ) %>%
+  unnest(age) %>%
+  select(`male?`,age,p) %>%
+  write_csv(file.path("data", "crime_rate_by_gender_and_age.csv"))  
 
-names(df)
-for(i in  1:length(tablename))
-  {
-  df1 <- 
-    filter(df, `Distribution (compact name)` == tablename[i],
-           `% / abs_val` == "%", 
-           sex != "all", y != "SUM") %>%
-    transmute(
-      `x=1`,`x=2`,`x=3`,`x=4`,`x=5`,y, 
-    gender = ifelse(sex == "M", TRUE, FALSE) ) %>%
-    gather(key = class, value =  rate, -gender, -y) %>%
-    mutate(class= 
-              class %>%
-              str_extract("\\d+") %>%
-              as.numeric(),
-              y = as.numeric(y)
-            ) %>%
-    select(!! sym(xmeans[i]) := class, gender,
-           !! sym(ymeans[i]) := y, 
-           rate)  %>%  # pure magic. Required 20 attempts to guess.
-    write_csv(file.path("data", paste(tablename[i],".csv",sep="")))
-  }
-
-for(i in  1:length(marginalname))
-  {
-  df1 <- 
-    filter(df, `Distribution (compact name)` == tablename[i],
-           `% / abs_val` == "%", 
-           sex != "all", y != "SUM") %>%
-    transmute(
-      `SUM`,y, 
-    gender = ifelse(sex == "M", TRUE, FALSE) ) %>%
-    select(gender, !! sym(ymeans[i]) := y,
-           rate = SUM) %>% # !! sym pure magic. Required 20 attempts to guess.
-    write_csv(file.path("data", paste(marginalname[i],".csv",sep="")))
-  }
+df3 <- df %>%
+  mutate(age = str_replace_all(age,"\\<|\\+", "")) %>%
+  separate(age, into = c("age_from", "age_to"), sep = "-") %>%
+  mutate(
+    age_from = as.numeric(age_from),
+    age_to = as.numeric(age_to),
+    age_to = case_when(
+      age_from == 13 ~ 13,
+      age_from == 65 ~ 200,
+      TRUE ~ age_to
+    ),
+    age_from = case_when(
+      age_from == 13 ~ 0,
+      TRUE ~ age_from
+    ),
+    `male?` = if_else(`male?`=="Female",FALSE, TRUE),
+    p = as.numeric(p)
+  ) %>%
+  select(`male?`,age_from,age_to,p) %>%
+  write_csv(file.path("data", "crime_rate_by_gender_and_age_range.csv"))  
 
