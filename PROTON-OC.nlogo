@@ -130,7 +130,6 @@ to setup
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-education-levels
-  setup-oc-groups
   setup-population
   setup-schools
   init-students
@@ -138,6 +137,8 @@ to setup
   assign-jobs
   init-professional-links
   init-breed-colors
+  calculate-criminal-tendency
+  setup-oc-groups
   reset-oc-embeddedness
   ask turtles [ set-turtle-color-pos ]
   ask links [ set-link-color ]
@@ -243,26 +244,16 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
-  let data filter [ row ->
-    first row = operation
-  ] but-first csv:from-file "inputs/general/data/oc_groups.csv"
-  let groups table:make
-  let families table:make
-  foreach data [ row ->
-    create-persons 1 [
-      put-self-in-table groups   (item 1 row)
-      put-self-in-table families (item 2 row)
-      ; call init-person with a "fake" one-row age-gender distribution
-      init-person (list (list (item 3 row) (item 4 row) 1))
-      set oc-member? true
-    ]
+  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0) [
+    -1 *  min [ criminal-tendency ] of persons ] [
+    0 ]
+  ask rnd:weighted-n-of num-oc-families persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
+  let suitable-candidates-in-families [ -> persons with [ age > 18 and any? family-link-neighbors with [ oc-member? ] ] ]
+  while [ count runresult suitable-candidates-in-families < num-oc-persons - num-oc-families ] [
+    ask rnd:weighted-one-of persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
   ]
-  foreach agentsets-from-table groups [ agents ->
-    ask agents [ create-criminal-links-with other agents [ set num-co-offenses 1 ]]
-  ]
-  foreach agentsets-from-table families [ agents ->
-    ask agents [ create-family-links-with other agents ]
-  ]
+  ask rnd:weighted-n-of (num-oc-persons - num-oc-families) runresult suitable-candidates-in-families [
+    criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
 end
 
 to-report agentsets-from-table [ the-table ]
@@ -320,7 +311,7 @@ to setup-population
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [
+  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
     init-person age-gender-dist
   ]
   generate-households
@@ -478,7 +469,7 @@ to setup-education-levels
   set education-levels []
   let index 0
   foreach list-schools [ row ->
-    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-non-oc-persons) ) ; warning: doesn't take OC pop into account
+    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-persons) ) ; warning: doesn't take OC pop into account
     let new-row replace-item 3 row x
     set new-row remove-item 4 new-row
     set education-levels lput (list index new-row) education-levels
@@ -932,13 +923,13 @@ to-report population-pool-to-agentset [ population ]
   report turtle-set table:values table-map population [ entry -> table:values entry ]
 end
 
-to-report household-sizes [ num-persons ]
+to-report household-sizes [ the-size ]
   let hh-size-dist read-csv "household_size_dist"
   let sizes []
   let current-sum 0
-  while [ current-sum < num-persons ] [
+  while [ current-sum < the-size ] [
     let hh-size pick-from-pair-list hh-size-dist
-    if current-sum + hh-size <= num-persons [
+    if current-sum + hh-size <= the-size [
       set sizes lput hh-size sizes
       set current-sum current-sum + hh-size
     ]
@@ -1164,8 +1155,8 @@ SLIDER
 15
 260
 48
-num-non-oc-persons
-num-non-oc-persons
+num-persons
+num-persons
 100
 10000
 100.0
@@ -1497,6 +1488,36 @@ nat-propensity-threshold
 0.1
 1
 sd
+HORIZONTAL
+
+SLIDER
+15
+120
+260
+153
+num-oc-persons
+num-oc-persons
+2
+200
+25.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+155
+260
+188
+num-oc-families
+num-oc-families
+1
+50
+10.0
+1
+1
+NIL
 HORIZONTAL
 
 @#$#@#$#@

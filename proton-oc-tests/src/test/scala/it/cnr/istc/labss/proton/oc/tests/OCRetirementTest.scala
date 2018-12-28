@@ -11,7 +11,7 @@ class OCRetirementTest extends OCModelSuite {
   // that's why we use age > retirement-age and not >=.
   test("Old people do not have a job, Young people are not retired, Retired people are old") { ws =>
     ws.cmd("""
-      set num-non-oc-persons 100
+      set num-persons 100
       set operation "Aemilia"
       set retirement-age 65
       setup
@@ -23,7 +23,7 @@ class OCRetirementTest extends OCModelSuite {
   }
   test("Same, but after a while") { ws =>
     ws.cmd("""
-      set num-non-oc-persons 100
+      set num-persons 100
       set operation "Aemilia"
       set retirement-age 50
       setup
