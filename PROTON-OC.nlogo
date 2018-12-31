@@ -822,7 +822,7 @@ to update-meta-links [ agents ]
           if [ criminal-link-with other-end ] of myself     != nobody [
             set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
           ]
-          set dist 1 / w ; the distance cost of the link is the inverse of its weight
+          set dist 1 / (w + 1); the distance cost of the link is the inverse of its weight, plus 1
         ]
       ]
     ]
