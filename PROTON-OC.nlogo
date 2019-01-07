@@ -184,19 +184,10 @@ end
 
 to go
   if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
-    foreach network-saving-list [ listname ->
-      let network-agentset links with [ breed = runresult listname ]
-      if any? network-agentset [
-         let network-file-name (word "networks/" ticks  "_"  listname  ".graphml")
-         nw:with-context turtles runresult listname [
-          nw:save-graphml network-file-name
-        ]
-      ]
-    ]
+    dump-networks
   ]
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
-    let model-file-name (word "outputs/" ticks "_model" ".world")
-    export-world model-file-name
+    dump-model
   ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
@@ -215,6 +206,23 @@ to go
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
+end
+
+to dump-networks []
+  foreach network-saving-list [ listname ->
+    let network-agentset links with [ breed = runresult listname ]
+    if any? network-agentset [
+      let network-file-name (word "networks/" ticks  "_"  listname  ".graphml")
+      nw:with-context turtles runresult listname [
+        nw:save-graphml network-file-name
+      ]
+    ]
+  ]
+end
+
+to dump-model
+  let model-file-name (word "outputs/" ticks "_model" ".world")
+  export-world model-file-name
 end
 
 to make-friends
