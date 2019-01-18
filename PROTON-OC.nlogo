@@ -477,7 +477,7 @@ to setup-education-levels
   set education-levels []
   let index 0
   foreach list-schools [ row ->
-    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-persons) ) ; warning: doesn't take OC pop into account
+    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-persons) )
     let new-row replace-item 3 row x
     set new-row remove-item 4 new-row
     set education-levels lput (list index new-row) education-levels
@@ -830,7 +830,7 @@ to update-meta-links [ agents ]
           if [ criminal-link-with other-end ] of myself     != nobody [
             set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
           ]
-          set dist 1 / (w + 1); the distance cost of the link is the inverse of its weight, plus 1
+          set dist 1 / w; the distance cost of the link is the inverse of its weight
         ]
       ]
     ]
