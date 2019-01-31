@@ -165,7 +165,7 @@ end
 to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   set fertility-table group-by-first-two-items read-csv "fertility"
-  set mortality-table group-by-first-two-items read-csv "mortality"
+  set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
@@ -192,6 +192,7 @@ to go
   if ((ticks mod ticks-per-year) = 0) [
     graduate
     calculate-criminal-tendency
+    immigrate
   ]
   commit-crimes
   retire-persons
@@ -584,6 +585,32 @@ to-report link-color
   report [50 50 50 50]
 end
 
+to immigrate
+  ; calculate the difference between deaths and birth
+  let to-replace num-persons - count all-persons with [ birth-tick >= 0 ]
+  let missing-jobs count jobs with [ not any? my-job-links ]
+  ask n-of min (list to-replace missing-jobs) jobs with [ not any? my-job-links ] [
+    hatch-persons 1 [
+        set num-crimes-committed 0
+        set education-level -1
+        set my-job myself
+        ;set wealth-level [ wealth-level ] of myself
+        set birth-tick ticks - 40 * 12
+        set male? one-of [ true false ]
+        set propensity lognormal nat-propensity-m nat-propensity-sigma
+        set oc-member? false
+        set cached-oc-embeddedness nobody
+        set partner nobody
+        set retired? false
+        set number-of-children 999
+        ;create-family-links-with turtle-set [ family-link-neighbors ] of myself
+        ;create-family-link-with myself
+        set-turtle-color-pos
+      create-job-link-with myself
+    ]
+  ]
+end
+
 to make-baby
   ask persons with [ not male? and age >= 14 and age <= 49 ] [
     if random-float 1 < p-fertility [
@@ -612,6 +639,7 @@ to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality [
       set number-deceased number-deceased + 1
+      if birth-tick >= 0 [show "hey, I'm dying so young!"]
       die
     ]
   ]
@@ -620,7 +648,7 @@ end
 to-report p-mortality
   let the-key list age male?
   ifelse (table:has-key? mortality-table the-key) [
-    report (item 0 table:get mortality-table the-key) / ticks-per-year
+    report (item 0 table:get mortality-table the-key)/ ticks-per-year
   ] [
     report 1 ; it there's no key, we remove the agent
   ]
@@ -1167,7 +1195,7 @@ num-persons
 num-persons
 100
 10000
-100.0
+950.0
 50
 1
 NIL
@@ -1329,7 +1357,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-3.0
+0.0
 1
 1
 NIL
@@ -1522,7 +1550,7 @@ num-oc-families
 num-oc-families
 1
 50
-10.0
+50.0
 1
 1
 NIL
