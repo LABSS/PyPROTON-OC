@@ -164,7 +164,7 @@ end
 
 to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "fertility"
+  set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
   set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
@@ -614,6 +614,8 @@ end
 to make-baby
   ask persons with [ not male? and age >= 14 and age <= 49 ] [
     if random-float 1 < p-fertility [
+      ; we stop counting after 2 because probability stays the same
+      if number-of-children < 2 [ set number-of-children number-of-children + 1 ]
       hatch-persons 1 [
         set num-crimes-committed 0
         set education-level -1
@@ -1195,7 +1197,7 @@ num-persons
 num-persons
 100
 10000
-950.0
+100.0
 50
 1
 NIL
@@ -1550,7 +1552,7 @@ num-oc-families
 num-oc-families
 1
 50
-50.0
+10.0
 1
 1
 NIL
