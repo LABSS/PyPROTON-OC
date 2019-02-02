@@ -21,7 +21,7 @@ persons-own [
   num-crimes-committed
   education-level
   max-education-level
-  wealth-level
+  wealth-level           ; -1 for migrants
   job-level
   my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
@@ -192,7 +192,7 @@ to go
   if ((ticks mod ticks-per-year) = 0) [
     graduate
     calculate-criminal-tendency
-    immigrate
+    let-migrants-in
   ]
   commit-crimes
   retire-persons
@@ -313,7 +313,6 @@ end
 
 to setup-population
   output "Setting up population"
-
   let age-gender-dist read-csv "initial_age_gender_dist"
   ; Using Watts-Strogatz is a bit arbitrary, but it should at least give us
   ; some clustering to start with. The network structure should evolve as the
@@ -327,17 +326,12 @@ to setup-population
 end
 
 to init-person [ age-gender-dist ] ; person command
+  init-person-empty
   let row rnd:weighted-one-of-list age-gender-dist last ; select a row from our age-gender distribution
   set birth-tick 0 - (item 0 row) * ticks-per-year      ; ...and set age...
   set male? (item 1 row)                                ; ...and gender according to values in that row.
-  set partner nobody                                    ; persons will get paired when generating households
-  set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-  set education-level -1                                ; we set starting education level in init-students
-  set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime
-  set oc-member? false                                  ; the seed OC network are initialised separately
-  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
-  set number-of-children 0                              ; TODO to be initialized by a dataset
+  ; education level is chosen, job and wealth follow in a conditioned sequence
   set max-education-level pick-from-pair-list table:get group-by-first-of-three read-csv "edu" male?
   set education-level max-education-level
   limit-education-by-age
@@ -347,6 +341,56 @@ to init-person [ age-gender-dist ] ; person command
   ] [
     set job-level 1
     set wealth-level 1 ; this will be updated by family membership
+  ]
+end
+
+to init-person-empty ; person command
+  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
+  set education-level -1                                ; we set starting education level in init-students
+  set max-education-level 0 ; useful only for children, will be updated in the case
+  set wealth-level 1 ; this will be updated by family membership
+  set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime  propensity
+  set oc-member? false                                  ; the seed OC network are initialised separately
+  set retired? false
+  set partner nobody
+  set number-of-children 0
+  set my-job nobody
+end
+
+to let-migrants-in
+  ; calculate the difference between deaths and birth
+  let to-replace num-persons - count all-persons
+  let missing-jobs count jobs with [ not any? my-job-links ]
+  ask n-of min (list to-replace missing-jobs) jobs with [ not any? my-job-links ] [
+    ; we do not care about education level and wealth of migrants, as those variables
+    ; exist only in order to generate the job position.
+    hatch-persons 1 [
+      init-person-empty
+      set my-job myself
+      set wealth-level -1 ; to recognize migrants.
+      set birth-tick ticks - (random 20 + 18) * ticks-per-year
+      set male? one-of [ true false ]
+      set-turtle-color-pos
+      create-job-link-with myself
+    ]
+  ]
+end
+
+to make-baby
+  ask persons with [ not male? and age >= 14 and age <= 50 ] [
+    if random-float 1 < p-fertility [
+      ; we stop counting after 2 because probability stays the same
+      if number-of-children < 2 [ set number-of-children number-of-children + 1 ]
+      hatch-persons 1 [
+        init-person-empty
+        set wealth-level [ wealth-level ] of myself
+        set birth-tick ticks
+        set male? one-of [ true false ]
+        create-family-links-with turtle-set [ family-link-neighbors ] of myself
+        create-family-link-with myself
+        set-turtle-color-pos
+      ]
+    ]
   ]
 end
 
@@ -585,63 +629,10 @@ to-report link-color
   report [50 50 50 50]
 end
 
-to immigrate
-  ; calculate the difference between deaths and birth
-  let to-replace num-persons - count all-persons with [ birth-tick >= 0 ]
-  let missing-jobs count jobs with [ not any? my-job-links ]
-  ask n-of min (list to-replace missing-jobs) jobs with [ not any? my-job-links ] [
-    hatch-persons 1 [
-        set num-crimes-committed 0
-        set education-level -1
-        set my-job myself
-        ;set wealth-level [ wealth-level ] of myself
-        set birth-tick ticks - 40 * 12
-        set male? one-of [ true false ]
-        set propensity lognormal nat-propensity-m nat-propensity-sigma
-        set oc-member? false
-        set cached-oc-embeddedness nobody
-        set partner nobody
-        set retired? false
-        set number-of-children 999
-        ;create-family-links-with turtle-set [ family-link-neighbors ] of myself
-        ;create-family-link-with myself
-        set-turtle-color-pos
-      create-job-link-with myself
-    ]
-  ]
-end
-
-to make-baby
-  ask persons with [ not male? and age >= 14 and age <= 49 ] [
-    if random-float 1 < p-fertility [
-      ; we stop counting after 2 because probability stays the same
-      if number-of-children < 2 [ set number-of-children number-of-children + 1 ]
-      hatch-persons 1 [
-        set num-crimes-committed 0
-        set education-level -1
-        set my-job nobody
-        set wealth-level [ wealth-level ] of myself
-        set birth-tick ticks
-        set male? one-of [ true false ]
-        set propensity lognormal nat-propensity-m nat-propensity-sigma
-        set oc-member? false
-        set cached-oc-embeddedness nobody
-        set partner nobody
-        set retired? false
-        set number-of-children 0
-        create-family-links-with turtle-set [ family-link-neighbors ] of myself
-        create-family-link-with myself
-        set-turtle-color-pos
-      ]
-    ]
-  ]
-end
-
 to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality [
       set number-deceased number-deceased + 1
-      if birth-tick >= 0 [show "hey, I'm dying so young!"]
       die
     ]
   ]
@@ -1359,7 +1350,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-0.0
+3.0
 1
 1
 NIL
