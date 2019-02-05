@@ -1,3 +1,4 @@
+# good queries for OC
 ; finding workers
 
 # life and fate
@@ -9,7 +10,6 @@ count all-persons with [ birth-tick >= 0 ]
 
 # employment rate
 count all-persons with [ any? job-links ] / count all-persons
-jobs with [ not any? my-job-links ]
 
 
 # are schools teaching the right people?
