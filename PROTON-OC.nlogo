@@ -78,7 +78,6 @@ globals [
   num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
   epsilon_c                    ; table holding the correction factor for c calculation.
-  operation
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
@@ -125,7 +124,6 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
-  set operation "Aemilia" ; to tune out
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
