@@ -170,7 +170,6 @@ to load-stats-tables
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
   set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
-  set edu group-by-first-two-items read-csv "edu"
   set work_status group-by-first-two-items read-csv "work_status"
   set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
   set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
@@ -180,6 +179,8 @@ to load-stats-tables
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
+  ; further sources:
+  ; schools.csv table goes into education-levels
 end
 
 to go
@@ -253,16 +254,22 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
-  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0) [
-    -1 *  min [ criminal-tendency ] of persons ] [
-    0 ]
+  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0)
+    [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
   ask rnd:weighted-n-of num-oc-families persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
-  let suitable-candidates-in-families [ -> persons with [ age > 18 and any? family-link-neighbors with [ oc-member? ] ] ]
-  while [ count runresult suitable-candidates-in-families < num-oc-persons - num-oc-families ] [
-    ask rnd:weighted-one-of persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
+  let suitable-candidates-in-families persons with [
+    age > 18 and not oc-member? and any? family-link-neighbors with [ oc-member? ]
   ]
-  ask rnd:weighted-n-of (num-oc-persons - num-oc-families) runresult suitable-candidates-in-families [
+  ; fill up the families as much as possible
+  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (num-oc-persons - num-oc-families))
+  suitable-candidates-in-families [
+    criminal-tendency + min-criminal-tendency ] [ set oc-member? true
+  ]
+  ; take some more if needed (note that this modifies the count of families)
+  ask rnd:weighted-n-of (num-oc-persons - count persons with [ oc-member? ])
+  persons with [ not oc-member? ] [
     criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
+  ask persons with [ oc-member? ] [ create-criminal-links-with other persons with [ oc-member? ] ]
 end
 
 to-report agentsets-from-table [ the-table ]
@@ -550,24 +557,12 @@ to setup-schools
 end
 
 to init-students
-  let starting-row table:get education-levels 0
-  let starting-point item 0 starting-row
-  let ending-point item 1 starting-row
-  ask persons with [  age > ending-point ] [
-    set education-level 1
-  ]
   foreach table:keys education-levels [ level ->
     let row table:get education-levels level
     let start-age item 0 row
     let end-age   item 1 row
-    let prob      item 2 row
-    if level = (num-education-levels - 1) [
-      ask persons with [ (age > end-age) ] [
-        if random-float 1 < prob [ set education-level (num-education-levels - 1)] ; set some graduate
-      ]
-    ]
-    ask persons with [ age >= start-age and age <= end-age ] [
-      maybe-enroll-to-school level
+    ask persons with [ age >= start-age and age <= end-age and education-level = level - 1 ] [
+      enroll-to-school level
     ]
   ]
   ask schools [
@@ -576,9 +571,7 @@ to init-students
   ]
 end
 
-to maybe-enroll-to-school [ level ] ; person command
-  let prob item 2 table:get education-levels level
-  if random-float 1 < prob [
+to enroll-to-school [ level ] ; person command
     let potential-schools (turtle-set [
       [ end2 ] of my-school-attendance-links
     ] of family-link-neighbors) with [ education-level = level ]
@@ -587,30 +580,14 @@ to maybe-enroll-to-school [ level ] ; person command
     ] [
       create-school-attendance-link-with one-of schools with [ education-level = level ]
     ]
-    set education-level (level - 1)
-  ]
-end
-
-to maybe-enroll-to-school-ses [ level ] ; person command
-  let levels (range 1 (level + 1))
-  ; summing up all probabilities lower than current one
-  let prob (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list wealth-level male? i) ] levels))
-  print prob
-  if random-float 1 < prob [
-    create-school-attendance-link-with one-of schools with [ education-level = level ]
-  ]
-end
-
-to test-enroll [ level ]
-  let levels (range 1 (level + 1))
-  print  (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list 1 true i) ] levels))
+    ;set education-level (level - 1)
 end
 
 to graduate
   let levels education-levels
   let primary-age item 0 table:get levels 0
   ask persons with [ education-level = -1 and age = primary-age ] [
-    maybe-enroll-to-school 0
+    enroll-to-school 0
   ]
   ask schools [
     let end-age item 1 table:get levels education-level
@@ -618,8 +595,10 @@ to graduate
     ask school-attendance-link-neighbors with [ age = (end-age + 1)] [
       ask link-with myself [ die ]
       set education-level school-education-level
-      if table:has-key? education-levels (school-education-level + 1) [
-        maybe-enroll-to-school (school-education-level + 1)
+      if table:has-key? education-levels (school-education-level + 1) and
+      (school-education-level + 1 < max-education-level)
+      [
+        enroll-to-school (school-education-level + 1)
       ]
     ]
   ]
