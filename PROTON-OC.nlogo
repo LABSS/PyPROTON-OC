@@ -359,7 +359,7 @@ end
 
 to let-migrants-in
   ; calculate the difference between deaths and birth
-  let to-replace max list 0 num-persons - count all-persons
+  let to-replace max list 0 (num-persons - count all-persons)
   let missing-jobs count jobs with [ not any? my-job-links ]
   ask n-of min (list to-replace missing-jobs) jobs with [ not any? my-job-links ] [
     ; we do not care about education level and wealth of migrants, as those variables
