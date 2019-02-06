@@ -12,7 +12,6 @@ class OCSchoolTest extends OCModelSuite {
   test("People should be in schools of the correct education level. Nobody should be both at work and in school. ") { ws =>
     ws.cmd("""
       set num-persons 1000
-      set operation "Aemilia"
       setup
       """
     )

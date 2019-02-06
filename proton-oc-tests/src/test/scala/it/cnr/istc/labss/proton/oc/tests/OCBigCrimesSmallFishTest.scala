@@ -12,7 +12,7 @@ class OCBigCrimesSmallFishTest extends OCModelSuite {
   test("A large crime organized by a small fish is reported.") { ws =>
     ws.cmd("""
       set num-persons 500
-      set max-accomplice-radius 5
+      set max-accomplice-radius 6
       set num-co-offenders-dist [ [ 5 0.5 ] [ 6 0.5 ] [ 10 0.5 ] ]
       setup
       """

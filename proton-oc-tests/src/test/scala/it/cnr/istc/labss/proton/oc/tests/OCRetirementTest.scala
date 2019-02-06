@@ -12,7 +12,6 @@ class OCRetirementTest extends OCModelSuite {
   test("Old people do not have a job, Young people are not retired, Retired people are old") { ws =>
     ws.cmd("""
       set num-persons 100
-      set operation "Aemilia"
       set retirement-age 65
       setup
       """
@@ -24,7 +23,6 @@ class OCRetirementTest extends OCModelSuite {
   test("Same, but after a while") { ws =>
     ws.cmd("""
       set num-persons 100
-      set operation "Aemilia"
       set retirement-age 50
       setup
       repeat 2 * ticks-per-year [ go ]

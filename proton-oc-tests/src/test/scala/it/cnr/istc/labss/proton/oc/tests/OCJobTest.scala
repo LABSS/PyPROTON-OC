@@ -12,7 +12,6 @@ class OCJobTest extends OCModelSuite {
   test("People should not work underage ") { ws =>
     ws.cmd("""
       set num-persons 500
-      set operation "Aemilia"
       setup
       """
     )

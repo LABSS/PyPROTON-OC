@@ -14,8 +14,10 @@ count all-persons with [ any? job-links ] / count all-persons
 
 # are schools teaching the right people?
 schools with [ any? school-attendance-link-neighbors with [ education-level != [ education-level ] of myself + 1 ] ]
-; all people should be in appropriate schools
+# all people should be in appropriate schools
 all? persons [ not any? school-attendance-link-neighbors or education-level = ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ] 
+# people out of place
+persons with [  any? school-attendance-link-neighbors and education-level != ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ]
 ; work and school at the same time
 persons with [ any? school-attendance-link-neighbors and any? job-link ]
 ; people in the wrong level of school. Does not work because at the change of year, some people has different distances. The one in the test works.

@@ -267,7 +267,11 @@ to setup-oc-groups
   ask rnd:weighted-n-of (num-oc-persons - count persons with [ oc-member? ])
   persons with [ not oc-member? ] [
     criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
-  ask persons with [ oc-member? ] [ create-criminal-links-with other persons with [ oc-member? ] ]
+  ask persons with [ oc-member? ] [
+    create-criminal-links-with other persons with [ oc-member? ] [
+      set num-co-offenses 1
+    ]
+  ]
 end
 
 to-report agentsets-from-table [ the-table ]
