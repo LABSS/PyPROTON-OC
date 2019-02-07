@@ -24,7 +24,24 @@ df <-
   gather(`male?`, p, -age) %>%
   write_csv(file.path("data", "initial_mortality_rates.csv"))
 
-# show a population pyramid, just to check if the data makes sense
-df %>%
-  mutate(p = ifelse(`male?`, p, -p)) %>%
-  ggplot(aes(x = age, y = p, fill = `male?`)) + geom_col() + coord_flip()
+
+df <-
+  file.path("raw", "Fertility and Mortality rates.xlsx") %>%
+  read_excel(sheet = "2") %>%
+  transmute(
+    age = `Ordine di nascita`,
+    "0" = `first child`,
+    "1" = `second child`,
+    "2" = `third child`
+  ) %>%
+  mutate(
+    age = case_when(
+        age == "50 +" ~ "50",
+        TRUE ~ age 
+      )
+  ) %>%
+  na.omit() %>%
+  filter(age!='total' & age != '10-13 anni') %>%
+  gather(num_children, fertility, -age) %>%
+  write_csv(file.path("data", "initial_fertility_rates.csv"))
+

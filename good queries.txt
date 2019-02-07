@@ -1,0 +1,36 @@
+# good queries for OC
+; finding workers
+
+# life and fate
+
+# flux: all new people born
+count all-persons with [ birth-tick >= 0 ]
+
+# employment
+
+# employment rate
+count all-persons with [ any? job-links ] / count all-persons
+
+
+# are schools teaching the right people?
+schools with [ any? school-attendance-link-neighbors with [ education-level != [ education-level ] of myself + 1 ] ]
+# all people should be in appropriate schools
+all? persons [ not any? school-attendance-link-neighbors or education-level = ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ] 
+# people out of place
+persons with [  any? school-attendance-link-neighbors and education-level != ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ]
+; work and school at the same time
+persons with [ any? school-attendance-link-neighbors and any? job-link ]
+; people in the wrong level of school. Does not work because at the change of year, some people has different distances. The one in the test works.
+all-persons with [ any? school-attendance-link-neighbors and [ education-level ] of one-of school-attendance-link-neighbors != possible-school-level ]
+; works
+    ws.rpt("""all? persons [ 
+      not any? school-attendance-link-neighbors or 
+      education-level = (possible-school-level - 1) or 
+      (birth-tick mod ticks-per-year = 0 and
+        (age > 25 or 
+        education-level = (possible-school-level - 2))) 
+    ]""") shouldBe true
+; report
+    ws.show("[ (list who age education-level possible-school-level [ education-level ] of one-of school-attendance-link-neighbors [ who ] of one-of school-attendance-link-neighbors [ breed = schools ] of one-of school-attendance-link-neighbors) ] of persons with [ any? school-attendance-link-neighbors and education-level != (possible-school-level - 1) ]")
+
+

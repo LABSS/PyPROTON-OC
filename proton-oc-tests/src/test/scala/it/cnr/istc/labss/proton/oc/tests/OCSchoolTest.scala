@@ -11,8 +11,7 @@ class OCSchoolTest extends OCModelSuite {
   // that's why we use age > retirement-age and not >=.
   test("People should be in schools of the correct education level. Nobody should be both at work and in school. ") { ws =>
     ws.cmd("""
-      set num-non-oc-persons 1000
-      set operation "Aemilia"
+      set num-persons 1000
       setup
       """
     )

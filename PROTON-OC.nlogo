@@ -21,7 +21,7 @@ persons-own [
   num-crimes-committed
   education-level
   max-education-level
-  wealth-level
+  wealth-level           ; -1 for migrants
   job-level
   my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
@@ -78,7 +78,6 @@ globals [
   num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
   epsilon_c                    ; table holding the correction factor for c calculation.
-  operation
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
@@ -125,12 +124,10 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
-  set operation "Aemilia" ; to tune out
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-education-levels
-  setup-oc-groups
   setup-population
   setup-schools
   init-students
@@ -138,6 +135,8 @@ to setup
   assign-jobs
   init-professional-links
   init-breed-colors
+  calculate-criminal-tendency
+  setup-oc-groups
   reset-oc-embeddedness
   ask turtles [ set-turtle-color-pos ]
   ask links [ set-link-color ]
@@ -163,13 +162,12 @@ end
 
 to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "fertility"
-  set mortality-table group-by-first-two-items read-csv "mortality"
+  set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
+  set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
   set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
-  set edu group-by-first-two-items read-csv "edu"
   set work_status group-by-first-two-items read-csv "work_status"
   set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
   set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
@@ -179,27 +177,21 @@ to load-stats-tables
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
+  ; further sources:
+  ; schools.csv table goes into education-levels
 end
 
 to go
   if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
-    foreach network-saving-list [ listname ->
-      let network-agentset links with [ breed = runresult listname ]
-      if any? network-agentset [
-         let network-file-name (word "networks/" ticks  "_"  listname  ".graphml")
-         nw:with-context turtles runresult listname [
-          nw:save-graphml network-file-name
-        ]
-      ]
-    ]
+    dump-networks
   ]
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
-    let model-file-name (word "outputs/" ticks "_model" ".world")
-    export-world model-file-name
+    dump-model
   ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
     calculate-criminal-tendency
+    let-migrants-in
   ]
   commit-crimes
   retire-persons
@@ -214,6 +206,23 @@ to go
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
+end
+
+to dump-networks []
+  foreach network-saving-list [ listname ->
+    let network-agentset links with [ breed = runresult listname ]
+    if any? network-agentset [
+      let network-file-name (word "networks/" ticks  "_"  listname  ".graphml")
+      nw:with-context turtles runresult listname [
+        nw:save-graphml network-file-name
+      ]
+    ]
+  ]
+end
+
+to dump-model
+  let model-file-name (word "outputs/" ticks "_model" ".world")
+  export-world model-file-name
 end
 
 to make-friends
@@ -243,25 +252,25 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
-  let data filter [ row ->
-    first row = operation
-  ] but-first csv:from-file "inputs/general/data/oc_groups.csv"
-  let groups table:make
-  let families table:make
-  foreach data [ row ->
-    create-persons 1 [
-      put-self-in-table groups   (item 1 row)
-      put-self-in-table families (item 2 row)
-      ; call init-person with a "fake" one-row age-gender distribution
-      init-person (list (list (item 3 row) (item 4 row) 1))
-      set oc-member? true
+  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0)
+    [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
+  ask rnd:weighted-n-of num-oc-families persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
+  let suitable-candidates-in-families persons with [
+    age > 18 and not oc-member? and any? family-link-neighbors with [ oc-member? ]
+  ]
+  ; fill up the families as much as possible
+  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (num-oc-persons - num-oc-families))
+  suitable-candidates-in-families [
+    criminal-tendency + min-criminal-tendency ] [ set oc-member? true
+  ]
+  ; take some more if needed (note that this modifies the count of families)
+  ask rnd:weighted-n-of (num-oc-persons - count persons with [ oc-member? ])
+  persons with [ not oc-member? ] [
+    criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
+  ask persons with [ oc-member? ] [
+    create-criminal-links-with other persons with [ oc-member? ] [
+      set num-co-offenses 1
     ]
-  ]
-  foreach agentsets-from-table groups [ agents ->
-    ask agents [ create-criminal-links-with other agents [ set num-co-offenses 1 ]]
-  ]
-  foreach agentsets-from-table families [ agents ->
-    ask agents [ create-family-links-with other agents ]
   ]
 end
 
@@ -313,31 +322,25 @@ end
 
 to setup-population
   output "Setting up population"
-
   let age-gender-dist read-csv "initial_age_gender_dist"
   ; Using Watts-Strogatz is a bit arbitrary, but it should at least give us
   ; some clustering to start with. The network structure should evolve as the
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-non-oc-persons 2 0.1 [
+  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
     init-person age-gender-dist
   ]
   generate-households
 end
 
 to init-person [ age-gender-dist ] ; person command
+  init-person-empty
   let row rnd:weighted-one-of-list age-gender-dist last ; select a row from our age-gender distribution
   set birth-tick 0 - (item 0 row) * ticks-per-year      ; ...and set age...
   set male? (item 1 row)                                ; ...and gender according to values in that row.
-  set partner nobody                                    ; persons will get paired when generating households
-  set my-job nobody                                     ; jobs will be assigned in `assign-jobs`
-  set education-level -1                                ; we set starting education level in init-students
-  set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime
-  set oc-member? false                                  ; the seed OC network are initialised separately
-  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
-  set number-of-children 0                              ; TODO to be initialized by a dataset
+  ; education level is chosen, job and wealth follow in a conditioned sequence
   set max-education-level pick-from-pair-list table:get group-by-first-of-three read-csv "edu" male?
   set education-level max-education-level
   limit-education-by-age
@@ -347,6 +350,56 @@ to init-person [ age-gender-dist ] ; person command
   ] [
     set job-level 1
     set wealth-level 1 ; this will be updated by family membership
+  ]
+end
+
+to init-person-empty ; person command
+  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
+  set education-level -1                                ; we set starting education level in init-students
+  set max-education-level 0 ; useful only for children, will be updated in the case
+  set wealth-level 1 ; this will be updated by family membership
+  set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime  propensity
+  set oc-member? false                                  ; the seed OC network are initialised separately
+  set retired? false
+  set partner nobody
+  set number-of-children 0
+  set my-job nobody
+end
+
+to let-migrants-in
+  ; calculate the difference between deaths and birth
+  let to-replace max list 0 (num-persons - count all-persons)
+  let missing-jobs count jobs with [ not any? my-job-links ]
+  ask n-of min (list to-replace missing-jobs) jobs with [ not any? my-job-links ] [
+    ; we do not care about education level and wealth of migrants, as those variables
+    ; exist only in order to generate the job position.
+    hatch-persons 1 [
+      init-person-empty
+      set my-job myself
+      set wealth-level -1 ; to recognize migrants.
+      set birth-tick ticks - (random 20 + 18) * ticks-per-year
+      set male? one-of [ true false ]
+      set-turtle-color-pos
+      create-job-link-with myself
+    ]
+  ]
+end
+
+to make-baby
+  ask persons with [ not male? and age >= 14 and age <= 50 ] [
+    if random-float 1 < p-fertility [
+      ; we stop counting after 2 because probability stays the same
+      if number-of-children < 2 [ set number-of-children number-of-children + 1 ]
+      hatch-persons 1 [
+        init-person-empty
+        set wealth-level [ wealth-level ] of myself
+        set birth-tick ticks
+        set male? one-of [ true false ]
+        create-family-links-with turtle-set [ family-link-neighbors ] of myself
+        create-family-link-with myself
+        set-turtle-color-pos
+      ]
+    ]
   ]
 end
 
@@ -478,7 +531,7 @@ to setup-education-levels
   set education-levels []
   let index 0
   foreach list-schools [ row ->
-    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-non-oc-persons) ) ; warning: doesn't take OC pop into account
+    let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-persons) )
     let new-row replace-item 3 row x
     set new-row remove-item 4 new-row
     set education-levels lput (list index new-row) education-levels
@@ -506,24 +559,12 @@ to setup-schools
 end
 
 to init-students
-  let starting-row table:get education-levels 0
-  let starting-point item 0 starting-row
-  let ending-point item 1 starting-row
-  ask persons with [  age > ending-point ] [
-    set education-level 1
-  ]
   foreach table:keys education-levels [ level ->
     let row table:get education-levels level
     let start-age item 0 row
     let end-age   item 1 row
-    let prob      item 2 row
-    if level = (num-education-levels - 1) [
-      ask persons with [ (age > end-age) ] [
-        if random-float 1 < prob [ set education-level (num-education-levels - 1)] ; set some graduate
-      ]
-    ]
-    ask persons with [ age >= start-age and age <= end-age ] [
-      maybe-enroll-to-school level
+    ask persons with [ age >= start-age and age <= end-age and education-level = level - 1 ] [
+      enroll-to-school level
     ]
   ]
   ask schools [
@@ -532,9 +573,7 @@ to init-students
   ]
 end
 
-to maybe-enroll-to-school [ level ] ; person command
-  let prob item 2 table:get education-levels level
-  if random-float 1 < prob [
+to enroll-to-school [ level ] ; person command
     let potential-schools (turtle-set [
       [ end2 ] of my-school-attendance-links
     ] of family-link-neighbors) with [ education-level = level ]
@@ -543,30 +582,14 @@ to maybe-enroll-to-school [ level ] ; person command
     ] [
       create-school-attendance-link-with one-of schools with [ education-level = level ]
     ]
-    set education-level (level - 1)
-  ]
-end
-
-to maybe-enroll-to-school-ses [ level ] ; person command
-  let levels (range 1 (level + 1))
-  ; summing up all probabilities lower than current one
-  let prob (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list wealth-level male? i) ] levels))
-  print prob
-  if random-float 1 < prob [
-    create-school-attendance-link-with one-of schools with [ education-level = level ]
-  ]
-end
-
-to test-enroll [ level ]
-  let levels (range 1 (level + 1))
-  print  (reduce + reduce sentence (map [ i -> table:get edu_by_wealth_lvl (list 1 true i) ] levels))
+    ;set education-level (level - 1)
 end
 
 to graduate
   let levels education-levels
   let primary-age item 0 table:get levels 0
   ask persons with [ education-level = -1 and age = primary-age ] [
-    maybe-enroll-to-school 0
+    enroll-to-school 0
   ]
   ask schools [
     let end-age item 1 table:get levels education-level
@@ -574,8 +597,10 @@ to graduate
     ask school-attendance-link-neighbors with [ age = (end-age + 1)] [
       ask link-with myself [ die ]
       set education-level school-education-level
-      if table:has-key? education-levels (school-education-level + 1) [
-        maybe-enroll-to-school (school-education-level + 1)
+      if table:has-key? education-levels (school-education-level + 1) and
+      (school-education-level + 1 < max-education-level)
+      [
+        enroll-to-school (school-education-level + 1)
       ]
     ]
   ]
@@ -583,30 +608,6 @@ end
 
 to-report link-color
   report [50 50 50 50]
-end
-
-to make-baby
-  ask persons with [ not male? and age >= 14 and age <= 49 ] [
-    if random-float 1 < p-fertility [
-      hatch-persons 1 [
-        set num-crimes-committed 0
-        set education-level -1
-        set my-job nobody
-        set wealth-level [ wealth-level ] of myself
-        set birth-tick ticks
-        set male? one-of [ true false ]
-        set propensity lognormal nat-propensity-m nat-propensity-sigma
-        set oc-member? false
-        set cached-oc-embeddedness nobody
-        set partner nobody
-        set retired? false
-        set number-of-children 0
-        create-family-links-with turtle-set [ family-link-neighbors ] of myself
-        create-family-link-with myself
-        set-turtle-color-pos
-      ]
-    ]
-  ]
 end
 
 to make-people-die
@@ -621,7 +622,7 @@ end
 to-report p-mortality
   let the-key list age male?
   ifelse (table:has-key? mortality-table the-key) [
-    report (item 0 table:get mortality-table the-key) / ticks-per-year
+    report (item 0 table:get mortality-table the-key)/ ticks-per-year
   ] [
     report 1 ; it there's no key, we remove the agent
   ]
@@ -831,7 +832,7 @@ to update-meta-links [ agents ]
           if [ criminal-link-with other-end ] of myself     != nobody [
             set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
           ]
-          set dist 1 / w ; the distance cost of the link is the inverse of its weight
+          set dist 1 / w; the distance cost of the link is the inverse of its weight
         ]
       ]
     ]
@@ -932,13 +933,13 @@ to-report population-pool-to-agentset [ population ]
   report turtle-set table:values table-map population [ entry -> table:values entry ]
 end
 
-to-report household-sizes [ num-persons ]
+to-report household-sizes [ the-size ]
   let hh-size-dist read-csv "household_size_dist"
   let sizes []
   let current-sum 0
-  while [ current-sum < num-persons ] [
+  while [ current-sum < the-size ] [
     let hh-size pick-from-pair-list hh-size-dist
-    if current-sum + hh-size <= num-persons [
+    if current-sum + hh-size <= the-size [
       set sizes lput hh-size sizes
       set current-sum current-sum + hh-size
     ]
@@ -1164,8 +1165,8 @@ SLIDER
 15
 260
 48
-num-non-oc-persons
-num-non-oc-persons
+num-persons
+num-persons
 100
 10000
 100.0
@@ -1497,6 +1498,36 @@ nat-propensity-threshold
 0.1
 1
 sd
+HORIZONTAL
+
+SLIDER
+15
+120
+260
+153
+num-oc-persons
+num-oc-persons
+2
+200
+25.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+155
+260
+188
+num-oc-families
+num-oc-families
+1
+50
+10.0
+1
+1
+NIL
 HORIZONTAL
 
 @#$#@#$#@
@@ -1865,22 +1896,22 @@ NetLogo 6.0.4
   <experiment name="basic" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <timeLimit steps="100"/>
+    <timeLimit steps="1200"/>
     <metric>big-crime-from-small-fish</metric>
     <metric>count prisoners</metric>
     <metric>number-deceased</metric>
-    <metric>sum [ num-crimes-committed ] of persons</metric>
-    <metric>count (turtle-set persons prisoners) with [ oc-member? ]</metric>
-    <metric>[ age ] of (turtle-set persons prisoners)</metric>
-    <metric>[ oc-embeddedness ] of (turtle-set persons prisoners)</metric>
+    <metric>sum [ num-crimes-committed ] of all-persons</metric>
+    <metric>count (all-persons) with [ oc-member? ]</metric>
+    <metric>[ age ] of (all-persons)</metric>
+    <metric>[ oc-embeddedness ] of (all-persons)</metric>
+    <enumeratedValueSet variable="num-persons">
+      <value value="10000"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="data-folder">
       <value value="&quot;inputs/palermo/data/&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="output?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="base-opportunity-rate">
-      <value value="0.1"/>
+      <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="ticks-per-year">
       <value value="12"/>
@@ -1888,29 +1919,29 @@ NetLogo 6.0.4
     <enumeratedValueSet variable="max-accomplice-radius">
       <value value="2"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="operation">
-      <value value="&quot;Aemilia&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-education-levels">
-      <value value="3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-non-oc-persons">
-      <value value="100"/>
-    </enumeratedValueSet>
     <enumeratedValueSet variable="probability-of-getting-caught">
       <value value="0.05"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mean-accomplices-needed">
-      <value value="6"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="prob-of-going-to-university">
-      <value value="0.1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="retirement-age">
       <value value="65"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="oc-embeddedness-radius">
       <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-oc-persons">
+      <value value="25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-oc-families">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="nat-propensity-m">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="nat-propensity-sigma">
+      <value value="0.25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="nat-propensity-threshold">
+      <value value="1"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>

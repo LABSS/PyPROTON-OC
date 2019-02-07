@@ -6,7 +6,7 @@
 *.docx#
 .DS_Store
 *.icloud
-*.world
-*.graphml
 *.graphml
 *.world
+*.out
+*.swp
