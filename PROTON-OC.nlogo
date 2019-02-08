@@ -99,6 +99,7 @@ globals [
   c-range-by-age-and-sex
   ; outputs
   number-deceased
+  number-birth
 ]
 
 to profile-setup
@@ -389,7 +390,8 @@ to make-baby
   ask persons with [ not male? and age >= 14 and age <= 50 ] [
     if random-float 1 < p-fertility [
       ; we stop counting after 2 because probability stays the same
-      if number-of-children < 2 [ set number-of-children number-of-children + 1 ]
+      set number-of-children number-of-children + 1
+      set number-birth number-birth + 1
       hatch-persons 1 [
         init-person-empty
         set wealth-level [ wealth-level ] of myself
@@ -629,7 +631,7 @@ to-report p-mortality
 end
 
 to-report p-fertility
-  let the-key list age number-of-children
+  let the-key list age min list number-of-children 2
   ifelse (table:has-key? fertility-table the-key) [
     report (item 0 table:get fertility-table the-key) / ticks-per-year
   ] [
@@ -1144,10 +1146,10 @@ ticks
 30.0
 
 BUTTON
-15
-215
-130
-248
+16
+129
+131
+162
 NIL
 setup
 NIL
@@ -1176,10 +1178,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-265
-245
-375
-290
+267
+138
+377
+183
 NIL
 count jobs
 17
@@ -1187,10 +1189,10 @@ count jobs
 11
 
 BUTTON
-265
-160
-375
-235
+1095
+78
+1205
+153
 move nodes
   if mouse-down? [\n    let candidate min-one-of turtles [distancexy mouse-xcor mouse-ycor]\n    if [distancexy mouse-xcor mouse-ycor] of candidate < 1 [\n      ;; The WATCH primitive puts a \"halo\" around the watched turtle.\n      watch candidate\n      while [mouse-down?] [\n        ;; If we don't force the view to update, the user won't\n        ;; be able to see the turtle moving around.\n        display\n        ;; The SUBJECT primitive reports the turtle being watched.\n        ask subject [ setxy mouse-xcor mouse-ycor ]\n      ]\n      ;; Undoes the effects of WATCH.  Can be abbreviated RP.\n      reset-perspective\n    ]\n  ]
 T
@@ -1204,10 +1206,10 @@ NIL
 0
 
 INPUTBOX
-15
-55
-260
-115
+1095
+13
+1340
+73
 data-folder
 inputs/palermo/data/
 1
@@ -1217,8 +1219,8 @@ String
 SWITCH
 265
 50
-380
-83
+388
+84
 output?
 output?
 1
@@ -1226,10 +1228,10 @@ output?
 -1000
 
 MONITOR
-265
-295
-375
-340
+267
+188
+377
+233
 NIL
 count links
 17
@@ -1237,10 +1239,10 @@ count links
 11
 
 BUTTON
-135
-215
-260
-248
+136
+129
+261
+162
 NIL
 profile-setup
 NIL
@@ -1254,10 +1256,10 @@ NIL
 1
 
 INPUTBOX
-265
-90
-380
-150
+1224
+78
+1339
+138
 ticks-per-year
 12.0
 1
@@ -1265,10 +1267,10 @@ ticks-per-year
 Number
 
 BUTTON
-15
-255
-70
-288
+16
+169
+71
+202
 NIL
 go
 NIL
@@ -1282,10 +1284,10 @@ NIL
 0
 
 BUTTON
-75
-255
-130
-288
+76
+169
+131
+202
 NIL
 go
 T
@@ -1299,10 +1301,10 @@ NIL
 0
 
 BUTTON
-135
-255
-260
-288
+136
+169
+261
+202
 NIL
 profile-go
 NIL
@@ -1316,17 +1318,17 @@ NIL
 1
 
 OUTPUT
-1090
-10
-1720
-695
+1098
+409
+1345
+608
 10
 
 SLIDER
-15
-295
-260
-328
+1097
+159
+1342
+192
 max-accomplice-radius
 max-accomplice-radius
 0
@@ -1338,10 +1340,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-330
-260
-363
+1097
+194
+1342
+227
 oc-embeddedness-radius
 oc-embeddedness-radius
 0
@@ -1353,10 +1355,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-365
-260
-398
+1097
+229
+1342
+262
 retirement-age
 retirement-age
 0
@@ -1368,10 +1370,10 @@ years old
 HORIZONTAL
 
 SLIDER
-15
-400
-260
-433
+1097
+264
+1342
+297
 probability-of-getting-caught
 probability-of-getting-caught
 0
@@ -1383,10 +1385,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-265
-345
-375
-390
+267
+238
+377
+283
 NIL
 count prisoners
 17
@@ -1394,10 +1396,10 @@ count prisoners
 11
 
 PLOT
-15
-545
-390
-760
+13
+492
+379
+697
 Age distribution
 age
 count
@@ -1412,21 +1414,21 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [ age ] of persons"
 
 MONITOR
-265
-395
+267
+288
 375
-440
-NIL
-count family-links
+334
+migrants
+count persons with [ wealth-level = -1 ]
 17
 1
 11
 
 MONITOR
-265
-445
-375
-490
+267
+338
+377
+383
 NIL
 number-deceased
 17
@@ -1434,10 +1436,10 @@ number-deceased
 11
 
 MONITOR
-265
-495
-375
-540
+267
+388
+377
+433
 crimes
 sum [ num-crimes-committed ] of persons
 17
@@ -1456,10 +1458,10 @@ view-crim?
 -1000
 
 SLIDER
-15
-435
-260
-468
+1097
+299
+1342
+332
 nat-propensity-m
 nat-propensity-m
 0
@@ -1471,10 +1473,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-470
-260
-503
+1097
+334
+1342
+367
 nat-propensity-sigma
 nat-propensity-sigma
 0
@@ -1486,10 +1488,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-505
-262
-538
+1097
+369
+1344
+403
 nat-propensity-threshold
 nat-propensity-threshold
 0
@@ -1501,10 +1503,10 @@ sd
 HORIZONTAL
 
 SLIDER
-15
-120
-260
-153
+16
+54
+261
+87
 num-oc-persons
 num-oc-persons
 2
@@ -1516,10 +1518,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-155
-260
-188
+16
+89
+261
+122
 num-oc-families
 num-oc-families
 1
@@ -1529,6 +1531,28 @@ num-oc-families
 1
 NIL
 HORIZONTAL
+
+MONITOR
+267
+439
+379
+485
+NIL
+number-birth
+17
+1
+11
+
+MONITOR
+267
+89
+377
+135
+OC members
+count all-persons with [ oc-member? ]
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
