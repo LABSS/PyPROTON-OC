@@ -207,6 +207,7 @@ to go
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
+  show ticks
 end
 
 to dump-networks []
@@ -759,21 +760,25 @@ to-report social-proximity-with [ target ] ; person reporter
   report total / normalization
 end
 
-to-report factors-social-proximity
+to-report factors-social-proximity  ; person reporter.
+  let ego myself
+  let alter self
   report (list
     ;     var-name     weight    normalized-reporter
-    (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of myself) > 18) [ 0 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ])
-    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ] ])
-    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ] ])
-    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ] ])
-    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ] ])
-    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ] ])
+    (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of ego) > 18) [ 0 ] [ 1 - abs (age - [ age ] of ego) / 18 ] ])
+    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of ego) [ 1 ][ 0 ] ])
+    (list "wealth"     1.0       [ -> ifelse-value (wealth-level = [ wealth-level ] of ego) [ 1 ][ 0 ] ])
+    (list "job"        0.0       [ -> ifelse-value (job-level = [ job-level ] of ego) [ 1 ][ 0 ] ])
+    (list "education"  1.0       [ -> ifelse-value (education-level = [ education-level ] of ego) [ 1 ][ 0 ] ])
+    (list "retired"    0.0       [ -> ifelse-value (retired? = [ retired? ] of ego) [ 1 ][ 0 ] ])
+    (list "closure"    1.0       [ -> ifelse-value (any? (other [ friendship-link-neighbors ] of alter) with
+                                      [ friendship-link-neighbor? ego ]) [ 1 ][ 0 ] ])
 )
 end
 
 ; we do no track time of crime so for now the requirement of
 ; "at least one crime in the last 2 years." is not feasible.
-; for now we use just "at least one crime"
+; for now we use just "at least one crime."
 to-report factors-c
   report (list
     ;     var-name     normalized-reporter
@@ -1220,7 +1225,7 @@ SWITCH
 265
 50
 388
-84
+83
 output?
 output?
 1
@@ -1417,7 +1422,7 @@ MONITOR
 267
 288
 375
-334
+333
 migrants
 count persons with [ wealth-level = -1 ]
 17
@@ -1491,7 +1496,7 @@ SLIDER
 1097
 369
 1344
-403
+402
 nat-propensity-threshold
 nat-propensity-threshold
 0
@@ -1536,7 +1541,7 @@ MONITOR
 267
 439
 379
-485
+484
 NIL
 number-birth
 17
@@ -1547,7 +1552,7 @@ MONITOR
 267
 89
 377
-135
+134
 OC members
 count all-persons with [ oc-member? ]
 17
