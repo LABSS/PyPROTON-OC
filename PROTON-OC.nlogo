@@ -204,6 +204,7 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
+  if socialization-intervention != "none" [ socialization-intervene ]
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
@@ -217,6 +218,35 @@ to dump-networks []
       let network-file-name (word "networks/" ticks  "_"  listname  ".graphml")
       nw:with-context turtles runresult listname [
         nw:save-graphml network-file-name
+      ]
+    ]
+  ]
+end
+
+to socialization-intervene
+  let the-condition nobody
+  ifelse socialization-intervention = "remove-if-caught" [
+    set the-condition [ -> breed = prisoners ]
+  ][
+    ifelse socialization-intervention = "remove-if-OC-member" [
+      set the-condition [ -> oc-member? ]
+    ][
+      if socialization-intervention = "remove-if-caught-and-oc-member" [
+        set the-condition  [ -> oc-member? and breed = prisoners ]
+      ]
+    ]
+  ]
+  let kids-to-protect persons with [
+    age <= 18 and age >= 12 and any? family-link-neighbors with [
+      runresult the-condition
+    ]
+  ]
+  ask kids-to-protect [
+    ask family-link-neighbors with [
+      runresult the-condition
+    ] [
+      ask my-family-links with [ [ not runresult the-condition ] of other-end ] [
+        die
       ]
     ]
   ]
@@ -1558,6 +1588,16 @@ count all-persons with [ oc-member? ]
 17
 1
 11
+
+CHOOSER
+15
+210
+260
+255
+socialization-intervention
+socialization-intervention
+"none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-oc-member"
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
