@@ -11,6 +11,9 @@ count all-persons with [ birth-tick >= 0 ]
 # employment rate
 count all-persons with [ any? job-links ] / count all-persons
 
+# small criminals
+persons with [age <= 18 and age >= 12 and any? family-link-neighbors with [ oc-member? ] ]
+
 
 # are schools teaching the right people?
 schools with [ any? school-attendance-link-neighbors with [ education-level != [ education-level ] of myself + 1 ] ]

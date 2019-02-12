@@ -204,7 +204,11 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-  if socialization-intervention != "none" [ socialization-intervene ]
+  if family-intervention != "none" [ family-intervene        ]
+  if ticks mod ticks-between-intervention = 0 [
+    if social-support    != "none" [ socialization-intervene ]
+    if welfare-support   != "none" [ welfare-intervene       ]
+  ]
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
@@ -223,15 +227,49 @@ to dump-networks []
   ]
 end
 
+; todo: this crashes if people older than 120? correct
 to socialization-intervene
+  let potential-targets all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
+  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [ criminal-tendency ]
+  ifelse social-support = "educational" [
+    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
+  ][
+    ifelse social-support = "psychological" [
+      ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [ not friendship-link-neighbor? myself ] [ 1 - (abs (age - [ age ] of myself ) / 120) ] ]
+    ][
+      if social-support = "more friends" [
+        ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [
+          not friendship-link-neighbor? myself ][ criminal-tendency ]
+        ]
+      ]
+    ]
+  ]
+end
+
+to welfare-intervene
+  let potential-targets all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
+  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [ criminal-tendency ]
+  ifelse social-support = "job-mother" [
+    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
+  ][
+    if social-support = "job-child" [
+      ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [
+        not friendship-link-neighbor? myself ][ criminal-tendency ]
+      ]
+    ]
+  ]
+end
+
+
+to family-intervene
   let the-condition nobody
-  ifelse socialization-intervention = "remove-if-caught" [
+  ifelse family-intervention = "remove-if-caught" [
     set the-condition [ -> breed = prisoners ]
   ][
-    ifelse socialization-intervention = "remove-if-OC-member" [
+    ifelse family-intervention = "remove-if-OC-member" [
       set the-condition [ -> oc-member? ]
     ][
-      if socialization-intervention = "remove-if-caught-and-oc-member" [
+      if family-intervention = "remove-if-caught-and-oc-member" [
         set the-condition  [ -> oc-member? and breed = prisoners ]
       ]
     ]
@@ -1594,10 +1632,60 @@ CHOOSER
 210
 260
 255
-socialization-intervention
-socialization-intervention
+family-intervention
+family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-oc-member"
 0
+
+CHOOSER
+15
+285
+260
+330
+social-support
+social-support
+"none" "educational" "psychological" "more friends"
+0
+
+CHOOSER
+15
+335
+260
+380
+welfare-support
+welfare-support
+"none" "job-mother" "job-child"
+0
+
+SLIDER
+15
+385
+260
+418
+childs-addressed-percent
+childs-addressed-percent
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+10
+425
+227
+458
+ticks-between-intervention
+ticks-between-intervention
+1
+24
+12.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
