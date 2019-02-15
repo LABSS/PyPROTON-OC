@@ -229,17 +229,38 @@ end
 
 ; todo: this crashes if people older than 120? correct
 to socialization-intervene
+  let support-set nobody
+  let make-criminal-tendency-positive ifelse-value (min [ criminal-tendency ] of persons < 0)
+    [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
+  let invert-criminal-tendency ifelse-value (max [ criminal-tendency ] of persons > 0)
+    [ max [ criminal-tendency ] of persons ] [ 0 ]
   let potential-targets all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
-  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [ criminal-tendency ]
+  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [
+    criminal-tendency + make-criminal-tendency-positive
+  ]
   ifelse social-support = "educational" [
     ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
   ][
-    ifelse social-support = "psychological" [
-      ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [ not friendship-link-neighbor? myself ] [ 1 - (abs (age - [ age ] of myself ) / 120) ] ]
+    ifelse social-support = "psychological" [; add not-a-criminal
+      ask targets [
+        set support-set other persons with [
+          num-crimes-committed = 0 and not friendship-link-neighbor? myself
+        ]
+        if any? support-set [
+          create-friendship-link-with rnd:weighted-one-of support-set [
+            1 - (abs (age - [ age ] of myself ) / 120)
+          ]
+        ]
+      ]
     ][
       if social-support = "more friends" [
-        ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [
-          not friendship-link-neighbor? myself ][ criminal-tendency ]
+        ask targets [
+          set support-set other persons with [ not friendship-link-neighbor? myself ]
+          if any? support-set [
+            create-friendship-link-with rnd:weighted-one-of support-set [
+              invert-criminal-tendency - criminal-tendency
+            ]
+          ]
         ]
       ]
     ]
@@ -247,15 +268,21 @@ to socialization-intervene
 end
 
 to welfare-intervene
+  ;let invert-criminal-tendency ifelse-value (max [ criminal-tendency ] of persons > 0)
+  ;  [ max [ criminal-tendency ] of persons ] [ 0 ]
+  let make-criminal-tendency-positive ifelse-value (min [ criminal-tendency ] of persons < 0)
+    [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
   let potential-targets all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
-  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [ criminal-tendency ]
+  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [
+    make-criminal-tendency-positive + criminal-tendency
+  ]
   ifelse social-support = "job-mother" [
-    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
+    ;ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
   ][
     if social-support = "job-child" [
-      ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [
-        not friendship-link-neighbor? myself ][ criminal-tendency ]
-      ]
+      ;ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [
+      ;  not friendship-link-neighbor? myself ][ invert-criminal-tendency - criminal-tendency ]
+      ;]
     ]
   ]
 end
@@ -1244,7 +1271,7 @@ num-persons
 num-persons
 100
 10000
-100.0
+550.0
 50
 1
 NIL
@@ -1406,7 +1433,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-3.0
+2.0
 1
 1
 NIL
@@ -1673,9 +1700,9 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
+15
 425
-227
+260
 458
 ticks-between-intervention
 ticks-between-intervention
