@@ -13,8 +13,8 @@ class OCBigCrimesSmallFishTest extends OCModelSuite {
     ws.cmd("""
       set num-persons 500
       set max-accomplice-radius 6
-      set num-co-offenders-dist [ [ 5 0.5 ] [ 6 0.5 ] [ 10 0.5 ] ]
       setup
+      set num-co-offenders-dist [ [ 5 0.5 ] [ 6 0.5 ] [ 10 0.5 ] ]
       """
     )
      for (fid <- 1 to 30) {
