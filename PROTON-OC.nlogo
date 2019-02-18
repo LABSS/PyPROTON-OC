@@ -212,7 +212,9 @@ to go
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
-  if behaviorspace-experiment-name != "" [ show ticks ]
+  if behaviorspace-experiment-name != "" [
+    show (word behaviorspace-run-number "." ticks)
+    ]
 end
 
 to dump-networks []
