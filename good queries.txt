@@ -13,7 +13,15 @@ count all-persons with [ any? job-links ] / count all-persons
 
 # small criminals
 persons with [age <= 18 and age >= 12 and any? family-link-neighbors with [ oc-member? ] ]
+# a woman in the family
+persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
+#their jobs and job level
+[ (list job-level count my-job-links job-level)] of persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
 
+#families with different wealth levels inside
+all? persons [all? family-link-neighbors [ wealth-level = [ wealth-level ] of myself ] ]
+persons with [any? other family-link-neighbors with [ wealth-level != [ wealth-level ] of myself ] ]
+[ (list age male? oc-member? wealth-level)] of [family-link-neighbors] of person 452
 
 # are schools teaching the right people?
 schools with [ any? school-attendance-link-neighbors with [ education-level != [ education-level ] of myself + 1 ] ]

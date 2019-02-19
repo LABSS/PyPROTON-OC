@@ -204,10 +204,10 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-  if family-intervention != "none" [ family-intervene        ]
   if ticks mod ticks-between-intervention = 0 [
-    if social-support    != "none" [ socialization-intervene ]
-    if welfare-support   != "none" [ welfare-intervene       ]
+    if family-intervention != "none" [ family-intervene        ]
+    if social-support    != "none"   [ socialization-intervene ]
+    if welfare-support   != "none"   [ welfare-intervene       ]
   ]
   if view-crim? [ show-criminal-network ]
   make-people-die
@@ -237,7 +237,7 @@ to socialization-intervene
   let invert-criminal-tendency ifelse-value (max [ criminal-tendency ] of persons > 0)
     [ max [ criminal-tendency ] of persons ] [ 0 ]
   let potential-targets all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
-  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [
+  let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
     criminal-tendency + make-criminal-tendency-positive
   ]
   ifelse social-support = "educational" [
@@ -270,25 +270,34 @@ to socialization-intervene
 end
 
 to welfare-intervene
-  ;let invert-criminal-tendency ifelse-value (max [ criminal-tendency ] of persons > 0)
-  ;  [ max [ criminal-tendency ] of persons ] [ 0 ]
-  let make-criminal-tendency-positive ifelse-value (min [ criminal-tendency ] of persons < 0)
-    [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
-  let potential-targets all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
-  let targets rnd:weighted-n-of (childs-addressed-percent / 100 * count potential-targets) potential-targets [
-    make-criminal-tendency-positive + criminal-tendency
-  ]
-  ifelse social-support = "job-mother" [
-    ;ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
+  let the-employer nobody
+  let targets no-turtles
+  ifelse welfare-support = "job-mother" [
+    set targets all-persons with [not male? and any? family-link-neighbors with [ oc-member? ] and not any? my-job-links]
   ][
-    if social-support = "job-child" [
-      ;ask targets [ create-friendship-link-with rnd:weighted-one-of persons with [
-      ;  not friendship-link-neighbor? myself ][ invert-criminal-tendency - criminal-tendency ]
-      ;]
+    if welfare-support = "job-child" [
+      set targets all-persons with [ age > 16 and age < 24
+        and not any? my-school-links
+        and any? family-link-neighbors with [ oc-member? ]
+        and not any? my-job-links ]
+    ]
+  ]
+  if any? targets [
+    set targets n-of ceiling (targets-addressed-percent / 100 * count targets) targets
+    ask targets [
+      let target self
+      set the-employer one-of employers
+      ask the-employer [
+        hatch-jobs 1 [
+          create-position-link-with myself
+          set label self
+          set job-level [ job-level ] of target
+          create-job-link-with target
+        ]
+      ]
     ]
   ]
 end
-
 
 to family-intervene
   let the-condition nobody
@@ -308,7 +317,7 @@ to family-intervene
       runresult the-condition
     ]
   ]
-  ask kids-to-protect [
+  ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
     ask family-link-neighbors with [
       runresult the-condition
     ] [
@@ -1029,7 +1038,9 @@ to generate-households
     set hh-size min (list hh-size length population)
     let hh-members turtle-set sublist population 0 hh-size       ; grab the first persons in the list,
     set population sublist population hh-size length population  ; remove them from the population
-    ask hh-members [ create-family-links-with other hh-members ] ; and link them up.
+    let family-wealth-level [ wealth-level ] of max-one-of hh-members [ age ]
+    ask hh-members [ create-family-links-with other hh-members
+      set wealth-level family-wealth-level ]                     ; and link them up.
   ]
 end
 
@@ -1668,9 +1679,9 @@ family-intervention
 
 CHOOSER
 15
-285
 260
-330
+260
+305
 social-support
 social-support
 "none" "educational" "psychological" "more friends"
@@ -1678,9 +1689,9 @@ social-support
 
 CHOOSER
 15
-335
+310
 260
-380
+355
 welfare-support
 welfare-support
 "none" "job-mother" "job-child"
@@ -1688,11 +1699,11 @@ welfare-support
 
 SLIDER
 15
-385
+360
 260
-418
-childs-addressed-percent
-childs-addressed-percent
+393
+targets-addressed-percent
+targets-addressed-percent
 0
 100
 10.0
@@ -1703,9 +1714,9 @@ HORIZONTAL
 
 SLIDER
 15
-425
+400
 260
-458
+433
 ticks-between-intervention
 ticks-between-intervention
 1
