@@ -32,6 +32,7 @@ persons-own [
   partner                ; the person's significant other
   retired?
   number-of-children
+  facilitator
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -50,6 +51,7 @@ prisoners-own [
   partner                ; the person's significant other
   retired?
   number-of-children
+  facilitator
   sentence-countdown
 ]
 
@@ -253,6 +255,9 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
+  ask persons [
+    set facilitator 0
+  ]
   let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0)
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
   ask rnd:weighted-n-of num-oc-families persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
@@ -271,6 +276,11 @@ to setup-oc-groups
   ask persons with [ oc-member? ] [
     create-criminal-links-with other persons with [ oc-member? ] [
       set num-co-offenses 1
+    ]
+  ]
+  ask persons with [ not oc-member? and age > 18] [
+    if (random-float 1) < percentage-of-facilitators [
+      set facilitator 1
     ]
   ]
 end
@@ -615,6 +625,10 @@ end
 to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality [
+      if facilitator > 0 [
+        let new-facilitator one-of other persons with [facilitator = 0 and age > 18]
+        ask new-facilitator [set facilitator 1]
+      ]
       set number-deceased number-deceased + 1
       die
     ]
@@ -639,6 +653,20 @@ to-report p-fertility
   ]
 end
 
+to-report facilitator-test [cog]
+  ifelse (length cog < threshold-use-facilitators)
+    [report true ]
+    [
+      let available-facilitator one-of persons with [facilitator = 1]
+      ifelse available-facilitator = nobody
+        [ report false ]
+        [
+          ask available-facilitator [set facilitator 2]
+          report true
+        ]
+   ]
+end
+
 to commit-crimes
   reset-oc-embeddedness
   let co-offender-groups []
@@ -652,15 +680,20 @@ to commit-crimes
       ]
     ]
   ]
-  foreach co-offender-groups commit-crime
-  let oc-co-offender-groups filter [ co-offenders ->
-    any? co-offenders with [ oc-member? ]
-  ] co-offender-groups
-  foreach oc-co-offender-groups [ co-offenders ->
-    ask co-offenders [ set oc-member? true ]
+  if (facilitator-test co-offender-groups)  = true [
+    foreach co-offender-groups commit-crime
+    let oc-co-offender-groups filter [ co-offenders ->
+      any? co-offenders with [ oc-member? ]
+    ] co-offender-groups
+    foreach oc-co-offender-groups [ co-offenders ->
+      ask co-offenders [ set oc-member? true ]
+    ]
+    foreach co-offender-groups [ co-offenders ->
+      if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+    ]
   ]
-  foreach co-offender-groups [ co-offenders ->
-    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+  ask persons with [facilitator = 2] [
+    if random-float 1 < effectiveness-facilitators [ set facilitator 1 ]
   ]
 end
 
@@ -1220,7 +1253,7 @@ SWITCH
 265
 50
 388
-84
+83
 output?
 output?
 1
@@ -1417,7 +1450,7 @@ MONITOR
 267
 288
 375
-334
+333
 migrants
 count persons with [ wealth-level = -1 ]
 17
@@ -1491,7 +1524,7 @@ SLIDER
 1097
 369
 1344
-403
+402
 nat-propensity-threshold
 nat-propensity-threshold
 0
@@ -1536,7 +1569,7 @@ MONITOR
 267
 439
 379
-485
+484
 NIL
 number-birth
 17
@@ -1547,10 +1580,76 @@ MONITOR
 267
 89
 377
-135
+134
 OC members
 count all-persons with [ oc-member? ]
 17
+1
+11
+
+CHOOSER
+15
+220
+175
+265
+LEAs
+LEAs
+"None" "vsFacilitators" "vsBosses"
+0
+
+SLIDER
+15
+265
+175
+298
+percentage-of-facilitators
+percentage-of-facilitators
+0
+1
+0.1
+0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+295
+175
+328
+threshold-use-facilitators
+threshold-use-facilitators
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+325
+175
+358
+effectiveness-facilitators
+effectiveness-facilitators
+0
+1
+0.8
+0.1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+15
+365
+260
+410
+NIL
+count persons with [facilitator = 1]
+0
 1
 11
 
