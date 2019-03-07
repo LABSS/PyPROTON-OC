@@ -480,7 +480,7 @@ to let-migrants-in
   let to-replace max list 0 (num-persons - count all-persons)
   let missing-jobs count jobs with [ not any? my-job-links ]
   let num-to-add min (list to-replace missing-jobs)
-  set num-migrants num-migrants + num-to-add
+  set number-migrants number-migrants + num-to-add
   ask n-of num-to-add jobs with [ not any? my-job-links ] [
     ; we do not care about education level and wealth of migrants, as those variables
     ; exist only in order to generate the job position.
