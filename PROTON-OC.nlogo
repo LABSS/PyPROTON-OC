@@ -99,7 +99,8 @@ globals [
   c-range-by-age-and-sex
   ; outputs
   number-deceased
-  number-birth
+  number-born
+  number-migrants
 ]
 
 to profile-setup
@@ -478,7 +479,9 @@ to let-migrants-in
   ; calculate the difference between deaths and birth
   let to-replace max list 0 (num-persons - count all-persons)
   let missing-jobs count jobs with [ not any? my-job-links ]
-  ask n-of min (list to-replace missing-jobs) jobs with [ not any? my-job-links ] [
+  let num-to-add min (list to-replace missing-jobs)
+  set num-migrants num-migrants + num-to-add
+  ask n-of num-to-add jobs with [ not any? my-job-links ] [
     ; we do not care about education level and wealth of migrants, as those variables
     ; exist only in order to generate the job position.
     hatch-persons 1 [
@@ -498,7 +501,7 @@ to make-baby
     if random-float 1 < p-fertility [
       ; we stop counting after 2 because probability stays the same
       set number-of-children number-of-children + 1
-      set number-birth number-birth + 1
+      set number-born number-born + 1
       hatch-persons 1 [
         init-person-empty
         set wealth-level [ wealth-level ] of myself
@@ -1651,7 +1654,7 @@ MONITOR
 379
 484
 NIL
-number-birth
+number-born
 17
 1
 11
