@@ -728,6 +728,7 @@ to make-people-die
       set number-deceased number-deceased + 1
       die
     ]
+    ask all-persons with [ age > 119 ] [ die ]
   ]
 end
 
@@ -877,12 +878,10 @@ to-report factors-social-proximity  ; person reporter.
     (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of ego) > 18) [ 0 ] [ 1 - abs (age - [ age ] of ego) / 18 ] ])
     (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of ego) [ 1 ][ 0 ] ])
     (list "wealth"     1.0       [ -> ifelse-value (wealth-level = [ wealth-level ] of ego) [ 1 ][ 0 ] ])
-    (list "job"        0.0       [ -> ifelse-value (job-level = [ job-level ] of ego) [ 1 ][ 0 ] ])
     (list "education"  1.0       [ -> ifelse-value (education-level = [ education-level ] of ego) [ 1 ][ 0 ] ])
-    (list "retired"    0.0       [ -> ifelse-value (retired? = [ retired? ] of ego) [ 1 ][ 0 ] ])
     (list "closure"    1.0       [ -> ifelse-value (any? (other [ friendship-link-neighbors ] of alter) with
                                       [ friendship-link-neighbor? ego ]) [ 1 ][ 0 ] ])
-)
+ )
 end
 
 ; we do no track time of crime so for now the requirement of
