@@ -236,12 +236,12 @@ to socialization-intervene
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
   let invert-criminal-tendency ifelse-value (max [ criminal-tendency ] of persons > 0)
     [ max [ criminal-tendency ] of persons ] [ 0 ]
-  let potential-targets all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
+  let potential-targets all-persons with [ age <= 18 and age >= 6 and any? school-link-neighbors ]
   let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
     criminal-tendency + make-criminal-tendency-positive
   ]
   ifelse social-support = "educational" [
-    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
+    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels + 1) ]
   ][
     ifelse social-support = "psychological" [
       ask targets [
@@ -284,6 +284,13 @@ to welfare-intervene
   ]
   if any? targets [
     set targets n-of ceiling (targets-addressed-percent / 100 * count targets) targets
+    welfare-createjobs targets
+  ]
+end
+
+to welfare-createjobs [ targets ]
+  let the-employer nobody
+  if any? targets [
     ask targets [
       let target self
       set the-employer one-of employers
@@ -293,6 +300,9 @@ to welfare-intervene
           set label self
           set job-level [ job-level ] of target
           create-job-link-with target
+          ask target [
+            create-professional-links-with [ current-employees ] of the-employer
+          ]
         ]
       ]
     ]
@@ -324,6 +334,10 @@ to family-intervene
       ask my-family-links with [ [ not runresult the-condition ] of other-end ] [
         die
       ]
+    ] ; at this point bad dad is out and we help the remaining
+    welfare-createjobs (turtle-set myself family-link-neighbors) with [
+      not any? my-job-links and age > 16 and age < 24
+      and not any? my-school-links
     ]
   ]
 end
@@ -1686,7 +1700,7 @@ CHOOSER
 social-support
 social-support
 "none" "educational" "psychological" "more friends"
-0
+1
 
 CHOOSER
 15
