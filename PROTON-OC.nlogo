@@ -230,7 +230,6 @@ to dump-networks []
   ]
 end
 
-; todo: this crashes if people older than 120? correct
 to socialization-intervene
   let support-set nobody
   let make-criminal-tendency-positive ifelse-value (min [ criminal-tendency ] of persons < 0)
@@ -244,7 +243,7 @@ to socialization-intervene
   ifelse social-support = "educational" [
     ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
   ][
-    ifelse social-support = "psychological" [; add not-a-criminal
+    ifelse social-support = "psychological" [
       ask targets [
         set support-set other persons with [
           num-crimes-committed = 0 and not friendship-link-neighbor? myself
