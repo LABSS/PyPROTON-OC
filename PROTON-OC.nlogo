@@ -230,40 +230,58 @@ to dump-networks []
   ]
 end
 
-to socialization-intervene
-  let support-set nobody
-  let make-criminal-tendency-positive ifelse-value (min [ criminal-tendency ] of persons < 0)
+to-report add-to-c-for-weighted-extraction
+  report ifelse-value (min [ criminal-tendency ] of persons < 0)
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
-  let invert-criminal-tendency ifelse-value (max [ criminal-tendency ] of persons > 0)
+end
+
+to-report subract-c-from-me-weighted-extraction
+  report ifelse-value (max [ criminal-tendency ] of persons > 0)
     [ max [ criminal-tendency ] of persons ] [ 0 ]
+end
+
+to socialization-intervene
   let potential-targets all-persons with [ age <= 18 and age >= 6 and any? school-link-neighbors ]
   let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
-    criminal-tendency + make-criminal-tendency-positive
+    criminal-tendency + add-to-c-for-weighted-extraction
   ]
   ifelse social-support = "educational" [
-    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels + 1) ]
+    soc-add-educational targets
   ][
     ifelse social-support = "psychological" [
+      soc-add-psychological targets
+    ][
+      if social-support = "more friends" [
+        soc-add-more-friends targets
+      ]
+    ]
+  ]
+end
+
+to soc-add-educational [ targets ]
+    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels + 1) ]
+end
+
+to soc-add-psychological [ targets ]
+  ; we use a random sample (arbitrarily set to 50 people size max) to avoid weigthed sample from large populations
       ask targets [
-        set support-set other persons with [
+        let support-set other persons with [
           num-crimes-committed = 0 and not friendship-link-neighbor? myself
         ]
         if any? support-set [
-          create-friendship-link-with rnd:weighted-one-of support-set [
+          create-friendship-link-with rnd:weighted-one-of (n-of 50 support-set) [
             1 - (abs (age - [ age ] of myself ) / 120)
           ]
         ]
       ]
-    ][
-      if social-support = "more friends" [
-        ask targets [
-          set support-set other persons with [ not friendship-link-neighbor? myself ]
-          if any? support-set [
-            create-friendship-link-with rnd:weighted-one-of support-set [
-              invert-criminal-tendency - criminal-tendency
-            ]
-          ]
-        ]
+end
+
+to soc-add-more-friends [ targets ]
+  ask targets [
+    let support-set other persons with [ not friendship-link-neighbor? myself ]
+    if any? support-set [
+      create-friendship-link-with rnd:weighted-one-of (n-of 50 support-set) [
+        subract-c-from-me-weighted-extraction - criminal-tendency
       ]
     ]
   ]
@@ -301,7 +319,7 @@ to welfare-createjobs [ targets ]
           set job-level [ job-level ] of target
           create-job-link-with target
           ask target [
-            create-professional-links-with [ current-employees ] of the-employer
+            create-professional-links-with other [ current-employees ] of the-employer
           ]
         ]
       ]
@@ -335,10 +353,16 @@ to family-intervene
         die
       ]
     ] ; at this point bad dad is out and we help the remaining
-    welfare-createjobs (turtle-set myself family-link-neighbors) with [
-      not any? my-job-links and age > 16 and age < 24
+    let family (turtle-set self family-link-neighbors)
+    welfare-createjobs family with [
+      not any? my-job-links and age >= 16
       and not any? my-school-links
     ]
+    soc-add-educational family with [
+      not any? my-job-links and age < 18
+    ]
+    soc-add-psychological family
+    soc-add-more-friends family
   ]
 end
 
@@ -1700,7 +1724,7 @@ CHOOSER
 social-support
 social-support
 "none" "educational" "psychological" "more friends"
-1
+0
 
 CHOOSER
 15
