@@ -32,10 +32,13 @@ persons-own [
   partner                ; the person's significant other
   retired?
   number-of-children
+  c-t-fresh?  ; stored c value and its freshness.
+  c-t
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
 prisoners-own [
+  sentence-countdown
   num-crimes-committed
   education-level
   max-education-level
@@ -50,7 +53,8 @@ prisoners-own [
   partner                ; the person's significant other
   retired?
   number-of-children
-  sentence-countdown
+  c-t-fresh?  ; stored c value and its freshness.
+  c-t
 ]
 
 jobs-own [
@@ -190,6 +194,7 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     dump-model
   ]
+  ask all-persons [ set c-t-fresh? false ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
     calculate-criminal-tendency
@@ -510,6 +515,7 @@ to init-person-empty ; person command
   set partner nobody
   set number-of-children 0
   set my-job nobody
+  set c-t-fresh? false
 end
 
 to let-migrants-in
@@ -888,11 +894,15 @@ to calculate-criminal-tendency
 end
 
 to-report criminal-tendency ; person reporter
-  let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
-  foreach  factors-c [ x ->
+  ifelse c-t-fresh? [ report c-t ] [
+    let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
+    foreach  factors-c [ x ->
       set c c * (runresult item 1 x)
     ]
-  report c
+    set c-t-fresh? true
+    set c-t c
+  ]
+  report c-t
 end
 
 to-report social-proximity-with [ target ] ; person reporter
