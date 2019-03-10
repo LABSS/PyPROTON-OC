@@ -39,8 +39,8 @@ class OCInterventionTest extends OCModelSuite {
       """)
     // the baby is (one-of persons with [ age = 0  and propensity = 0])
     ws.rpt("""
-      sum [ count friendship-link-neighbors ] of ([ family-link-neighbors ] of (one-of persons with [ age = 0  and propensity = 0]))
-    """) >= 40 shouldBe true
+      sum [ count friendship-link-neighbors ] of ([ family-link-neighbors ] of (one-of persons with [ age = 0  and propensity = 0])) >= 40
+    """) shouldBe true
     ws.rpt("""
       count [ family-link-neighbors ] of (one-of persons with [ age = 0  and propensity = 0])
     """) shouldBe 10
