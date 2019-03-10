@@ -269,16 +269,16 @@ end
 
 to soc-add-psychological [ targets ]
   ; we use a random sample (arbitrarily set to 50 people size max) to avoid weigthed sample from large populations
-      ask targets [
-        let support-set other persons with [
-          num-crimes-committed = 0 and not friendship-link-neighbor? myself
-        ]
-        if any? support-set [
-          create-friendship-link-with rnd:weighted-one-of (n-of 50 support-set) [
-            1 - (abs (age - [ age ] of myself ) / 120)
-          ]
-        ]
+  ask targets [
+    let support-set other persons with [
+      num-crimes-committed = 0 and not friendship-link-neighbor? myself
+    ]
+    if any? support-set [
+      create-friendship-link-with rnd:weighted-one-of (n-of 50 support-set) [
+        1 - (abs (age - [ age ] of myself ) / 120)
       ]
+    ]
+  ]
 end
 
 to soc-add-more-friends [ targets ]
@@ -350,28 +350,30 @@ to family-intervene
       runresult the-condition
     ]
   ]
-  ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
-    ; notice that the intervention acts on ALL family members respecting the condition
-    ask family-link-neighbors with [
-      runresult the-condition
-    ] [
-      ask my-family-links with [ [ not runresult the-condition ] of other-end ] [
-        die
+  if any? kids-to-protect [
+    ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
+      ; notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
+      ask family-link-neighbors with [
+        runresult the-condition
+      ] [
+        ask my-family-links with [ [ not runresult the-condition ] of other-end ] [
+          die
+        ]
+        ask my-friendship-links with [ [ not runresult the-condition ] of other-end ] [
+          die
+        ]
+      ] ; at this point bad dad is out and we help the remaining
+      let family (turtle-set self family-link-neighbors)
+      welfare-createjobs family with [
+        not any? my-job-links and age >= 16
+        and not any? my-school-links
       ]
-      ask my-friendship-links with [ [ not runresult the-condition ] of other-end ] [
-        die
+      soc-add-educational family with [
+        not any? my-job-links and age < 18
       ]
-    ] ; at this point bad dad is out and we help the remaining
-    let family (turtle-set self family-link-neighbors)
-    welfare-createjobs family with [
-      not any? my-job-links and age >= 16
-      and not any? my-school-links
+      soc-add-psychological family
+      soc-add-more-friends family
     ]
-    soc-add-educational family with [
-      not any? my-job-links and age < 18
-    ]
-    soc-add-psychological family
-    soc-add-more-friends family
   ]
 end
 
