@@ -340,7 +340,7 @@ to family-intervene
     ifelse family-intervention = "remove-if-OC-member" [
       set the-condition [ -> oc-member? ]
     ][
-      if family-intervention = "remove-if-caught-and-oc-member" [
+      if family-intervention = "remove-if-caught-and-OC-member" [
         set the-condition  [ -> oc-member? and breed = prisoners ]
       ]
     ]
@@ -351,10 +351,14 @@ to family-intervene
     ]
   ]
   ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
+    ; notice that the intervention acts on ALL family members respecting the condition
     ask family-link-neighbors with [
       runresult the-condition
     ] [
       ask my-family-links with [ [ not runresult the-condition ] of other-end ] [
+        die
+      ]
+      ask my-friendship-links with [ [ not runresult the-condition ] of other-end ] [
         die
       ]
     ] ; at this point bad dad is out and we help the remaining
@@ -1723,7 +1727,7 @@ CHOOSER
 255
 family-intervention
 family-intervention
-"none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-oc-member"
+"none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
 0
 
 CHOOSER
