@@ -274,18 +274,22 @@ to soc-add-psychological [ targets ]
       num-crimes-committed = 0 and not friendship-link-neighbor? myself
     ]
     if any? support-set [
-      create-friendship-link-with rnd:weighted-one-of (n-of 50 support-set) [
+      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
         1 - (abs (age - [ age ] of myself ) / 120)
       ]
     ]
   ]
 end
 
+to-report limited-extraction [ the-set ]
+  report ifelse-value (count the-set > 50) [ n-of 50 the-set ][ the-set ]
+end
+
 to soc-add-more-friends [ targets ]
   ask targets [
     let support-set other persons with [ not friendship-link-neighbor? myself ]
     if any? support-set [
-      create-friendship-link-with rnd:weighted-one-of (n-of 50 support-set) [
+      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
         subract-c-from-me-weighted-extraction - criminal-tendency
       ]
     ]
