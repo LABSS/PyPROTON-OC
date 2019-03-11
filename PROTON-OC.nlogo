@@ -32,10 +32,13 @@ persons-own [
   partner                ; the person's significant other
   retired?
   number-of-children
+  c-t-fresh?  ; stored c value and its freshness.
+  c-t
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
 prisoners-own [
+  sentence-countdown
   num-crimes-committed
   education-level
   max-education-level
@@ -50,7 +53,8 @@ prisoners-own [
   partner                ; the person's significant other
   retired?
   number-of-children
-  sentence-countdown
+  c-t-fresh?  ; stored c value and its freshness.
+  c-t
 ]
 
 jobs-own [
@@ -99,7 +103,8 @@ globals [
   c-range-by-age-and-sex
   ; outputs
   number-deceased
-  number-birth
+  number-born
+  number-migrants
 ]
 
 to profile-setup
@@ -189,6 +194,7 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     dump-model
   ]
+  ask all-persons [ set c-t-fresh? false ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
     calculate-criminal-tendency
@@ -204,9 +210,17 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
+  if ticks mod ticks-between-intervention = 0 [
+    if family-intervention != "none" [ family-intervene        ]
+    if social-support    != "none"   [ socialization-intervene ]
+    if welfare-support   != "none"   [ welfare-intervene       ]
+  ]
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
+  if behaviorspace-experiment-name != "" [
+    show (word behaviorspace-run-number "." ticks)
+    ]
 end
 
 to dump-networks []
@@ -217,6 +231,152 @@ to dump-networks []
       nw:with-context turtles runresult listname [
         nw:save-graphml network-file-name
       ]
+    ]
+  ]
+end
+
+to-report add-to-c-for-weighted-extraction
+  report ifelse-value (min [ criminal-tendency ] of persons < 0)
+    [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
+end
+
+to-report subract-c-from-me-weighted-extraction
+  report ifelse-value (max [ criminal-tendency ] of persons > 0)
+    [ max [ criminal-tendency ] of persons ] [ 0 ]
+end
+
+to socialization-intervene
+  let potential-targets all-persons with [ age <= 18 and age >= 6 and any? school-link-neighbors ]
+  let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
+    criminal-tendency + add-to-c-for-weighted-extraction
+  ]
+  ifelse social-support = "educational" [
+    soc-add-educational targets
+  ][
+    ifelse social-support = "psychological" [
+      soc-add-psychological targets
+    ][
+      if social-support = "more friends" [
+        soc-add-more-friends targets
+      ]
+    ]
+  ]
+end
+
+to soc-add-educational [ targets ]
+    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels + 1) ]
+end
+
+to soc-add-psychological [ targets ]
+  ; we use a random sample (arbitrarily set to 50 people size max) to avoid weigthed sample from large populations
+  ask targets [
+    let support-set other persons with [
+      num-crimes-committed = 0 and not friendship-link-neighbor? myself
+    ]
+    if any? support-set [
+      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
+        1 - (abs (age - [ age ] of myself ) / 120)
+      ]
+    ]
+  ]
+end
+
+to-report limited-extraction [ the-set ]
+  report ifelse-value (count the-set > 50) [ n-of 50 the-set ][ the-set ]
+end
+
+to soc-add-more-friends [ targets ]
+  ask targets [
+    let support-set other persons with [ not friendship-link-neighbor? myself ]
+    if any? support-set [
+      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
+        subract-c-from-me-weighted-extraction - criminal-tendency
+      ]
+    ]
+  ]
+end
+
+to welfare-intervene
+  let the-employer nobody
+  let targets no-turtles
+  ifelse welfare-support = "job-mother" [
+    set targets all-persons with [not male? and any? family-link-neighbors with [ oc-member? ] and not any? my-job-links]
+  ][
+    if welfare-support = "job-child" [
+      set targets all-persons with [ age > 16 and age < 24
+        and not any? my-school-links
+        and any? family-link-neighbors with [ oc-member? ]
+        and not any? my-job-links ]
+    ]
+  ]
+  if any? targets [
+    set targets n-of ceiling (targets-addressed-percent / 100 * count targets) targets
+    welfare-createjobs targets
+  ]
+end
+
+to welfare-createjobs [ targets ]
+  let the-employer nobody
+  if any? targets [
+    ask targets [
+      let target self
+      set the-employer one-of employers
+      ask the-employer [
+        hatch-jobs 1 [
+          create-position-link-with myself
+          set label self
+          set job-level [ job-level ] of target
+          create-job-link-with target
+          ask target [
+            create-professional-links-with other [ current-employees ] of the-employer
+          ]
+        ]
+      ]
+    ]
+  ]
+end
+
+to family-intervene
+  let the-condition nobody
+  ifelse family-intervention = "remove-if-caught" [
+    set the-condition [ -> breed = prisoners ]
+  ][
+    ifelse family-intervention = "remove-if-OC-member" [
+      set the-condition [ -> oc-member? ]
+    ][
+      if family-intervention = "remove-if-caught-and-OC-member" [
+        set the-condition  [ -> oc-member? and breed = prisoners ]
+      ]
+    ]
+  ]
+  let kids-to-protect persons with [
+    age <= 18 and age >= 12 and any? family-link-neighbors with [
+      runresult the-condition
+    ]
+  ]
+  if any? kids-to-protect [
+    ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
+      ; notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
+      ask family-link-neighbors with [
+        runresult the-condition
+      ] [
+        ask my-family-links with [ [ not runresult the-condition ] of other-end ] [
+          die
+        ]
+        ask my-friendship-links with [ [ not runresult the-condition ] of other-end ] [
+          die
+        ]
+      ] ; at this point bad dad is out and we help the remaining
+      let family (turtle-set self family-link-neighbors)
+      welfare-createjobs family with [
+        not any? my-job-links and age >= 16
+        and not any? my-school-links
+      ]
+      soc-add-educational family with [
+        not any? my-job-links and age < 18
+      ]
+      soc-add-psychological family
+      soc-add-more-friends family
     ]
   ]
 end
@@ -365,13 +525,16 @@ to init-person-empty ; person command
   set partner nobody
   set number-of-children 0
   set my-job nobody
+  set c-t-fresh? false
 end
 
 to let-migrants-in
   ; calculate the difference between deaths and birth
   let to-replace max list 0 (num-persons - count all-persons)
   let missing-jobs count jobs with [ not any? my-job-links ]
-  ask n-of min (list to-replace missing-jobs) jobs with [ not any? my-job-links ] [
+  let num-to-add min (list to-replace missing-jobs)
+  set number-migrants number-migrants + num-to-add
+  ask n-of num-to-add jobs with [ not any? my-job-links ] [
     ; we do not care about education level and wealth of migrants, as those variables
     ; exist only in order to generate the job position.
     hatch-persons 1 [
@@ -391,7 +554,7 @@ to make-baby
     if random-float 1 < p-fertility [
       ; we stop counting after 2 because probability stays the same
       set number-of-children number-of-children + 1
-      set number-birth number-birth + 1
+      set number-born number-born + 1
       hatch-persons 1 [
         init-person-empty
         set wealth-level [ wealth-level ] of myself
@@ -618,6 +781,7 @@ to make-people-die
       set number-deceased number-deceased + 1
       die
     ]
+    ask all-persons with [ age > 119 ] [ die ]
   ]
 end
 
@@ -740,11 +904,15 @@ to calculate-criminal-tendency
 end
 
 to-report criminal-tendency ; person reporter
-  let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
-  foreach  factors-c [ x ->
+  ifelse c-t-fresh? [ report c-t ] [
+    let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
+    foreach  factors-c [ x ->
       set c c * (runresult item 1 x)
     ]
-  report c
+    set c-t-fresh? true
+    set c-t c
+  ]
+  report c-t
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -759,21 +927,23 @@ to-report social-proximity-with [ target ] ; person reporter
   report total / normalization
 end
 
-to-report factors-social-proximity
+to-report factors-social-proximity  ; person reporter.
+  let ego myself
+  let alter self
   report (list
     ;     var-name     weight    normalized-reporter
-    (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of myself) > 18) [ 0 ] [ 1 - abs (age - [ age ] of myself) / 18 ] ])
-    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of myself) [ 1 ][ 0 ] ])
-    (list "wealth"     0.9       [ -> ifelse-value (wealth-level = [ wealth-level ] of myself) [ 1 ][ 0 ] ])
-    (list "job"        0.7       [ -> ifelse-value (job-level = [ job-level ] of myself) [ 1 ][ 0 ] ])
-    (list "education"  0.5       [ -> ifelse-value (education-level = [ education-level ] of myself) [ 1 ][ 0 ] ])
-    (list "retired"    0.3       [ -> ifelse-value (retired? = [ retired? ] of myself) [ 1 ][ 0 ] ])
-)
+    (list "age"        1.0       [ -> ifelse-value (abs (age - [ age ] of ego) > 18) [ 0 ] [ 1 - abs (age - [ age ] of ego) / 18 ] ])
+    (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of ego) [ 1 ][ 0 ] ])
+    (list "wealth"     1.0       [ -> ifelse-value (wealth-level = [ wealth-level ] of ego) [ 1 ][ 0 ] ])
+    (list "education"  1.0       [ -> ifelse-value (education-level = [ education-level ] of ego) [ 1 ][ 0 ] ])
+    (list "closure"    1.0       [ -> ifelse-value (any? (other [ friendship-link-neighbors ] of alter) with
+                                      [ friendship-link-neighbor? ego ]) [ 1 ][ 0 ] ])
+ )
 end
 
 ; we do no track time of crime so for now the requirement of
 ; "at least one crime in the last 2 years." is not feasible.
-; for now we use just "at least one crime"
+; for now we use just "at least one crime."
 to-report factors-c
   report (list
     ;     var-name     normalized-reporter
@@ -927,7 +1097,9 @@ to generate-households
     set hh-size min (list hh-size length population)
     let hh-members turtle-set sublist population 0 hh-size       ; grab the first persons in the list,
     set population sublist population hh-size length population  ; remove them from the population
-    ask hh-members [ create-family-links-with other hh-members ] ; and link them up.
+    let family-wealth-level [ wealth-level ] of max-one-of hh-members [ age ]
+    ask hh-members [ create-family-links-with other hh-members
+      set wealth-level family-wealth-level ]                     ; and link them up.
   ]
 end
 
@@ -1171,7 +1343,7 @@ num-persons
 num-persons
 100
 10000
-100.0
+550.0
 50
 1
 NIL
@@ -1220,7 +1392,7 @@ SWITCH
 265
 50
 388
-84
+83
 output?
 output?
 1
@@ -1333,7 +1505,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-3.0
+2.0
 1
 1
 NIL
@@ -1417,7 +1589,7 @@ MONITOR
 267
 288
 375
-334
+333
 migrants
 count persons with [ wealth-level = -1 ]
 17
@@ -1491,7 +1663,7 @@ SLIDER
 1097
 369
 1344
-403
+402
 nat-propensity-threshold
 nat-propensity-threshold
 0
@@ -1536,9 +1708,9 @@ MONITOR
 267
 439
 379
-485
+484
 NIL
-number-birth
+number-born
 17
 1
 11
@@ -1547,12 +1719,72 @@ MONITOR
 267
 89
 377
-135
+134
 OC members
 count all-persons with [ oc-member? ]
 17
 1
 11
+
+CHOOSER
+15
+210
+260
+255
+family-intervention
+family-intervention
+"none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
+0
+
+CHOOSER
+15
+260
+260
+305
+social-support
+social-support
+"none" "educational" "psychological" "more friends"
+0
+
+CHOOSER
+15
+310
+260
+355
+welfare-support
+welfare-support
+"none" "job-mother" "job-child"
+0
+
+SLIDER
+15
+360
+260
+393
+targets-addressed-percent
+targets-addressed-percent
+0
+100
+10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+400
+260
+433
+ticks-between-intervention
+ticks-between-intervention
+1
+24
+12.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
