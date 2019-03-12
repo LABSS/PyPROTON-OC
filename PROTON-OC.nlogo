@@ -140,6 +140,7 @@ to setup
   init-breed-colors
   calculate-criminal-tendency
   setup-oc-groups
+  setup-facilitators
   reset-oc-embeddedness
   ask turtles [ set-turtle-color-pos ]
   ask links [ set-link-color ]
@@ -161,6 +162,14 @@ to setup
   set good-guy-threshold        0.6
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   update-plots
+end
+
+to setup-facilitators
+  ask persons [
+    set facilitator
+      ifelse-value (not oc-member? and age > 18 and (random-float 1 < percentage-of-facilitators))
+      [ 1 ] [ 0 ]
+  ]
 end
 
 to load-stats-tables
@@ -255,9 +264,6 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
-  ask persons [
-    set facilitator 0
-  ]
   let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0)
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
   ask rnd:weighted-n-of num-oc-families persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
@@ -276,11 +282,6 @@ to setup-oc-groups
   ask persons with [ oc-member? ] [
     create-criminal-links-with other persons with [ oc-member? ] [
       set num-co-offenses 1
-    ]
-  ]
-  ask persons with [ not oc-member? and age > 18] [
-    if (random-float 1) < percentage-of-facilitators [
-      set facilitator 1
     ]
   ]
 end
@@ -626,8 +627,8 @@ to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality [
       if facilitator > 0 [
-        let new-facilitator one-of other persons with [facilitator = 0 and age > 18]
-        ask new-facilitator [set facilitator 1]
+        let new-facilitator one-of other persons with [ facilitator = 0 and age > 18 ]
+        ask new-facilitator [ set facilitator 1 ]
       ]
       set number-deceased number-deceased + 1
       die
@@ -656,15 +657,15 @@ end
 to-report facilitator-test [cog]
   ifelse (length cog < threshold-use-facilitators)
     [report true ]
+  [
+    let available-facilitator one-of persons with [facilitator = 1]
+    ifelse available-facilitator = nobody
+      [ report false ]
     [
-      let available-facilitator one-of persons with [facilitator = 1]
-      ifelse available-facilitator = nobody
-        [ report false ]
-        [
-          ask available-facilitator [set facilitator 2]
-          report true
-        ]
-   ]
+      ask available-facilitator [set facilitator 2]
+      report true
+    ]
+  ]
 end
 
 to commit-crimes
@@ -691,9 +692,6 @@ to commit-crimes
     foreach co-offender-groups [ co-offenders ->
       if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
     ]
-  ]
-  ask persons with [facilitator = 2] [
-    if random-float 1 < effectiveness-facilitators [ set facilitator 1 ]
   ]
 end
 
@@ -1623,21 +1621,6 @@ threshold-use-facilitators
 100
 10.0
 1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-15
-325
-175
-358
-effectiveness-facilitators
-effectiveness-facilitators
-0
-1
-0.8
-0.1
 1
 NIL
 HORIZONTAL
