@@ -17,6 +17,10 @@ persons with [age <= 18 and age >= 12 and any? family-link-neighbors with [ oc-m
 persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
 #their jobs and job level
 [ (list job-level count my-job-links job-level)] of persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
+#unemployed women in the family
+persons with [not male? and any? family-link-neighbors with [ oc-member? ] and not any? my-job-links]
+
+
 
 #families with different wealth levels inside
 all? persons [all? family-link-neighbors [ wealth-level = [ wealth-level ] of myself ] ]
