@@ -215,6 +215,15 @@ to go
     if social-support    != "none"   [ socialization-intervene ]
     if welfare-support   != "none"   [ welfare-intervene       ]
   ]
+  ; here will go the law intervention
+  ; if OC-members-scrutiny [ OC-members-scrutinize ]
+  ;OC-members-repression []
+
+  ;OC-ties-disruption []
+
+;OC-scrutiny-per-tick
+;OC-members-per-tick
+;OC-ties-per-turn
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
@@ -1785,6 +1794,72 @@ ticks-between-intervention
 1
 NIL
 HORIZONTAL
+
+SWITCH
+1095
+615
+1340
+648
+OC-members-scrutiny
+OC-members-scrutiny
+1
+1
+-1000
+
+SWITCH
+1095
+710
+1340
+743
+OC-members-repression
+OC-members-repression
+1
+1
+-1000
+
+SWITCH
+1095
+805
+1340
+838
+OC-ties-disruption
+OC-ties-disruption
+1
+1
+-1000
+
+INPUTBOX
+1095
+645
+1340
+705
+OC-scrutiny-per-tick
+1.0
+1
+0
+Number
+
+INPUTBOX
+1095
+740
+1340
+800
+OC-members-per-tick
+1.0
+1
+0
+Number
+
+INPUTBOX
+1095
+835
+1340
+895
+OC-ties-per-turn
+1.0
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
