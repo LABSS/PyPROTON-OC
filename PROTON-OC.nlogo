@@ -105,6 +105,7 @@ globals [
   number-deceased
   number-born
   number-migrants
+  intervention-on?
 ]
 
 to profile-setup
@@ -210,13 +211,19 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-  if ticks mod ticks-between-intervention = 0 [
+  ; intervention clock
+  if ticks mod ticks-between-intervention = 0 and
+     ticks >= intervention-start and
+     ticks <  intervention-end
+  [
+    set intervention-on? true
     if family-intervention != "none" [ family-intervene        ]
     if social-support    != "none"   [ socialization-intervene ]
     if welfare-support   != "none"   [ welfare-intervene       ]
+    ; OC-members-scrutiny works directly in factors-c
+  ;OC-members-repression []
   ]
   ; here will go the law intervention
-  ; if OC-members-scrutiny [ OC-members-scrutinize ]
   ;OC-members-repression []
 
   ;OC-ties-disruption []
@@ -972,6 +979,8 @@ to-report factors-c
           count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
         (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
                                                                              [ 1.81 ] [ 1.0 ] ])
+    (list "oc-member"   [ -> ifelse-value
+      (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.00 ] [ 1.0 ] ])
   )
 end
 
@@ -1577,10 +1586,10 @@ count prisoners
 11
 
 PLOT
-13
-492
-379
-697
+15
+545
+381
+750
 Age distribution
 age
 count
@@ -1800,8 +1809,8 @@ SWITCH
 615
 1340
 648
-OC-members-scrutiny
-OC-members-scrutiny
+OC-members-scrutinize?
+OC-members-scrutinize?
 1
 1
 -1000
@@ -1811,8 +1820,8 @@ SWITCH
 710
 1340
 743
-OC-members-repression
-OC-members-repression
+OC-members-repression?
+OC-members-repression?
 1
 1
 -1000
@@ -1822,8 +1831,8 @@ SWITCH
 805
 1340
 838
-OC-ties-disruption
-OC-ties-disruption
+OC-ties-disruption?
+OC-ties-disruption?
 1
 1
 -1000
@@ -1860,6 +1869,36 @@ OC-ties-per-turn
 1
 0
 Number
+
+SLIDER
+15
+435
+260
+468
+intervention-start
+intervention-start
+0
+100
+12.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+470
+260
+503
+intervention-end
+intervention-end
+0
+100
+24.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
