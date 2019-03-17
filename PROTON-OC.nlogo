@@ -195,6 +195,20 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     dump-model
   ]
+    ; intervention clock
+  ifelse ticks mod ticks-between-intervention = 0 and
+     ticks >= intervention-start and
+     ticks <  intervention-end
+  [
+    set intervention-on? true
+    if family-intervention != "none" [ family-intervene        ]
+    if social-support    != "none"   [ socialization-intervene ]
+    if welfare-support   != "none"   [ welfare-intervene       ]
+    ; OC-members-scrutiny works directly in factors-c
+  ;OC-members-repression []
+  ] [
+    set intervention-on? false
+  ]
   ask all-persons [ set c-t-fresh? false ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
@@ -211,18 +225,7 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-  ; intervention clock
-  if ticks mod ticks-between-intervention = 0 and
-     ticks >= intervention-start and
-     ticks <  intervention-end
-  [
-    set intervention-on? true
-    if family-intervention != "none" [ family-intervene        ]
-    if social-support    != "none"   [ socialization-intervene ]
-    if welfare-support   != "none"   [ welfare-intervene       ]
-    ; OC-members-scrutiny works directly in factors-c
-  ;OC-members-repression []
-  ]
+
   ; here will go the law intervention
   ;OC-members-repression []
 
@@ -820,6 +823,37 @@ to-report p-fertility
 end
 
 to commit-crimes
+  reset-oc-embeddedness
+  let co-offender-groups []
+  ask persons [
+    if random-float 1 < criminal-tendency [
+      let accomplices find-accomplices number-of-accomplices
+      set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
+      ; check for big crimes started from a normal guy
+      if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+        set big-crime-from-small-fish big-crime-from-small-fish +  1
+      ]
+    ]
+  ]
+  foreach co-offender-groups commit-crime
+  let oc-co-offender-groups filter [ co-offenders ->
+    any? co-offenders with [ oc-member? ]
+  ] co-offender-groups
+  foreach oc-co-offender-groups [ co-offenders ->
+    ask co-offenders [ set oc-member? true ]
+  ]
+  foreach co-offender-groups [ co-offenders ->
+    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+  ]
+  show map count co-offender-groups
+end
+
+to commit-crimes-2
+  ; calculate co-offendedness factor (will be moved elsewhere)
+  let reduction-by-cooffending sum map [ i -> first i * first but-first i ] num-co-offenders-dist
+  ; first I extract the prob of crime for each category (gender and age)
+  ; then I try (max ten times) to find someone in that category that wants to commit the crime
+  ; then....
   reset-oc-embeddedness
   let co-offender-groups []
   ask persons [
@@ -1899,6 +1933,17 @@ intervention-end
 1
 NIL
 HORIZONTAL
+
+MONITOR
+269
+487
+327
+533
+NIL
+count
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
