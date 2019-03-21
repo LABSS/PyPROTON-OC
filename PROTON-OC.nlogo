@@ -889,6 +889,7 @@ to retire-persons
 end
 
 to-report find-accomplices [ n ] ; person reporter
+  ; why not setting the net context to be sure?
   ; make sure it is person context
   let d 1 ; start with a network distance of 1
   let accomplices []
@@ -1336,7 +1337,7 @@ end
 
 to show-criminal-network
   let criminals persons with [ oc-member? ]
-  let c-links links with [ all? both-ends [  member? self criminals ] and (breed = family-links or breed = criminal-links) ]
+  let c-links links with [ all? both-ends [ member? self criminals ] and (breed = family-links or breed = criminal-links) ]
   ask criminals [ show-turtle ]
   ask c-links [ show-link ]
   layout-spring criminals c-links 1 0.1 0.1
@@ -1933,17 +1934,6 @@ intervention-end
 1
 NIL
 HORIZONTAL
-
-MONITOR
-269
-487
-327
-533
-NIL
-count
-17
-1
-11
 
 @#$#@#$#@
 ## WHAT IS IT?
