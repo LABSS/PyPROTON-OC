@@ -1325,15 +1325,15 @@ to show-criminal-network
   ;; sottoreti in comune, vedi meta-network
   ask meta-criminal-links [ die ]
   set criminals persons with [ oc-member? ]
-  ask criminals [ set size crime-activity ]
   ask criminals [
+    set size crime-activity
     ask other criminals [
       if criminal-link-neighbor? myself [
         let weight 0
         if family-link-neighbor? myself [ set weight weight + 0.1 ]
         if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
         if professional-link-neighbor? myself [ set weight weight + 0.1 ]
-        ;if school-link-neighbor? myself [set weight weight + 0.1]
+        if school-link-neighbor? myself [set weight weight + 0.1]
         if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
       ]
     ]
