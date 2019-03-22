@@ -105,7 +105,6 @@ globals [
   number-deceased
   number-born
   number-migrants
-  intervention-on?
 ]
 
 to profile-setup
@@ -196,19 +195,13 @@ to go
     dump-model
   ]
     ; intervention clock
-  ifelse ticks mod ticks-between-intervention = 0 and
-     ticks >= intervention-start and
-     ticks <  intervention-end
-  [
-    set intervention-on? true
+  if intervention-on? [
     if family-intervention != "none" [ family-intervene        ]
     if social-support    != "none"   [ socialization-intervene ]
     if welfare-support   != "none"   [ welfare-intervene       ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
-  ] [
-    set intervention-on? false
   ]
   ask all-persons [ set c-t-fresh? false ]
   if ((ticks mod ticks-per-year) = 0) [
@@ -232,6 +225,12 @@ to go
   if behaviorspace-experiment-name != "" [
     show (word behaviorspace-run-number "." ticks)
     ]
+end
+
+to-report intervention-on?
+  report ticks mod ticks-between-intervention = 0 and
+     ticks >= intervention-start and
+     ticks <  intervention-end
 end
 
 to dump-networks []
@@ -837,7 +836,6 @@ to commit-crimes
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
-  show map count co-offender-groups
 end
 
 to-report arrest-probability-with-intervention [ group ]
