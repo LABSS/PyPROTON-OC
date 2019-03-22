@@ -13,6 +13,8 @@ undirected-link-breed [professional-links professional-link] ; person <--> perso
 undirected-link-breed [school-links       school-link]       ; person <--> person
 undirected-link-breed [meta-links         meta-link]         ; person <--> person
 
+undirected-link-breed [meta-criminal-links         meta-criminal-link]         ; person <--> person
+
 undirected-link-breed [positions-links         position-link]          ; job <--> employer
 undirected-link-breed [job-links               job-link]               ; person <--> job
 undirected-link-breed [school-attendance-links school-attendance-link] ; person <--> school
@@ -35,6 +37,8 @@ persons-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
+  ; SIMO added this one to count the crime now
+  crime-activity
 ]
 
 prisoners-own [
@@ -55,11 +59,14 @@ prisoners-own [
   number-of-children
   c-t-fresh?  ; stored c value and its freshness.
   c-t
+  ; SIMO added this one to count the crime now
+  crime-activity
 ]
 
 jobs-own [
   job-level
 ]
+
 schools-own [
   education-level
 ]
@@ -105,6 +112,10 @@ globals [
   number-deceased
   number-born
   number-migrants
+
+  ;; SIMO for crime net visualization
+  criminals
+  c-links
 ]
 
 to profile-setup
@@ -163,6 +174,7 @@ to setup
   set this-is-a-big-crime       3
   set good-guy-threshold        0.6
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
+  if view-crim? [ show-criminal-network ]
   update-plots
 end
 
@@ -194,7 +206,11 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     dump-model
   ]
-  ask all-persons [ set c-t-fresh? false ]
+  ask all-persons [
+    set c-t-fresh? false
+    set crime-activity crime-activity - 1
+    if crime-activity <= 1 [set crime-activity 1]
+  ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
     calculate-criminal-tendency
@@ -705,8 +721,14 @@ to setup-education-levels
   set education-levels table:from-list education-levels
 end
 
-to-report min-age-edu-level [ the-level ] report item 0 table:get education-levels the-level end
-to-report max-age-edu-level [ the-level ] report item 1 table:get education-levels the-level end
+to-report min-age-edu-level [ the-level ]
+  report item 0 table:get education-levels the-level
+end
+
+to-report max-age-edu-level [ the-level ]
+  report item 1 table:get education-levels the-level
+end
+
 to-report possible-school-level ; person command
   let the-level -1
   foreach table:keys education-levels [ i ->
@@ -861,6 +883,7 @@ end
 to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
+    set crime-activity 5
     create-criminal-links-with other co-offenders
   ]
   nw:with-context co-offenders criminal-links [
@@ -975,14 +998,19 @@ to-report oc-embeddedness ; person reporter
     if any? other oc-members [
       update-meta-links agents
       nw:with-context agents meta-links [
-        set cached-oc-embeddedness (
-          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
-          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
-        )
+        set cached-oc-embeddedness ( find-oc-weight-distance oc-members / find-oc-weight-distance agents )
+        ; SIMO: JUST TO STAY DRY
+;          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
+;          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
+;        )
       ]
     ]
   ]
   report cached-oc-embeddedness
+end
+
+to-report find-oc-weight-distance [people]
+  report sum [ 1 / nw:weighted-distance-to myself dist ] of other people
 end
 
 to-report number-of-accomplices
@@ -1014,9 +1042,10 @@ end
 to load-model
   let model-file-name user-file
   if is-string? model-file-name [
-     let file-ext-position position ".world" model-file-name
-     ifelse is-number? file-ext-position [ import-world model-file-name ]
-                                         [ user-message "the file must have the extension .world" ]
+    let file-ext-position position ".world" model-file-name
+    ifelse is-number? file-ext-position
+    [ import-world model-file-name ]
+    [ user-message "the file must have the extension .world" ]
   ]
 end
 
@@ -1274,21 +1303,53 @@ to-report atkinson-inequality-index [ epsilon person-reporter ]
   report 1 - ((sum [ runresult person-reporter ] of all-persons) / count all-persons )^(1 - (1 - epsilon)) / mean-income
 end
 
-to-report all-persons report (turtle-set persons prisoners) end
+to-report all-persons
+  report (turtle-set persons prisoners)
+end
 
-to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
+to-report unemployed-while-working
+  report count persons with [ job-level != 1 and not any? my-job-links ]
+end
 
 to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
 end
 
 to show-criminal-network
-  let criminals persons with [ oc-member? ]
-  let c-links links with [ all? both-ends [  member? self criminals ] and (breed = family-links or breed = criminal-links) ]
+  ;; non visualizare i criminal-links
+  ;; visualizzare il resto della rete (tutti gli altri link)
+  ;; dropdown che seleziona il tipo di link
+  ;; far vedere lo spessore dei link merging the other kind of links
+  ;; meta-network
+  ;; cambiare la size della turtle se ha commesso il crimine al tick precedente usando una variabile
+  ;; sottoreti in comune, vedi meta-network
+  ask meta-criminal-links [ die ]
+  set criminals persons with [ oc-member? ]
+  ask criminals [ set size crime-activity ]
+  ask criminals [
+    ask other criminals [
+      let weight 0
+      if family-link-neighbor? myself [ set weight weight + 0.1 ]
+      if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
+      if professional-link-neighbor? myself [ set weight weight + 0.1 ]
+      ;if school-link-neighbor? myself [set weight weight + 0.1]
+      if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
+    ]
+  ]
+
+  ;set c-links links with [ all? both-ends [ member? self criminals ] and (breed = family-links or breed = criminal-links) ]
+
   ask criminals [ show-turtle ]
-  ask c-links [ show-link ]
-  layout-spring criminals c-links 1 0.1 0.1
+  ask meta-criminal-links [ show-link ]
+  nw:with-context criminals meta-criminal-links [layout-circle sort criminals 12]
 end
+
+
+
+
+
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1625,7 +1686,7 @@ SWITCH
 48
 view-crim?
 view-crim?
-1
+0
 1
 -1000
 
@@ -1785,6 +1846,28 @@ ticks-between-intervention
 1
 NIL
 HORIZONTAL
+
+MONITOR
+195
+440
+262
+485
+criminals
+count criminals
+17
+1
+11
+
+MONITOR
+65
+440
+192
+485
+meta criminal links
+count meta-criminal-links
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
