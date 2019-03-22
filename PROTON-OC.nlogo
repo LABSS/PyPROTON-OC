@@ -205,7 +205,8 @@ to go
     if social-support    != "none"   [ socialization-intervene ]
     if welfare-support   != "none"   [ welfare-intervene       ]
     ; OC-members-scrutiny works directly in factors-c
-  ;OC-members-repression []
+    ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
+    ; OC-ties-disruption? we don't yet have an implementation.
   ] [
     set intervention-on? false
   ]
@@ -225,15 +226,6 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-
-  ; here will go the law intervention
-  ;OC-members-repression []
-
-  ;OC-ties-disruption []
-
-;OC-scrutiny-per-tick
-;OC-members-per-tick
-;OC-ties-per-turn
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
@@ -843,38 +835,16 @@ to commit-crimes
     ask co-offenders [ set oc-member? true ]
   ]
   foreach co-offender-groups [ co-offenders ->
-    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+    if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
   show map count co-offender-groups
 end
 
-to commit-crimes-2
-  ; calculate co-offendedness factor (will be moved elsewhere)
-  let reduction-by-cooffending sum map [ i -> first i * first but-first i ] num-co-offenders-dist
-  ; first I extract the prob of crime for each category (gender and age)
-  ; then I try (max ten times) to find someone in that category that wants to commit the crime
-  ; then....
-  reset-oc-embeddedness
-  let co-offender-groups []
-  ask persons [
-    if random-float 1 < criminal-tendency [
-      let accomplices find-accomplices number-of-accomplices
-      set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
-      ; check for big crimes started from a normal guy
-      if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
-        set big-crime-from-small-fish big-crime-from-small-fish +  1
-      ]
-    ]
-  ]
-  foreach co-offender-groups commit-crime
-  let oc-co-offender-groups filter [ co-offenders ->
-    any? co-offenders with [ oc-member? ]
-  ] co-offender-groups
-  foreach oc-co-offender-groups [ co-offenders ->
-    ask co-offenders [ set oc-member? true ]
-  ]
-  foreach co-offender-groups [ co-offenders ->
-    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+to-report arrest-probability-with-intervention [ group ]
+  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ]) [
+    report probability-of-getting-caught * oc-arrest-multiplier
+  ] [
+    report probability-of-getting-caught
   ]
 end
 
@@ -1015,7 +985,7 @@ to-report factors-c
         (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
                                                                              [ 1.81 ] [ 1.0 ] ])
     (list "oc-member"   [ -> ifelse-value
-      (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.00 ] [ 1.0 ] ])
+      (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.50 ] [ 1.0 ] ])
   )
 end
 
@@ -1861,23 +1831,12 @@ OC-members-repression?
 1
 -1000
 
-SWITCH
-1095
-805
-1340
-838
-OC-ties-disruption?
-OC-ties-disruption?
-1
-1
--1000
-
 INPUTBOX
 1095
 645
 1340
 705
-OC-scrutiny-per-tick
+OC-arrest-multiplier
 1.0
 1
 0
@@ -1889,17 +1848,6 @@ INPUTBOX
 1340
 800
 OC-members-per-tick
-1.0
-1
-0
-Number
-
-INPUTBOX
-1095
-835
-1340
-895
-OC-ties-per-turn
 1.0
 1
 0
