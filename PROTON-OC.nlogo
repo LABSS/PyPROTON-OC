@@ -1328,12 +1328,14 @@ to show-criminal-network
   ask criminals [ set size crime-activity ]
   ask criminals [
     ask other criminals [
-      let weight 0
-      if family-link-neighbor? myself [ set weight weight + 0.1 ]
-      if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
-      if professional-link-neighbor? myself [ set weight weight + 0.1 ]
-      ;if school-link-neighbor? myself [set weight weight + 0.1]
-      if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
+      if criminal-link-neighbor? myself [
+        let weight 0
+        if family-link-neighbor? myself [ set weight weight + 0.1 ]
+        if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
+        if professional-link-neighbor? myself [ set weight weight + 0.1 ]
+        ;if school-link-neighbor? myself [set weight weight + 0.1]
+        if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
+      ]
     ]
   ]
 
@@ -1341,7 +1343,9 @@ to show-criminal-network
 
   ask criminals [ show-turtle ]
   ask meta-criminal-links [ show-link ]
-  nw:with-context criminals meta-criminal-links [layout-circle sort criminals 12]
+  nw:with-context criminals meta-criminal-links [
+    layout-circle sort criminals 12
+  ]
 end
 
 
