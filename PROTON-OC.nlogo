@@ -857,22 +857,22 @@ to retire-persons
 end
 
 to-report find-accomplices [ n ] ; person reporter
-  ; why not setting the net context to be sure?
-  ; make sure it is person context
   let d 1 ; start with a network distance of 1
   let accomplices []
-  while [ length accomplices < n and d < max-accomplice-radius ] [
-    let candidates sort-on [
-      candidate-weight
-    ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
-    while [ length accomplices < n and not empty? candidates ] [
-      let candidate first candidates
-      set candidates but-first candidates
-      if random-float 1 < [ criminal-tendency ] of candidate [
-        set accomplices lput candidate accomplices
+  nw:with-context persons person-links [
+    while [ length accomplices < n and d < max-accomplice-radius ] [
+      let candidates sort-on [
+        candidate-weight
+      ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
+      while [ length accomplices < n and not empty? candidates ] [
+        let candidate first candidates
+        set candidates but-first candidates
+        if random-float 1 < [ criminal-tendency ] of candidate [
+          set accomplices lput candidate accomplices
+        ]
       ]
+      set d d + 1
     ]
-    set d d + 1
   ]
   report accomplices
 end
@@ -1301,6 +1301,10 @@ to-report unemployed-while-working report count persons with [ job-level != 1 an
 
 to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
+end
+
+to-report person-links
+  report (link-set family-links friendship-links criminal-links professional-links school-links)
 end
 
 to show-criminal-network
