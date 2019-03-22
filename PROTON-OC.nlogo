@@ -1805,7 +1805,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-12.0
+2.0
 1
 1
 NIL
