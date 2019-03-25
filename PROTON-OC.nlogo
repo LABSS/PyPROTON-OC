@@ -407,10 +407,12 @@ end
 to make-friends
   ask persons [
     let num-new-friends min list random-poisson 3 count my-links with [
-      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+      breed = family-links or breed = professional-links or breed = school-links and
+      not [ friendship-link-neighbor? myself ] of other-end
     ] ; add slider
     ask rnd:weighted-n-of num-new-friends (my-links with [
-      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+      breed = family-links or breed = professional-links or breed = school-links and
+      not [ friendship-link-neighbor? myself ] of other-end
     ]) [
       [ social-proximity-with other-end ] of myself ] [
       ask other-end [ create-friendship-link-with other-end ] ]
@@ -1359,7 +1361,6 @@ end
 
 
 
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1466,7 +1467,7 @@ SWITCH
 83
 output?
 output?
-1
+0
 1
 -1000
 
