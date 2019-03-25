@@ -292,6 +292,8 @@ to soc-add-psychological [ targets ]
     if any? support-set [
       create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
         1 - (abs (age - [ age ] of myself ) / 120)
+        ;; nascondi tutti i links
+
       ]
     ]
   ]
@@ -1330,10 +1332,10 @@ to show-criminal-network
     ask other criminals [
       if criminal-link-neighbor? myself [
         let weight 0
-        if family-link-neighbor? myself [ set weight weight + 0.1 ]
+        ;if family-link-neighbor? myself [ set weight weight + 0.1 ]
         if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
-        if professional-link-neighbor? myself [ set weight weight + 0.1 ]
-        if school-link-neighbor? myself [set weight weight + 0.1]
+        ;if professional-link-neighbor? myself [ set weight weight + 0.1 ]
+        ;if school-link-neighbor? myself [set weight weight + 0.1]
         if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
       ]
     ]
@@ -1350,6 +1352,10 @@ end
 
 
 
+;; un tentativo da fare è fare il merge con codice di Mario
+;; ora facciamo troppi crimini
+;; visualizzazre solo i link per le persone che ne hanno un certo numero
+;; ridare occhiata della generazione amicizia
 
 
 
@@ -1748,7 +1754,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-25.0
+8.0
 1
 1
 NIL
@@ -1763,7 +1769,7 @@ num-oc-families
 num-oc-families
 1
 50
-10.0
+8.0
 1
 1
 NIL
