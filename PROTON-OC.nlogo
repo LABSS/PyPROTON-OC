@@ -406,11 +406,11 @@ to make-friends
   ask persons [
     let num-new-friends min list random-poisson 3 count my-links with [
       breed = family-links or breed = professional-links or breed = school-links and
-      not [ friendship-link-neighbor? myself ] of other-end
+      not [ friendship-link-neighbor? other-end ] of myself
     ] ; add slider
     ask rnd:weighted-n-of num-new-friends (my-links with [
       breed = family-links or breed = professional-links or breed = school-links and
-      not [ friendship-link-neighbor? myself ] of other-end
+      not [ friendship-link-neighbor?  other-end ] of myself
     ]) [
       [ social-proximity-with other-end ] of myself ] [
       ask other-end [ create-friendship-link-with other-end ] ]
