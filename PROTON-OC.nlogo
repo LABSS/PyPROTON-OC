@@ -858,12 +858,52 @@ to crime-stats
       last cell ", "
       first value ", "
       last value ", "
+      (last value * ticks) ", "
       (mean [ num-crimes-committed ] of all-persons with [
         age > last cell and age <= first value and male? = first cell
-      ] / ticks)
+      ]) ", "
+      (standard-deviation [ num-crimes-committed ] of all-persons with [
+        age > last cell and age <= first value and male? = first cell
+      ])
     )
+    show abs last value * ticks - (mean [ num-crimes-committed ] of all-persons with [
+        age > last cell and age <= first value and male? = first cell
+      ] ) < standard-deviation [ num-crimes-committed ] of all-persons with [
+        age > last cell and age <= first value and male? = first cell
+      ]
   ]
 end
+
+
+; called only by tests - will be removed later
+to-report crime-stats-go
+  while reduce [ [ i j ] -> i and j ]
+  [
+  map [ cell ->
+    ifelse-value ((any? all-persons with [
+      age > last cell and age <= first last table:get c-range-by-age-and-sex cell and male? = first cell
+    ]) and (sum [ num-crimes-committed ] of all-persons with [
+        age > last cell and age <= first last table:get c-range-by-age-and-sex cell and male? = first cell
+      ] > 0))
+    [
+      abs last last table:get c-range-by-age-and-sex cell * ticks -
+      (mean [ num-crimes-committed ] of all-persons with [
+        age > last cell and age <= first last table:get c-range-by-age-and-sex cell and male? = first cell
+      ] ) < standard-deviation [ num-crimes-committed ] of all-persons with [
+        age > last cell and age <= first last table:get c-range-by-age-and-sex cell and male? = first cell
+      ]
+
+    ] [
+      true
+    ]
+  ]
+  table:keys c-range-by-age-and-sex
+  ] [
+    go
+  ]
+
+end
+
 
 to-report arrest-probability-with-intervention [ group ]
   if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ]) [
@@ -1572,7 +1612,7 @@ oc-embeddedness-radius
 oc-embeddedness-radius
 0
 5
-2.0
+5.0
 1
 1
 NIL
