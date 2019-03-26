@@ -34,6 +34,7 @@ persons-own [
   number-of-children
   c-t-fresh?  ; stored c value and its freshness.
   c-t
+  hobby
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -55,6 +56,7 @@ prisoners-own [
   number-of-children
   c-t-fresh?  ; stored c value and its freshness.
   c-t
+  hobby
 ]
 
 jobs-own [
@@ -105,6 +107,7 @@ globals [
   number-deceased
   number-born
   number-migrants
+  number-weddings
 ]
 
 to profile-setup
@@ -163,6 +166,7 @@ to setup
   set this-is-a-big-crime       3
   set good-guy-threshold        0.6
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
+  ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   update-plots
 end
 
@@ -187,6 +191,63 @@ to load-stats-tables
   ; schools.csv table goes into education-levels
 end
 
+to-report wedding-proximity-with [p-partner]
+  let social-proxy social-proximity-with p-partner
+  let wedding-proxy (4 - (abs (hobby - [hobby] of p-partner))) / 4 ; see setup procedure, hobby
+  report (social-proxy + wedding-proxy) / 2
+end
+
+to-report potential-partner [candidate group]
+  let pp nobody
+  let sp 0
+  ask candidate [
+    ; 8 is the max difference for the age (see conf. call 3/20)
+    let pp-list  other group with [male? != ([male?] of myself) and
+                                  (abs (age - ([age] of myself))) < 8 and
+                                  not family-link-neighbor? myself]
+    if any? pp-list [
+      set pp rnd:weighted-one-of pp-list [wedding-proximity-with candidate]
+      ask pp [set sp wedding-proximity-with candidate]
+    ]
+  ]
+  report (list pp sp)
+end
+
+to-report wedding-pool-creation
+  ; from 25 to 55 is the wedding-range (see conf. call 3/20)
+  let pool persons with [age > 25 and age < 55 and partner = nobody]
+  let report-pool []
+  if any? pool [
+    ask pool [
+        set report-pool lput (list self (potential-partner self pool)) report-pool
+      ]
+  ]
+  report report-pool
+end
+
+to wedding
+  let wedding-pool wedding-pool-creation
+  if wedding-pool != [] [
+    foreach wedding-pool [ x ->
+      let partner-1 item 0 x
+      let partner-2 item 0 (item 1 x)
+      let wedding-prob item 1 (item 1 x)
+      if partner-2 != nobody [
+        if [partner] of partner-1 = nobody and
+           [partner] of partner-2 = nobody and
+           (random-float  1) < wedding-prob [
+              set number-weddings number-weddings + 1
+              ask partner-1 [ask my-family-links [die]]
+              ask partner-2 [ask my-family-links [die]]
+              ask partner-1 [set partner partner-2]
+              ask partner-2 [set partner partner-1]
+              ask partner-1 [create-family-links-with turtle-set partner-2]
+        ]
+      ]
+    ]
+  ]
+end
+
 to go
   if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
     dump-networks
@@ -199,6 +260,7 @@ to go
     graduate
     calculate-criminal-tendency
     let-migrants-in
+    wedding
   ]
   commit-crimes
   retire-persons
@@ -562,6 +624,7 @@ to make-baby
         set male? one-of [ true false ]
         create-family-links-with turtle-set [ family-link-neighbors ] of myself
         create-family-link-with myself
+        set hobby random 5 ; see setup procedure
         set-turtle-color-pos
       ]
     ]
@@ -1785,6 +1848,17 @@ ticks-between-intervention
 1
 NIL
 HORIZONTAL
+
+MONITOR
+150
+440
+257
+485
+NIL
+number-weddings
+0
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
