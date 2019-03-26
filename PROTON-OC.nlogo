@@ -194,6 +194,15 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     dump-model
   ]
+    ; intervention clock
+  if intervention-on? [
+    if family-intervention != "none" [ family-intervene        ]
+    if social-support    != "none"   [ socialization-intervene ]
+    if welfare-support   != "none"   [ welfare-intervene       ]
+    ; OC-members-scrutiny works directly in factors-c
+    ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
+    ; OC-ties-disruption? we don't yet have an implementation.
+  ]
   ask all-persons [ set c-t-fresh? false ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
@@ -210,17 +219,18 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-  if ticks mod ticks-between-intervention = 0 [
-    if family-intervention != "none" [ family-intervene        ]
-    if social-support    != "none"   [ socialization-intervene ]
-    if welfare-support   != "none"   [ welfare-intervene       ]
-  ]
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
   if behaviorspace-experiment-name != "" [
     show (word behaviorspace-run-number "." ticks)
     ]
+end
+
+to-report intervention-on?
+  report ticks mod ticks-between-intervention = 0 and
+     ticks >= intervention-start and
+     ticks <  intervention-end
 end
 
 to dump-networks []
@@ -824,7 +834,15 @@ to commit-crimes
     ask co-offenders [ set oc-member? true ]
   ]
   foreach co-offender-groups [ co-offenders ->
-    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+    if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
+  ]
+end
+
+to-report arrest-probability-with-intervention [ group ]
+  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ]) [
+    report probability-of-getting-caught * oc-arrest-multiplier
+  ] [
+    report probability-of-getting-caught
   ]
 end
 
@@ -839,21 +857,22 @@ to retire-persons
 end
 
 to-report find-accomplices [ n ] ; person reporter
-  ; make sure it is person context
   let d 1 ; start with a network distance of 1
   let accomplices []
-  while [ length accomplices < n and d < max-accomplice-radius ] [
-    let candidates sort-on [
-      candidate-weight
-    ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
-    while [ length accomplices < n and not empty? candidates ] [
-      let candidate first candidates
-      set candidates but-first candidates
-      if random-float 1 < [ criminal-tendency ] of candidate [
-        set accomplices lput candidate accomplices
+  nw:with-context persons person-links [
+    while [ length accomplices < n and d < max-accomplice-radius ] [
+      let candidates sort-on [
+        candidate-weight
+      ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
+      while [ length accomplices < n and not empty? candidates ] [
+        let candidate first candidates
+        set candidates but-first candidates
+        if random-float 1 < [ criminal-tendency ] of candidate [
+          set accomplices lput candidate accomplices
+        ]
       ]
+      set d d + 1
     ]
-    set d d + 1
   ]
   report accomplices
 end
@@ -963,6 +982,8 @@ to-report factors-c
           count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
         (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
                                                                              [ 1.81 ] [ 1.0 ] ])
+    (list "oc-member"   [ -> ifelse-value
+      (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.50 ] [ 1.0 ] ])
   )
 end
 
@@ -1282,9 +1303,13 @@ to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
 end
 
+to-report person-links
+  report (link-set family-links friendship-links criminal-links professional-links school-links)
+end
+
 to show-criminal-network
   let criminals persons with [ oc-member? ]
-  let c-links links with [ all? both-ends [  member? self criminals ] and (breed = family-links or breed = criminal-links) ]
+  let c-links links with [ all? both-ends [ member? self criminals ] and (breed = family-links or breed = criminal-links) ]
   ask criminals [ show-turtle ]
   ask c-links [ show-link ]
   layout-spring criminals c-links 1 0.1 0.1
@@ -1568,10 +1593,10 @@ count prisoners
 11
 
 PLOT
-13
-492
-379
-697
+15
+545
+381
+750
 Age distribution
 age
 count
@@ -1780,7 +1805,81 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+1095
+615
+1340
+648
+OC-members-scrutinize?
+OC-members-scrutinize?
+1
+1
+-1000
+
+SWITCH
+1095
+710
+1340
+743
+OC-members-repression?
+OC-members-repression?
+1
+1
+-1000
+
+INPUTBOX
+1095
+645
+1340
+705
+OC-arrest-multiplier
+1.0
+1
+0
+Number
+
+INPUTBOX
+1095
+740
+1340
+800
+OC-members-per-tick
+1.0
+1
+0
+Number
+
+SLIDER
+15
+435
+260
+468
+intervention-start
+intervention-start
+0
+100
 12.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+470
+260
+503
+intervention-end
+intervention-end
+0
+100
+24.0
 1
 1
 NIL
