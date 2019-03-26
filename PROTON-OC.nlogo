@@ -37,7 +37,7 @@ persons-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
-  ; SIMO added this one to count the crime now
+  ; SIMO added this one to track when a crime activity happens
   crime-activity
 ]
 
@@ -59,7 +59,7 @@ prisoners-own [
   number-of-children
   c-t-fresh?  ; stored c value and its freshness.
   c-t
-  ; SIMO added this one to count the crime now
+  ; SIMO added this one to track when a crime activity happens
   crime-activity
 ]
 
@@ -112,10 +112,6 @@ globals [
   number-deceased
   number-born
   number-migrants
-
-  ;; SIMO for crime net visualization
-  criminals
-  c-links
 ]
 
 to profile-setup
@@ -887,7 +883,7 @@ end
 to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
-    set crime-activity 5
+    set crime-activity 3
     create-criminal-links-with other co-offenders
   ]
   nw:with-context co-offenders criminal-links [
@@ -1320,47 +1316,26 @@ to-report lognormal [ mu sigma ]
 end
 
 to show-criminal-network
-  ;; non visualizare i criminal-links
-  ;; visualizzare il resto della rete (tutti gli altri link)
-  ;; dropdown che seleziona il tipo di link
-  ;; far vedere lo spessore dei link merging the other kind of links
-  ;; meta-network
-  ;; cambiare la size della turtle se ha commesso il crimine al tick precedente usando una variabile
-  ;; sottoreti in comune, vedi meta-network
   ask meta-criminal-links [ die ]
-  set criminals persons with [ oc-member? ]
+  let criminals turtles with [ (breed = persons or breed = prisoners) and oc-member? ]
   ask criminals [
     set size crime-activity
     ask other criminals [
       if criminal-link-neighbor? myself [
         let weight 0
-        ;if family-link-neighbor? myself [ set weight weight + 0.1 ]
+        if family-link-neighbor? myself [ set weight weight + 0.1 ]
         if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
-        ;if professional-link-neighbor? myself [ set weight weight + 0.1 ]
-        ;if school-link-neighbor? myself [set weight weight + 0.1]
+        if professional-link-neighbor? myself [ set weight weight + 0.1 ]
         if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
       ]
     ]
   ]
-
-  ;set c-links links with [ all? both-ends [ member? self criminals ] and (breed = family-links or breed = criminal-links) ]
-
   ask criminals [ show-turtle ]
   ask meta-criminal-links [ show-link ]
   nw:with-context criminals meta-criminal-links [
-    layout-circle sort criminals 12
+    layout-circle sort criminals 14
   ]
 end
-
-
-
-;; un tentativo da fare è fare il merge con codice di Mario
-;; ora facciamo troppi crimini
-;; visualizzazre solo i link per le persone che ne hanno un certo numero
-;; ridare occhiata della generazione amicizia
-
-
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1859,20 +1834,9 @@ NIL
 HORIZONTAL
 
 MONITOR
-195
+135
 440
 262
-485
-criminals
-count criminals
-17
-1
-11
-
-MONITOR
-65
-440
-192
 485
 meta criminal links
 count meta-criminal-links
