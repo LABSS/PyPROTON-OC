@@ -108,6 +108,7 @@ globals [
   number-born
   number-migrants
   number-weddings
+  number-weddings-expected
 ]
 
 to profile-setup
