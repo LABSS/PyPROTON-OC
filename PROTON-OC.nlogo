@@ -815,14 +815,24 @@ end
 
 to commit-crimes
   reset-oc-embeddedness
+  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0) [
+    -1 *  min [ criminal-tendency ] of persons
+  ] [ 0 ]
   let co-offender-groups []
-  ask persons [
-    if random-float 1 < criminal-tendency [
-      let accomplices find-accomplices number-of-accomplices
-      set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
-      ; check for big crimes started from a normal guy
-      if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
-        set big-crime-from-small-fish big-crime-from-small-fish +  1
+  foreach table:keys c-range-by-age-and-sex [ cell ->
+    let value last table:get c-range-by-age-and-sex cell
+    let people-in-cell persons with [
+      age > last cell and age <= first value and male? = first cell
+    ]
+    let n-of-crimes last value  * count people-in-cell
+    repeat round n-of-crimes [
+      ask rnd:weighted-one-of people-in-cell [  min-criminal-tendency + criminal-tendency ] [
+        let accomplices find-accomplices number-of-accomplices
+        set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
+        ; check for big crimes started from a normal guy
+        if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+          set big-crime-from-small-fish big-crime-from-small-fish +  1
+        ]
       ]
     ]
   ]
