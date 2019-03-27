@@ -201,7 +201,6 @@ to wedding-alternative
   ;; check this distribution
   let num-wedding-this-month floor random-normal number-weddings-mean number-weddings-sd
   let insuccess 0
-  print (word "we need to make " num-wedding-this-month " weddings" )
   while [ num-wedding-this-month > 0 and insuccess < 20 ] [
     let maritable persons with [age > 25 and age < 55 and partner = nobody]
     ask one-of maritable [
