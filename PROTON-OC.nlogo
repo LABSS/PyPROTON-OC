@@ -108,7 +108,8 @@ globals [
   number-born
   number-migrants
   number-weddings
-  number-weddings-expected
+  number-weddings-mean
+  number-weddings-sd
 ]
 
 to profile-setup
@@ -190,11 +191,55 @@ to load-stats-tables
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
   ; further sources:
   ; schools.csv table goes into education-levels
+  set number-weddings-mean 18
+  set number-weddings-sd 3
 end
 
-to-report wedding-proximity-with [p-partner]
+;;; BEGIN ALT WEDDING
+
+to wedding-alternative
+  ;; check this distribution
+  let num-wedding-this-month floor random-normal number-weddings-mean number-weddings-sd
+  let insuccess 0
+  print (word "we need to make " num-wedding-this-month " weddings" )
+  while [ num-wedding-this-month > 0 and insuccess < 20 ] [
+    let maritable persons with [age > 25 and age < 55 and partner = nobody]
+    ask one-of maritable [
+      let pool nobody
+      nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius 3) with [ self != myself ] ]
+      nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius 3) with [ self != myself ]) ]
+      set pool filter-maritable pool
+      if not any? pool and insuccess >= 10 [ set pool other filter-maritable maritable ]
+      ifelse any? pool
+      [ conclude-wedding pool
+        set num-wedding-this-month num-wedding-this-month - 1
+        set number-weddings number-weddings + 1
+        set insuccess 0 ]
+      [ set insuccess insuccess + 1 ]
+    ]
+  ]
+end
+
+to-report filter-maritable [ pool ]
+  report pool with [ male? != ([male?] of myself) and (abs (age - ([age] of myself))) < 8 and not family-link-neighbor? myself ]
+end
+
+to conclude-wedding [ pool ]
+  let my-partner rnd:weighted-one-of pool [ wedding-proximity-with myself ]
+  ask my-family-links [ die ]
+  set partner my-partner
+  ask my-partner [
+    ask my-family-links [ die ]
+    set partner myself
+  ]
+  create-family-link-with my-partner
+end
+
+;;; END ALT WEDDING
+
+to-report wedding-proximity-with [ p-partner ]
   let social-proxy social-proximity-with p-partner
-  let wedding-proxy (4 - (abs (hobby - [hobby] of p-partner))) / 4 ; see setup procedure, hobby
+  let wedding-proxy (4 - (abs (hobby - [ hobby ] of p-partner))) / 4 ; see setup procedure, hobby
   report (social-proxy + wedding-proxy) / 2
 end
 
@@ -261,7 +306,8 @@ to go
     graduate
     calculate-criminal-tendency
     let-migrants-in
-    wedding
+    ;wedding
+    wedding-alternative
   ]
   commit-crimes
   retire-persons
