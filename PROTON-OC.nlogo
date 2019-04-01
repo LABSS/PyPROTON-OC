@@ -37,7 +37,6 @@ persons-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
-  ; SIMO added this one to track when a crime activity happens
   crime-activity
 ]
 
@@ -59,7 +58,6 @@ prisoners-own [
   number-of-children
   c-t-fresh?  ; stored c value and its freshness.
   c-t
-  ; SIMO added this one to track when a crime activity happens
   crime-activity
 ]
 
@@ -998,8 +996,7 @@ to-report oc-embeddedness ; person reporter
     if any? other oc-members [
       update-meta-links agents
       nw:with-context agents meta-links [
-        set cached-oc-embeddedness ( find-oc-weight-distance oc-members / find-oc-weight-distance agents )
-        ; SIMO: JUST TO STAY DRY
+        set cached-oc-embeddedness (find-oc-weight-distance oc-members / find-oc-weight-distance agents)
 ;          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
 ;          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
 ;        )
@@ -1009,7 +1006,7 @@ to-report oc-embeddedness ; person reporter
   report cached-oc-embeddedness
 end
 
-to-report find-oc-weight-distance [people]
+to-report find-oc-weight-distance [ people ]
   report sum [ 1 / nw:weighted-distance-to myself dist ] of other people
 end
 
