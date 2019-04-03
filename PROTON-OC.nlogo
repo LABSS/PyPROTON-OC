@@ -1040,9 +1040,8 @@ to load-model
   let model-file-name user-file
   if is-string? model-file-name [
     let file-ext-position position ".world" model-file-name
-    ifelse is-number? file-ext-position
-    [ import-world model-file-name ]
-    [ user-message "the file must have the extension .world" ]
+    ifelse is-number? file-ext-position [ import-world model-file-name ]
+                                        [ user-message "the file must have the extension .world" ]
   ]
 end
 
@@ -1314,7 +1313,7 @@ end
 
 to show-criminal-network
   ask meta-criminal-links [ die ]
-  let criminals turtles with [ (breed = persons or breed = prisoners) and oc-member? ]
+  let criminals all-persons with [ oc-member? ]
   ask criminals [
     set size crime-activity
     ask other criminals [
@@ -1829,17 +1828,6 @@ ticks-between-intervention
 1
 NIL
 HORIZONTAL
-
-MONITOR
-135
-440
-262
-485
-meta criminal links
-count meta-criminal-links
-17
-1
-11
 
 @#$#@#$#@
 ## WHAT IS IT?
