@@ -1438,7 +1438,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
@@ -1668,7 +1668,7 @@ SWITCH
 48
 view-crim?
 view-crim?
-0
+1
 1
 -1000
 
@@ -1726,7 +1726,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-8.0
+25.0
 1
 1
 NIL
@@ -1741,7 +1741,7 @@ num-oc-families
 num-oc-families
 1
 50
-8.0
+10.0
 1
 1
 NIL
