@@ -654,11 +654,45 @@ to-report p-fertility
   ]
 end
 
+to-report find-facilitator [cog]
+  let the-facilitator nobody
+  ; first, test if there is a facilitator into co-offender-groups
+  let available-facilitators cog with [facilitator = 1]
+  ifelse any? available-facilitators
+    [ set the-facilitator one-of (available-facilitators with [facilitator = 1]) ]
+    [
+     ; second, search a facilitator into my networks
+     set available-facilitators persons with [facilitator = 1]
+     if any? available-facilitators [
+       ask available-facilitators [
+        let search-into-networks 1
+        ; see the issue, we search into 3 different networks, in order: family, criminal, friendship
+        repeat 3 [
+          if the-facilitator = nobody [
+            let actual-context nw:get-context
+            if search-into-networks = 1 [ nw:set-context turtles family-links  ]
+            if search-into-networks = 2 [ nw:set-context turtles criminal-links ]
+            if search-into-networks = 3 [ nw:set-context turtles friendship-links ]
+            let my-neighs nw:turtles-in-radius 1
+            set actual-context nw:get-context
+            if any? my-neighs with [facilitator = 1][
+              set the-facilitator one-of my-neighs
+            ]
+          ]
+          set search-into-networks search-into-networks + 1
+       ]
+      ]
+     ]
+    ]
+  ; if the-facilitator != nobody [ show the-facilitator ]
+  report the-facilitator
+end
+
 to-report facilitator-test [cog]
   ifelse (length cog < threshold-use-facilitators)
     [report true ]
   [
-    let available-facilitator one-of persons with [facilitator = 1]
+    let available-facilitator find-facilitator (turtle-set cog)
     ifelse available-facilitator = nobody
       [ report false ]
     [
