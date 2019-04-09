@@ -206,8 +206,8 @@ to wedding
     let ego one-of maritable
     ask ego [
       let pool nobody
-      nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius 3) with [ self != myself ] ]
-      nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius 3) with [ self != myself ]) ]
+      nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius max-accomplice-radius) with [ self != myself ] ]
+      nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius max-accomplice-radius) with [ self != myself ]) ]
       set pool filter-maritable pool
       ifelse not any? pool
       [
@@ -309,8 +309,8 @@ to go
     graduate
     calculate-criminal-tendency
     let-migrants-in
-    wedding
   ]
+  wedding
   commit-crimes
   retire-persons
   make-baby
