@@ -13,6 +13,8 @@ undirected-link-breed [professional-links professional-link] ; person <--> perso
 undirected-link-breed [school-links       school-link]       ; person <--> person
 undirected-link-breed [meta-links         meta-link]         ; person <--> person
 
+undirected-link-breed [meta-criminal-links         meta-criminal-link]         ; person <--> person
+
 undirected-link-breed [positions-links         position-link]          ; job <--> employer
 undirected-link-breed [job-links               job-link]               ; person <--> job
 undirected-link-breed [school-attendance-links school-attendance-link] ; person <--> school
@@ -36,6 +38,7 @@ persons-own [
   c-t
   hobby
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
+  crime-activity
 ]
 
 prisoners-own [
@@ -57,11 +60,13 @@ prisoners-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
+  crime-activity
 ]
 
 jobs-own [
   job-level
 ]
+
 schools-own [
   education-level
 ]
@@ -169,6 +174,7 @@ to setup
   set good-guy-threshold        0.6
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
+  if view-crim? [ show-criminal-network ]
   update-plots
 end
 
@@ -252,7 +258,20 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     dump-model
   ]
-  ask all-persons [ set c-t-fresh? false ]
+    ; intervention clock
+  if intervention-on? [
+    if family-intervention != "none" [ family-intervene        ]
+    if social-support    != "none"   [ socialization-intervene ]
+    if welfare-support   != "none"   [ welfare-intervene       ]
+    ; OC-members-scrutiny works directly in factors-c
+    ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
+    ; OC-ties-disruption? we don't yet have an implementation.
+  ]
+  ask all-persons [ 
+     set c-t-fresh? false 
+     set crime-activity crime-activity - 1
+     if crime-activity <= 1 [set crime-activity 1]
+  ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
     calculate-criminal-tendency
@@ -269,17 +288,18 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-  if ticks mod ticks-between-intervention = 0 [
-    if family-intervention != "none" [ family-intervene        ]
-    if social-support    != "none"   [ socialization-intervene ]
-    if welfare-support   != "none"   [ welfare-intervene       ]
-  ]
   if view-crim? [ show-criminal-network ]
   make-people-die
   tick
   if behaviorspace-experiment-name != "" [
     show (word behaviorspace-run-number "." ticks)
     ]
+end
+
+to-report intervention-on?
+  report ticks mod ticks-between-intervention = 0 and
+     ticks >= intervention-start and
+     ticks <  intervention-end
 end
 
 to dump-networks []
@@ -335,6 +355,8 @@ to soc-add-psychological [ targets ]
     if any? support-set [
       create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
         1 - (abs (age - [ age ] of myself ) / 120)
+        ;; nascondi tutti i links
+
       ]
     ]
   ]
@@ -448,10 +470,12 @@ end
 to make-friends
   ask persons [
     let num-new-friends min list random-poisson 3 count my-links with [
-      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+      breed = family-links or breed = professional-links or breed = school-links and
+      not [ friendship-link-neighbor? other-end ] of myself
     ] ; add slider
     ask rnd:weighted-n-of num-new-friends (my-links with [
-      breed != friendship-links and breed != meta-links and breed != job-links and breed != school-attendance-links
+      breed = family-links or breed = professional-links or breed = school-links and
+      not [ friendship-link-neighbor?  other-end ] of myself
     ]) [
       [ social-proximity-with other-end ] of myself ] [
       ask other-end [ create-friendship-link-with other-end ] ]
@@ -765,8 +789,14 @@ to setup-education-levels
   set education-levels table:from-list education-levels
 end
 
-to-report min-age-edu-level [ the-level ] report item 0 table:get education-levels the-level end
-to-report max-age-edu-level [ the-level ] report item 1 table:get education-levels the-level end
+to-report min-age-edu-level [ the-level ]
+  report item 0 table:get education-levels the-level
+end
+
+to-report max-age-edu-level [ the-level ]
+  report item 1 table:get education-levels the-level
+end
+
 to-report possible-school-level ; person command
   let the-level -1
   foreach table:keys education-levels [ i ->
@@ -865,14 +895,24 @@ end
 
 to commit-crimes
   reset-oc-embeddedness
+  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0) [
+    -1 *  min [ criminal-tendency ] of persons
+  ] [ 0 ]
   let co-offender-groups []
-  ask persons [
-    if random-float 1 < criminal-tendency [
-      let accomplices find-accomplices number-of-accomplices
-      set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
-      ; check for big crimes started from a normal guy
-      if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
-        set big-crime-from-small-fish big-crime-from-small-fish +  1
+  foreach table:keys c-range-by-age-and-sex [ cell ->
+    let value last table:get c-range-by-age-and-sex cell
+    let people-in-cell persons with [
+      age > last cell and age <= first value and male? = first cell
+    ]
+    let n-of-crimes last value  * count people-in-cell
+    repeat round n-of-crimes [
+      ask rnd:weighted-one-of people-in-cell [  min-criminal-tendency + criminal-tendency ] [
+        let accomplices find-accomplices number-of-accomplices
+        set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
+        ; check for big crimes started from a normal guy
+        if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+          set big-crime-from-small-fish big-crime-from-small-fish +  1
+        ]
       ]
     ]
   ]
@@ -884,7 +924,15 @@ to commit-crimes
     ask co-offenders [ set oc-member? true ]
   ]
   foreach co-offender-groups [ co-offenders ->
-    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
+    if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
+  ]
+end
+
+to-report arrest-probability-with-intervention [ group ]
+  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ]) [
+    report probability-of-getting-caught * oc-arrest-multiplier
+  ] [
+    report probability-of-getting-caught
   ]
 end
 
@@ -899,21 +947,22 @@ to retire-persons
 end
 
 to-report find-accomplices [ n ] ; person reporter
-  ; make sure it is person context
   let d 1 ; start with a network distance of 1
   let accomplices []
-  while [ length accomplices < n and d < max-accomplice-radius ] [
-    let candidates sort-on [
-      candidate-weight
-    ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
-    while [ length accomplices < n and not empty? candidates ] [
-      let candidate first candidates
-      set candidates but-first candidates
-      if random-float 1 < [ criminal-tendency ] of candidate [
-        set accomplices lput candidate accomplices
+  nw:with-context persons person-links [
+    while [ length accomplices < n and d < max-accomplice-radius ] [
+      let candidates sort-on [
+        candidate-weight
+      ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
+      while [ length accomplices < n and not empty? candidates ] [
+        let candidate first candidates
+        set candidates but-first candidates
+        if random-float 1 < [ criminal-tendency ] of candidate [
+          set accomplices lput candidate accomplices
+        ]
       ]
+      set d d + 1
     ]
-    set d d + 1
   ]
   report accomplices
 end
@@ -921,6 +970,7 @@ end
 to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
+    set crime-activity 3
     create-criminal-links-with other co-offenders
   ]
   nw:with-context co-offenders criminal-links [
@@ -1023,6 +1073,8 @@ to-report factors-c
           count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
         (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
                                                                              [ 1.81 ] [ 1.0 ] ])
+    (list "oc-member"   [ -> ifelse-value
+      (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.50 ] [ 1.0 ] ])
   )
 end
 
@@ -1035,14 +1087,18 @@ to-report oc-embeddedness ; person reporter
     if any? other oc-members [
       update-meta-links agents
       nw:with-context agents meta-links [
-        set cached-oc-embeddedness (
-          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
-          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
-        )
+        set cached-oc-embeddedness (find-oc-weight-distance oc-members / find-oc-weight-distance agents)
+;          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
+;          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
+;        )
       ]
     ]
   ]
   report cached-oc-embeddedness
+end
+
+to-report find-oc-weight-distance [ people ]
+  report sum [ 1 / nw:weighted-distance-to myself dist ] of other people
 end
 
 to-report number-of-accomplices
@@ -1074,9 +1130,9 @@ end
 to load-model
   let model-file-name user-file
   if is-string? model-file-name [
-     let file-ext-position position ".world" model-file-name
-     ifelse is-number? file-ext-position [ import-world model-file-name ]
-                                         [ user-message "the file must have the extension .world" ]
+    let file-ext-position position ".world" model-file-name
+    ifelse is-number? file-ext-position [ import-world model-file-name ]
+                                        [ user-message "the file must have the extension .world" ]
   ]
 end
 
@@ -1334,20 +1390,42 @@ to-report atkinson-inequality-index [ epsilon person-reporter ]
   report 1 - ((sum [ runresult person-reporter ] of all-persons) / count all-persons )^(1 - (1 - epsilon)) / mean-income
 end
 
-to-report all-persons report (turtle-set persons prisoners) end
+to-report all-persons
+  report (turtle-set persons prisoners)
+end
 
-to-report unemployed-while-working report count persons with [ job-level != 1 and not any? my-job-links ] end
+to-report unemployed-while-working
+  report count persons with [ job-level != 1 and not any? my-job-links ]
+end
 
 to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
 end
 
+to-report person-links
+  report (link-set family-links friendship-links criminal-links professional-links school-links)
+end
+
 to show-criminal-network
-  let criminals persons with [ oc-member? ]
-  let c-links links with [ all? both-ends [  member? self criminals ] and (breed = family-links or breed = criminal-links) ]
+  ask meta-criminal-links [ die ]
+  let criminals all-persons with [ oc-member? ]
+  ask criminals [
+    set size crime-activity
+    ask other criminals [
+      if criminal-link-neighbor? myself [
+        let weight 0
+        if family-link-neighbor? myself [ set weight weight + 0.1 ]
+        if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
+        if professional-link-neighbor? myself [ set weight weight + 0.1 ]
+        if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
+      ]
+    ]
+  ]
   ask criminals [ show-turtle ]
-  ask c-links [ show-link ]
-  layout-spring criminals c-links 1 0.1 0.1
+  ask meta-criminal-links [ show-link ]
+  nw:with-context criminals meta-criminal-links [
+    layout-circle sort criminals 14
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -1628,10 +1706,10 @@ count prisoners
 11
 
 PLOT
-13
-492
-379
-697
+15
+545
+381
+750
 Age distribution
 age
 count
@@ -1840,22 +1918,85 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+1095
+615
+1340
+648
+OC-members-scrutinize?
+OC-members-scrutinize?
+1
+1
+-1000
+
+SWITCH
+1095
+710
+1340
+743
+OC-members-repression?
+OC-members-repression?
+1
+1
+-1000
+
+INPUTBOX
+1095
+645
+1340
+705
+OC-arrest-multiplier
+1.0
+1
+0
+Number
+
+INPUTBOX
+1095
+740
+1340
+800
+OC-members-per-tick
+1.0
+1
+0
+Number
+
+SLIDER
+15
+435
+260
+468
+intervention-start
+intervention-start
+0
+100
 12.0
 1
 1
 NIL
 HORIZONTAL
 
-MONITOR
-150
-440
-257
-485
-NIL
-number-weddings
+SLIDER
+15
+470
+260
+503
+intervention-end
+intervention-end
 0
+100
+24.0
 1
-11
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
