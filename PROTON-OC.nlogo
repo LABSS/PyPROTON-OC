@@ -195,26 +195,32 @@ to load-stats-tables
   set number-weddings-sd 3
 end
 
-;;; BEGIN ALT WEDDING
-
-to wedding-alternative
-  ;; check this distribution
+to wedding
+  ;; check this distribution with empirical data from ISTAT
   let num-wedding-this-month floor random-normal number-weddings-mean number-weddings-sd
   let insuccess 0
-  while [ num-wedding-this-month > 0 and insuccess < 20 ] [
+  let max-insuccess 0
+  while [ num-wedding-this-month > 0 ] [
     let maritable persons with [age > 25 and age < 55 and partner = nobody]
-    ask one-of maritable [
+    set max-insuccess count maritable
+    let ego one-of maritable
+    ask ego [
       let pool nobody
       nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius 3) with [ self != myself ] ]
       nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius 3) with [ self != myself ]) ]
       set pool filter-maritable pool
-      if not any? pool and insuccess >= 10 [ set pool other filter-maritable maritable ]
-      ifelse any? pool
-      [ conclude-wedding pool
+      ifelse not any? pool
+      [
+        set insuccess insuccess + 1
+        set ego one-of other maritable
+        if insuccess > max-insuccess [ set num-wedding-this-month 0 ]
+      ]
+      [
+        conclude-wedding pool
         set num-wedding-this-month num-wedding-this-month - 1
         set number-weddings number-weddings + 1
-        set insuccess 0 ]
-      [ set insuccess insuccess + 1 ]
+        set insuccess 0
+      ]
     ]
   ]
 end
@@ -234,64 +240,62 @@ to conclude-wedding [ pool ]
   create-family-link-with my-partner
 end
 
-;;; END ALT WEDDING
-
 to-report wedding-proximity-with [ p-partner ]
   let social-proxy social-proximity-with p-partner
   let wedding-proxy (4 - (abs (hobby - [ hobby ] of p-partner))) / 4 ; see setup procedure, hobby
   report (social-proxy + wedding-proxy) / 2
 end
 
-to-report potential-partner [candidate group]
-  let pp nobody
-  let sp 0
-  ask candidate [
-    ; 8 is the max difference for the age (see conf. call 3/20)
-    let pp-list  other group with [male? != ([male?] of myself) and
-                                  (abs (age - ([age] of myself))) < 8 and
-                                  not family-link-neighbor? myself]
-    if any? pp-list [
-      set pp rnd:weighted-one-of pp-list [wedding-proximity-with candidate]
-      ask pp [set sp wedding-proximity-with candidate]
-    ]
-  ]
-  report (list pp sp)
-end
+;to-report potential-partner [candidate group]
+;  let pp nobody
+;  let sp 0
+;  ask candidate [
+;    ; 8 is the max difference for the age (see conf. call 3/20)
+;    let pp-list  other group with [male? != ([male?] of myself) and
+;                                  (abs (age - ([age] of myself))) < 8 and
+;                                  not family-link-neighbor? myself]
+;    if any? pp-list [
+;      set pp rnd:weighted-one-of pp-list [wedding-proximity-with candidate]
+;      ask pp [set sp wedding-proximity-with candidate]
+;    ]
+;  ]
+;  report (list pp sp)
+;end
 
-to-report wedding-pool-creation
-  ; from 25 to 55 is the wedding-range (see conf. call 3/20)
-  let pool persons with [age > 25 and age < 55 and partner = nobody]
-  let report-pool []
-  if any? pool [
-    ask pool [
-        set report-pool lput (list self (potential-partner self pool)) report-pool
-      ]
-  ]
-  report report-pool
-end
+;to-report wedding-pool-creation
+;  ; from 25 to 55 is the wedding-range (see conf. call 3/20)
+;  let pool persons with [age > 25 and age < 55 and partner = nobody]
+;  let report-pool []
+;  if any? pool [
+;    ask pool [
+;        set report-pool lput (list self (potential-partner self pool)) report-pool
+;      ]
+;  ]
+;  report report-pool
+;end
 
-to wedding
-  let wedding-pool wedding-pool-creation
-  if wedding-pool != [] [
-    foreach wedding-pool [ x ->
-      let partner-1 item 0 x
-      let partner-2 item 0 (item 1 x)
-      let wedding-prob item 1 (item 1 x)
-      if partner-2 != nobody [
-        if [partner] of partner-1 = nobody and
-           [partner] of partner-2 = nobody and
-           (random-float  1) < wedding-prob [
-              set number-weddings number-weddings + 1
-              ask partner-1 [ask my-family-links [die]]
-              ask partner-2 [ask my-family-links [die]]
-              ask partner-1 [set partner partner-2]
-              ask partner-2 [set partner partner-1]
-              ask partner-1 [create-family-links-with turtle-set partner-2]
-        ]
-      ]
-    ]
-  ]
-end
+;to wedding
+;  let wedding-pool wedding-pool-creation
+;  if wedding-pool != [] [
+;    foreach wedding-pool [ x ->
+;      let partner-1 item 0 x
+;      let partner-2 item 0 (item 1 x)
+;      let wedding-prob item 1 (item 1 x)
+;      if partner-2 != nobody [
+;        if [partner] of partner-1 = nobody and
+;           [partner] of partner-2 = nobody and
+;           (random-float  1) < wedding-prob [
+;              set number-weddings number-weddings + 1
+;              ask partner-1 [ask my-family-links [die]]
+;              ask partner-2 [ask my-family-links [die]]
+;              ask partner-1 [set partner partner-2]
+;              ask partner-2 [set partner partner-1]
+;              ask partner-1 [create-family-links-with turtle-set partner-2]
+;        ]
+;      ]
+;    ]
+;  ]
+;end
 
 to go
   if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
@@ -305,8 +309,7 @@ to go
     graduate
     calculate-criminal-tendency
     let-migrants-in
-    ;wedding
-    wedding-alternative
+    wedding
   ]
   commit-crimes
   retire-persons
