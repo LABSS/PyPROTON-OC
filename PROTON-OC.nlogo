@@ -203,28 +203,28 @@ end
 
 to wedding
   let num-wedding-this-month floor random-normal number-weddings-mean number-weddings-sd
-  let insuccess 0
-  let max-insuccess 0
-  while [ num-wedding-this-month > 0 ] [
-    let maritable persons with [age > 25 and age < 55 and partner = nobody]
-    set max-insuccess count maritable
-    let ego one-of maritable
+  let maritable persons with [age > 25 and age < 55 and partner = nobody]
+  let ego one-of maritable
+  while [ num-wedding-this-month > 0 or any? maritable ] [
     ask ego [
+      show who
       let pool nobody
       nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius max-accomplice-radius) with [ self != myself ] ]
       nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius max-accomplice-radius) with [ self != myself ]) ]
       set pool filter-maritable pool
+      set maritable other maritable
       ifelse not any? pool
       [
-        set insuccess insuccess + 1
-        set ego one-of other maritable
-        if insuccess > max-insuccess [ set num-wedding-this-month 0 ]
+        set ego one-of maritable
+        show (word "failed but there are still " count maritable " maritables")
       ]
       [
-        conclude-wedding pool
+        let my-partner rnd:weighted-one-of pool [ wedding-proximity-with myself ]
+        ask my-partner [ set maritable other maritable ]
         set num-wedding-this-month num-wedding-this-month - 1
         set number-weddings number-weddings + 1
-        set insuccess 0
+        conclude-wedding pool my-partner
+        show (word "married " ego " and " my-partner " and " count maritable " left")
       ]
     ]
   ]
@@ -234,8 +234,7 @@ to-report filter-maritable [ pool ]
   report pool with [ male? != ([ male? ] of myself) and (abs (age - ([ age ] of myself))) < 8 and not family-link-neighbor? myself ]
 end
 
-to conclude-wedding [ pool ]
-  let my-partner rnd:weighted-one-of pool [ wedding-proximity-with myself ]
+to conclude-wedding [ pool my-partner ]
   ask my-family-links [ die ]
   set partner my-partner
   ask my-partner [
@@ -267,8 +266,8 @@ to go
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
   ]
-  ask all-persons [ 
-     set c-t-fresh? false 
+  ask all-persons [
+     set c-t-fresh? false
      set crime-activity crime-activity - 1
      if crime-activity <= 1 [set crime-activity 1]
   ]
