@@ -32,7 +32,7 @@ persons-own [
   partner                ; the person's significant other
   retired?
   number-of-children
-  facilitator
+  facilitator?
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -51,7 +51,7 @@ prisoners-own [
   partner                ; the person's significant other
   retired?
   number-of-children
-  facilitator
+  facilitator?
   sentence-countdown
 ]
 
@@ -102,6 +102,9 @@ globals [
   ; outputs
   number-deceased
   number-birth
+  facilitator-fails
+  facilitator-crimes
+  crime-size-fails
 ]
 
 to profile-setup
@@ -127,6 +130,8 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
+  set facilitator-fails 0
+  set facilitator-crimes 0
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -166,9 +171,9 @@ end
 
 to setup-facilitators
   ask persons [
-    set facilitator
+    set facilitator?
       ifelse-value (not oc-member? and age > 18 and (random-float 1 < percentage-of-facilitators))
-      [ 1 ] [ 0 ]
+      [ true ] [ false ]
   ]
 end
 
@@ -376,6 +381,7 @@ to init-person-empty ; person command
   set partner nobody
   set number-of-children 0
   set my-job nobody
+  set facilitator? false
 end
 
 to let-migrants-in
@@ -626,9 +632,9 @@ end
 to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality [
-      if facilitator > 0 [
-        let new-facilitator one-of other persons with [ facilitator = 0 and age > 18 ]
-        ask new-facilitator [ set facilitator 1 ]
+      if facilitator? [
+        let new-facilitator one-of other persons with [ not facilitator? and age > 18 ]
+        ask new-facilitator [ set facilitator? true ]
       ]
       set number-deceased number-deceased + 1
       die
@@ -654,49 +660,39 @@ to-report p-fertility
   ]
 end
 
-to-report find-facilitator [cog]
+to-report find-facilitator [ co-offending-group ]
   let the-facilitator nobody
   ; first, test if there is a facilitator into co-offender-groups
-  let available-facilitators cog with [facilitator = 1]
-  ifelse any? available-facilitators
-    [ set the-facilitator one-of (available-facilitators with [facilitator = 1]) ]
-    [
-     ; second, search a facilitator into my networks
-     set available-facilitators persons with [facilitator = 1]
-     if any? available-facilitators [
-       ask available-facilitators [
-        let search-into-networks 1
-        ; see the issue, we search into 3 different networks, in order: family, criminal, friendship
-        repeat 3 [
-          if the-facilitator = nobody [
-            let actual-context nw:get-context
-            if search-into-networks = 1 [ nw:set-context turtles family-links  ]
-            if search-into-networks = 2 [ nw:set-context turtles criminal-links ]
-            if search-into-networks = 3 [ nw:set-context turtles friendship-links ]
-            let my-neighs nw:turtles-in-radius 1
-            set actual-context nw:get-context
-            if any? my-neighs with [facilitator = 1][
-              set the-facilitator one-of my-neighs
-            ]
-          ]
-          set search-into-networks search-into-networks + 1
-       ]
+  let available-facilitators co-offending-group with [ facilitator? ]
+  ifelse any? available-facilitators [
+    set the-facilitator one-of (available-facilitators with [ facilitator? ])
+  ] [
+    ; second, search a facilitator into my networks
+    while [ the-facilitator = nobody  and co-offending-group != no-turtles] [
+      let pool nobody
+      ask one-of co-offending-group [
+        nw:with-context persons (link-set friendship-links professional-links family-links) [
+          set pool (nw:turtles-in-radius max-accomplice-radius)
+          set pool other pool with [ facilitator? ]
+        ]
+        if any? pool [ set the-facilitator one-of pool ]
+        set co-offending-group other co-offending-group
       ]
-     ]
     ]
-  ; if the-facilitator != nobody [ show the-facilitator ]
+  ]
   report the-facilitator
 end
 
-to-report facilitator-test [cog]
-  ifelse (length cog < threshold-use-facilitators)
-    [report true ]
+to-report facilitator-test [ co-offending-group ]
+  ifelse (count co-offending-group < threshold-use-facilitators)
+    [ report true ]
   [
-    let available-facilitator find-facilitator (turtle-set cog)
-    ifelse available-facilitator = nobody
-      [ report false ]
-    [
-      ask available-facilitator [set facilitator 2]
+    let available-facilitator find-facilitator (co-offending-group)
+    ifelse available-facilitator = nobody [
+      set facilitator-fails facilitator-fails + 1
+      report false
+    ] [
+      set facilitator-crimes facilitator-crimes + 1
       report true
     ]
   ]
@@ -715,17 +711,18 @@ to commit-crimes
       ]
     ]
   ]
-  if (facilitator-test co-offender-groups)  = true [
-    foreach co-offender-groups commit-crime
-    let oc-co-offender-groups filter [ co-offenders ->
-      any? co-offenders with [ oc-member? ]
-    ] co-offender-groups
-    foreach oc-co-offender-groups [ co-offenders ->
-      ask co-offenders [ set oc-member? true ]
-    ]
-    foreach co-offender-groups [ co-offenders ->
-      if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
-    ]
+  set co-offender-groups filter [ co-offenders ->
+    facilitator-test co-offenders
+  ] co-offender-groups
+  foreach co-offender-groups commit-crime
+  let oc-co-offender-groups filter [ co-offenders ->
+    any? co-offenders with [ oc-member? ]
+  ] co-offender-groups
+  foreach oc-co-offender-groups [ co-offenders ->
+    ask co-offenders [ set oc-member? true ]
+  ]
+  foreach co-offender-groups [ co-offenders ->
+    if random-float 1 < probability-of-getting-caught [ get-caught co-offenders ]
   ]
 end
 
@@ -756,6 +753,7 @@ to-report find-accomplices [ n ] ; person reporter
     ]
     set d d + 1
   ]
+  if length accomplices < n [ set crime-size-fails crime-size-fails + 1 ]
   report accomplices
 end
 
@@ -1236,7 +1234,7 @@ num-persons
 num-persons
 100
 10000
-100.0
+500.0
 50
 1
 NIL
@@ -1396,7 +1394,7 @@ SLIDER
 192
 max-accomplice-radius
 max-accomplice-radius
-0
+1
 5
 3.0
 1
@@ -1637,9 +1635,9 @@ SLIDER
 percentage-of-facilitators
 percentage-of-facilitators
 0
-1
 0.1
-0.1
+0.005
+0.001
 1
 NIL
 HORIZONTAL
@@ -1653,7 +1651,7 @@ threshold-use-facilitators
 threshold-use-facilitators
 0
 100
-10.0
+4.0
 1
 1
 NIL
@@ -1661,12 +1659,45 @@ HORIZONTAL
 
 MONITOR
 15
-365
-260
-410
-NIL
-count persons with [facilitator = 1]
+335
+85
+380
+facilitators
+count persons with [facilitator?]
 0
+1
+11
+
+MONITOR
+85
+335
+175
+380
+NIL
+facilitator-fails
+17
+1
+11
+
+MONITOR
+175
+335
+260
+380
+NIL
+facilitator-crimes
+17
+1
+11
+
+MONITOR
+15
+385
+122
+430
+NIL
+crime-size-fails
+17
 1
 11
 
