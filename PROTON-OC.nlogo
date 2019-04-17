@@ -861,7 +861,7 @@ to-report find-facilitator [ co-offending-group ]
     set the-facilitator one-of (available-facilitators with [ facilitator? ])
   ] [
     ; second, search a facilitator into my networks
-    while [ the-facilitator = nobody  and co-offending-group != no-turtles] [
+    while [ the-facilitator = nobody and any? co-offending-group ] [
       let pool nobody
       ask one-of co-offending-group [
         nw:with-context persons (link-set friendship-links professional-links family-links) [
