@@ -61,7 +61,6 @@ prisoners-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   crime-activity
-  sentence-countdown
 ]
 
 jobs-own [
@@ -111,7 +110,6 @@ globals [
   c-range-by-age-and-sex
   ; outputs
   number-deceased
-  number-birth
   facilitator-fails
   facilitator-crimes
   crime-size-fails
@@ -230,7 +228,7 @@ to go
   ask all-persons [
      set c-t-fresh? false
      set crime-activity crime-activity - 1
-     if crime-activity <= 1 [set crime-activity 1]
+     if crime-activity <= 1 [ set crime-activity 1 ]
   ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
