@@ -203,29 +203,22 @@ end
 
 to wedding
   let num-wedding-this-month floor random-normal number-weddings-mean number-weddings-sd
-  let maritable persons with [age > 25 and age < 55 and partner = nobody]
+  let maritable persons with [ age > 25 and age < 55 and partner = nobody ]
   let ego one-of maritable
-  while [ num-wedding-this-month > 0 or any? maritable ] [
+  while [ num-wedding-this-month > 0 and any? maritable ] [
     ask ego [
-      show who
       let pool nobody
-      nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius max-accomplice-radius) with [ self != myself ] ]
-      nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius max-accomplice-radius) with [ self != myself ]) ]
-      set pool filter-maritable pool
+      nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius max-accomplice-radius) ]
+      nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius max-accomplice-radius)) ]
+      set pool filter-maritable other pool
       set maritable other maritable
       ifelse not any? pool
-      [
-        set ego one-of maritable
-        show (word "failed but there are still " count maritable " maritables")
-      ]
-      [
-        let my-partner rnd:weighted-one-of pool [ wedding-proximity-with myself ]
+      [ set ego one-of maritable ]
+      [ let my-partner rnd:weighted-one-of pool [ wedding-proximity-with myself ]
         ask my-partner [ set maritable other maritable ]
         set num-wedding-this-month num-wedding-this-month - 1
         set number-weddings number-weddings + 1
-        conclude-wedding pool my-partner
-        show (word "married " ego " and " my-partner " and " count maritable " left")
-      ]
+        conclude-wedding pool my-partner ]
     ]
   ]
 end
@@ -1820,7 +1813,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-25.0
+20.0
 1
 1
 NIL
@@ -1835,7 +1828,7 @@ num-oc-families
 num-oc-families
 1
 50
-10.0
+8.0
 1
 1
 NIL
