@@ -37,6 +37,7 @@ persons-own [
   facilitator?
   c-t-fresh?  ; stored c value and its freshness.
   c-t
+  hobby
   crime-activity
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
@@ -60,6 +61,7 @@ prisoners-own [
   facilitator?
   c-t-fresh?  ; stored c value and its freshness.
   c-t
+  hobby
   crime-activity
 ]
 
@@ -115,6 +117,9 @@ globals [
   crime-size-fails
   number-born
   number-migrants
+  number-weddings
+  number-weddings-mean
+  number-weddings-sd
 ]
 
 to profile-setup
@@ -176,6 +181,7 @@ to setup
   set this-is-a-big-crime       3
   set good-guy-threshold        0.6
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
+  ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   if view-crim? [ show-criminal-network ]
   update-plots
 end
@@ -207,6 +213,50 @@ to load-stats-tables
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
   ; further sources:
   ; schools.csv table goes into education-levels
+  set number-weddings-mean 18
+  set number-weddings-sd 3
+end
+
+to wedding
+  let num-wedding-this-month floor random-normal number-weddings-mean number-weddings-sd
+  let maritable persons with [ age > 25 and age < 55 and partner = nobody ]
+  let ego one-of maritable
+  while [ num-wedding-this-month > 0 and any? maritable ] [
+    ask ego [
+      let pool nobody
+      nw:with-context maritable friendship-links [ set pool (nw:turtles-in-radius max-accomplice-radius) ]
+      nw:with-context maritable professional-links [ set pool (turtle-set pool (nw:turtles-in-radius max-accomplice-radius)) ]
+      set pool filter-maritable other pool
+      set maritable other maritable
+      ifelse not any? pool
+      [ set ego one-of maritable ]
+      [ let my-partner rnd:weighted-one-of pool [ wedding-proximity-with myself ]
+        ask my-partner [ set maritable other maritable ]
+        set num-wedding-this-month num-wedding-this-month - 1
+        set number-weddings number-weddings + 1
+        conclude-wedding pool my-partner ]
+    ]
+  ]
+end
+
+to-report filter-maritable [ pool ]
+  report pool with [ male? != ([ male? ] of myself) and (abs (age - ([ age ] of myself))) < 8 and not family-link-neighbor? myself ]
+end
+
+to conclude-wedding [ pool my-partner ]
+  ask my-family-links [ die ]
+  set partner my-partner
+  ask my-partner [
+    ask my-family-links [ die ]
+    set partner myself
+  ]
+  create-family-link-with my-partner
+end
+
+to-report wedding-proximity-with [ p-partner ]
+  let social-proxy social-proximity-with p-partner
+  let wedding-proxy (4 - (abs (hobby - [ hobby ] of p-partner))) / 4
+  report (social-proxy + wedding-proxy) / 2
 end
 
 to go
@@ -235,6 +285,7 @@ to go
     calculate-criminal-tendency
     let-migrants-in
   ]
+  wedding
   commit-crimes
   retire-persons
   make-baby
@@ -603,6 +654,7 @@ to make-baby
         set male? one-of [ true false ]
         create-family-links-with turtle-set [ family-link-neighbors ] of myself
         create-family-link-with myself
+        set hobby random 5 ; see setup procedure
         set-turtle-color-pos
       ]
     ]
@@ -1823,7 +1875,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-25.0
+20.0
 1
 1
 NIL
@@ -1838,7 +1890,7 @@ num-oc-families
 num-oc-families
 1
 50
-10.0
+8.0
 1
 1
 NIL
