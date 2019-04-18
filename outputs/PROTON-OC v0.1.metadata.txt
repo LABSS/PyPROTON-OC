@@ -6,7 +6,6 @@ name, description, group
 "p3b", Education rate, init
 "p4", Law enforcement intervention rate, intervention
 "p5", Punishment length, intervention
-
 "o1", Number of OC members per time unit, result-base
 "o2", Number of recruited individuals into OC per time unit, result-base
 "o3", Number of crimes per time unit, result-base
