@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <experiments>
-    <experiment name="exp" repetitions="2" runMetricsEveryStep="true">
+    <experiment name="exp" repetitions="8" runMetricsEveryStep="true">
         <setup>setup</setup>
         <go>go</go>
         <final>show "Time elapsed:"
             show timer
         </final>
-        <!-- assuming 50 years | ora sta a 4 anni per test -->
-        <timeLimit steps="48"/>
+        <!-- assuming 50 years | ora sta a 5 anni per test -->
+        <timeLimit steps="60"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
