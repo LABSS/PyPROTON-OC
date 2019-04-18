@@ -42,6 +42,7 @@ persons-own [
   hobby
   crime-activity
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
+  new-recruit
 ]
 
 prisoners-own [
@@ -65,6 +66,7 @@ prisoners-own [
   c-t
   hobby
   crime-activity
+  new-recruit
 ]
 
 jobs-own [
@@ -976,7 +978,7 @@ to commit-crimes
     any? co-offenders with [ oc-member? ]
   ] co-offender-groups
   foreach oc-co-offender-groups [ co-offenders ->
-    ask co-offenders [ set oc-member? true ]
+    ask co-offenders [ set new-recruit ticks set oc-member? true ]
   ]
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
@@ -1537,7 +1539,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+0.0
 50
 1
 NIL
@@ -1577,7 +1579,7 @@ INPUTBOX
 1340
 73
 data-folder
-inputs/palermo/data/
+0
 1
 0
 String
@@ -1627,7 +1629,7 @@ INPUTBOX
 1339
 138
 ticks-per-year
-12.0
+0.0
 1
 0
 Number
@@ -1699,7 +1701,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-2.0
+0.0
 1
 1
 NIL
@@ -1714,7 +1716,7 @@ oc-embeddedness-radius
 oc-embeddedness-radius
 0
 5
-2.0
+0.0
 1
 1
 NIL
@@ -1729,7 +1731,7 @@ retirement-age
 retirement-age
 0
 100
-65.0
+0.0
 1
 1
 years old
@@ -1744,7 +1746,7 @@ probability-of-getting-caught
 probability-of-getting-caught
 0
 1
-0.05
+0.0
 0.05
 1
 NIL
@@ -1832,7 +1834,7 @@ nat-propensity-m
 nat-propensity-m
 0
 10
-1.0
+0.0
 0.1
 1
 NIL
@@ -1847,7 +1849,7 @@ nat-propensity-sigma
 nat-propensity-sigma
 0
 10
-0.25
+0.0
 0.05
 1
 NIL
@@ -1862,7 +1864,7 @@ nat-propensity-threshold
 nat-propensity-threshold
 0
 2
-1.0
+0.0
 0.1
 1
 sd
@@ -1877,7 +1879,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-20.0
+0.0
 1
 1
 NIL
@@ -1892,7 +1894,7 @@ num-oc-families
 num-oc-families
 1
 50
-8.0
+0.0
 1
 1
 NIL
@@ -1959,7 +1961,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-10.0
+0.0
 1
 1
 NIL
@@ -1974,7 +1976,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-2.0
+0.0
 1
 1
 NIL
@@ -2008,7 +2010,7 @@ INPUTBOX
 1340
 705
 OC-arrest-multiplier
-1.0
+0.0
 1
 0
 Number
@@ -2019,7 +2021,7 @@ INPUTBOX
 1340
 800
 OC-members-per-tick
-1.0
+0.0
 1
 0
 Number
@@ -2033,7 +2035,7 @@ intervention-start
 intervention-start
 0
 100
-12.0
+0.0
 1
 1
 NIL
@@ -2048,7 +2050,7 @@ intervention-end
 intervention-end
 0
 100
-24.0
+0.0
 1
 1
 NIL
@@ -2073,7 +2075,7 @@ percentage-of-facilitators
 percentage-of-facilitators
 0
 0.1
-0.005
+0.0
 0.001
 1
 NIL
@@ -2088,7 +2090,7 @@ threshold-use-facilitators
 threshold-use-facilitators
 0
 100
-4.0
+0.0
 1
 1
 NIL
