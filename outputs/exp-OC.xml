@@ -10,36 +10,35 @@
         <!-- assuming 50 years | ora sta a 4 anni per test -->
         <timeLimit steps="48"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
-        <metric>count all-persons with [ oc-member? ]</metric>
+        <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
-        <metric>count all-persons with [ new-recruit = (ticks - 1) ]</metric>
+        <metric>o2</metric>
         <!-- 3. Number of crimes per time unit -->
-        <metric>sum [ num-crimes-committed ] of all-persons</metric>
+        <metric>o3</metric>
         <!-- 4. Number of crimes committed by OC members per time unit -->
-        <metric>sum [ num-crimes-committed ] of all-persons with [ oc-member? ]</metric>
+        <metric>o4</metric>
         <!-- 5. Distribution of C (which is the individual propensity towards crime commission) -->
-        <metric>[ criminal-tendency ] of all-persons</metric>
+        <metric>o5</metric>
         <!-- 6. Distribution of R (which is the individual embededdness into OC-prone local networks) -->
-        <metric>[ oc-embeddedness ] of all-persons</metric>
+        <metric>o6</metric>
         <!-- 7. Distribution of socio-demographic variables on new recruited individuals -->
-        <metric>table:to-list table:counts[ education-level ] of all-persons with [ new-recruit = (ticks - 1) ]</metric>
-        <metric>table:to-list table:counts[ wealth-level ] of all-persons with [ new-recruit = (ticks - 1) ]</metric>
-        <metric>table:to-list table:counts[ job-level ] of all-persons with [ new-recruit = (ticks - 1) ]</metric>
+        <metric>o7a</metric>
+        <metric>o7b</metric>
+        <metric>o7c</metric>
         <!-- 8. Distribution of socio-demographic variables of OC members -->
-        <metric>table:to-list table:counts[ education-level ] of all-persons with [ oc-member? ]</metric>
-        <metric>table:to-list table:counts[ wealth-level ] of all-persons with [ oc-member? ]</metric>
-        <metric>table:to-list table:counts[ job-level ] of all-persons with [ oc-member? ]</metric>
+        <metric>o8a</metric>
+        <metric>o8b</metric>
+        <metric>o8c</metric>
         <!-- 9. Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC) -->
-        <metric>table:to-list table:counts[ education-level ] of all-persons with [ not oc-member? and c-t-fresh? ]</metric>
-        <metric>table:to-list table:counts[ wealth-level ] of all-persons with [ not oc-member? and c-t-fresh? ]</metric>
-        <metric>table:to-list table:counts[ job-level ] of all-persons with [ not oc-member? and c-t-fresh? ]</metric>
+        <metric>o9a</metric>
+        <metric>o9b</metric>
+        <metric>o9c</metric>
         <!-- 10. Distribution of socio-demographic variables of the general population -->
-        <metric>table:to-list table:counts[ education-level ] of all-persons</metric>
-        <metric>table:to-list table:counts [ wealth-level ] of all-persons</metric>
-        <metric>table:to-list table:counts [ job-level ] of all-persons</metric>
+        <metric>o10a</metric>
+        <metric>o10b</metric>
+        <metric>o10c</metric>
         <!-- 11. Number of crimes committed by facilitator agents per time unit -->
-        <!--<metric>sum [ num-crimes-committed ] of all-persons with [ facilitator > 0 ]</metric>-->
-        <metric>1</metric>
+        <metric>sum [ num-crimes-committed ] of all-persons with [ facilitator > 0 ]</metric>
         <!-- 12. Number of law enforcement interventions per time unit -->
         <metric>1</metric>
         <!-- PARAMETERS -->

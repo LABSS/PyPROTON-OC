@@ -1,0 +1,99 @@
+to-report o1
+  ; number of OC members per time unit
+  report count all-persons with [ oc-member? ]
+end
+
+to-report o2
+  ; Number of recruited individuals into OC per time unit
+  report count all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o3
+  ; Number of crimes per time unit
+  report sum [ num-crimes-committed ] of all-persons
+end
+
+to-report o4
+  ; Number of crimes committed by OC members per time unit
+  report sum [ num-crimes-committed ] of all-persons with [ oc-member? ]
+end
+
+to-report o5
+  ; Distribution of C (which is the individual propensity towards crime commission)
+  report [ criminal-tendency ] of all-persons
+end
+
+to-report o6
+  ; Distribution of R (which is the individual embededdness into OC-prone local networks)
+  report [ oc-embeddedness ] of all-persons
+end
+
+to-report o7a
+  ; Distribution of socio-demographic variables on new recruited individuals
+  report table:to-list table:counts[ education-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o7b
+  ; Distribution of socio-demographic variables on new recruited individuals
+  report table:to-list table:counts[ wealth-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o7c
+  ; Distribution of socio-demographic variables on new recruited individuals
+  report table:to-list table:counts[ job-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o8a
+  ; Distribution of socio-demographic variables of OC members
+  report table:to-list table:counts[ education-level ] of all-persons with [ oc-member? ]
+end
+
+to-report o8b
+  ; Distribution of socio-demographic variables of OC members
+  report table:to-list table:counts[ wealth-level ] of all-persons with [ oc-member? ]
+end
+
+to-report o8c
+  ; Distribution of socio-demographic variables of OC members
+  report table:to-list table:counts[ job-level ] of all-persons with [ oc-member? ]
+end
+
+to-report o9a
+  ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
+  report table:to-list table:counts[ education-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+end
+
+to-report o9b
+  ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
+  report table:to-list table:counts[ wealth-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+end
+
+to-report o9c
+  ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
+  report table:to-list table:counts[ job-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+end
+
+to-report o10a
+  ; Distribution of socio-demographic variables of the general population
+  report table:to-list table:counts[ education-level ] of all-persons
+end
+
+to-report o10b
+  ; Distribution of socio-demographic variables of the general population
+  report table:to-list table:counts [ wealth-level ] of all-persons
+end
+
+to-report o10c
+  ; Distribution of socio-demographic variables of the general population
+  report table:to-list table:counts [ job-level ] of all-persons
+end
+
+to-report o11
+  ; Number of crimes committed by facilitator agents per time unit
+  report sum [ num-crimes-committed ] of all-persons with [ facilitator? ]
+end
+
+to-report o12
+  ; Number of law enforcement interventions per time unit
+  report 1
+end
