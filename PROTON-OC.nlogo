@@ -1,3 +1,5 @@
+__includes ["nls_files/experiments.nls"]
+
 extensions [nw table csv profiler rnd]
 
 breed [jobs      job]
