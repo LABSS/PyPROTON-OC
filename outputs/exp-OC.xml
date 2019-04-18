@@ -38,9 +38,9 @@
         <metric>o10b</metric>
         <metric>o10c</metric>
         <!-- 11. Number of crimes committed by facilitator agents per time unit -->
-        <metric>sum [ num-crimes-committed ] of all-persons with [ facilitator > 0 ]</metric>
+        <metric>o11</metric>
         <!-- 12. Number of law enforcement interventions per time unit -->
-        <metric>1</metric>
+        <metric>o12</metric>
         <!-- PARAMETERS -->
         <!-- Population size -->
         <enumeratedValueSet variable="num-persons">
