@@ -34,11 +34,12 @@ persons-own [
   partner                ; the person's significant other
   retired?
   number-of-children
+  facilitator?
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
-  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
   crime-activity
+  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
 prisoners-own [
@@ -57,6 +58,7 @@ prisoners-own [
   partner                ; the person's significant other
   retired?
   number-of-children
+  facilitator?
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
@@ -110,6 +112,9 @@ globals [
   c-range-by-age-and-sex
   ; outputs
   number-deceased
+  facilitator-fails
+  facilitator-crimes
+  crime-size-fails
   number-born
   number-migrants
   number-weddings
@@ -140,6 +145,8 @@ to setup
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
+  set facilitator-fails 0
+  set facilitator-crimes 0
   nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
@@ -153,6 +160,7 @@ to setup
   init-breed-colors
   calculate-criminal-tendency
   setup-oc-groups
+  setup-facilitators
   reset-oc-embeddedness
   ask turtles [ set-turtle-color-pos ]
   ask links [ set-link-color ]
@@ -176,6 +184,14 @@ to setup
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   if view-crim? [ show-criminal-network ]
   update-plots
+end
+
+to setup-facilitators
+  ask persons [
+    set facilitator?
+      ifelse-value (not oc-member? and age > 18 and (random-float 1 < percentage-of-facilitators))
+      [ true ] [ false ]
+  ]
 end
 
 to load-stats-tables
@@ -262,7 +278,7 @@ to go
   ask all-persons [
      set c-t-fresh? false
      set crime-activity crime-activity - 1
-     if crime-activity <= 1 [set crime-activity 1]
+     if crime-activity <= 1 [ set crime-activity 1 ]
   ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
@@ -600,6 +616,7 @@ to init-person-empty ; person command
   set partner nobody
   set number-of-children 0
   set my-job nobody
+  set facilitator? false
   set c-t-fresh? false
 end
 
@@ -723,7 +740,6 @@ to assign-job ; job command
     create-job-link-with myself
     assert [ -> not any? my-school-attendance-links ]
   ]
-
 end
 
 to-report person-neighbors ; turtle reporter
@@ -860,6 +876,10 @@ end
 to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality [
+      if facilitator? [
+        let new-facilitator one-of other persons with [ not facilitator? and age > 18 ]
+        ask new-facilitator [ set facilitator? true ]
+      ]
       set number-deceased number-deceased + 1
       die
     ]
@@ -882,6 +902,44 @@ to-report p-fertility
     report (item 0 table:get fertility-table the-key) / ticks-per-year
   ] [
     report 0
+  ]
+end
+
+to-report find-facilitator [ co-offending-group ]
+  let the-facilitator nobody
+  ; first, test if there is a facilitator into co-offender-groups
+  let available-facilitators co-offending-group with [ facilitator? ]
+  ifelse any? available-facilitators [
+    set the-facilitator one-of (available-facilitators with [ facilitator? ])
+  ] [
+    ; second, search a facilitator into my networks
+    while [ the-facilitator = nobody and any? co-offending-group ] [
+      let pool nobody
+      ask one-of co-offending-group [
+        nw:with-context persons (link-set friendship-links professional-links family-links) [
+          set pool (nw:turtles-in-radius max-accomplice-radius)
+          set pool other pool with [ facilitator? ]
+        ]
+        if any? pool [ set the-facilitator one-of pool ]
+        set co-offending-group other co-offending-group
+      ]
+    ]
+  ]
+  report the-facilitator
+end
+
+to-report facilitator-test [ co-offending-group ]
+  ifelse (count co-offending-group < threshold-use-facilitators)
+    [ report true ]
+  [
+    let available-facilitator find-facilitator (co-offending-group)
+    ifelse available-facilitator = nobody [
+      set facilitator-fails facilitator-fails + 1
+      report false
+    ] [
+      set facilitator-crimes facilitator-crimes + 1
+      report true
+    ]
   ]
 end
 
@@ -908,6 +966,9 @@ to commit-crimes
       ]
     ]
   ]
+  set co-offender-groups filter [ co-offenders ->
+    facilitator-test co-offenders
+  ] co-offender-groups
   foreach co-offender-groups commit-crime
   let oc-co-offender-groups filter [ co-offenders ->
     any? co-offenders with [ oc-member? ]
@@ -956,6 +1017,7 @@ to-report find-accomplices [ n ] ; person reporter
       set d d + 1
     ]
   ]
+  if length accomplices < n [ set crime-size-fails crime-size-fails + 1 ]
   report accomplices
 end
 
@@ -1989,6 +2051,90 @@ intervention-end
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+405
+705
+565
+750
+LEAs
+LEAs
+"None" "vsFacilitators" "vsBosses"
+0
+
+SLIDER
+405
+750
+565
+783
+percentage-of-facilitators
+percentage-of-facilitators
+0
+0.1
+0.005
+0.001
+1
+NIL
+HORIZONTAL
+
+SLIDER
+405
+780
+565
+813
+threshold-use-facilitators
+threshold-use-facilitators
+0
+100
+4.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+570
+770
+640
+815
+facilitators
+count persons with [facilitator?]
+0
+1
+11
+
+MONITOR
+640
+770
+730
+815
+NIL
+facilitator-fails
+17
+1
+11
+
+MONITOR
+730
+770
+815
+815
+NIL
+facilitator-crimes
+17
+1
+11
+
+MONITOR
+570
+705
+677
+750
+NIL
+crime-size-fails
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
