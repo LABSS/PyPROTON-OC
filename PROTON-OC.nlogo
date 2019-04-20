@@ -154,7 +154,7 @@ to setup
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-education-levels
-  generate-households ; persons are created here
+  generate-households
   setup-siblings
   setup-friendship
   setup-schools
@@ -330,7 +330,7 @@ to-report intervention-on?
      ticks <  intervention-end
 end
 
-to dump-networks []
+to dump-networks
   foreach network-saving-list [ listname ->
     let network-agentset links with [ breed = runresult listname ]
     if any? network-agentset [
@@ -339,6 +339,15 @@ to dump-networks []
         nw:save-graphml network-file-name
       ]
     ]
+  ]
+end
+
+to duemp-networks
+  let i 0
+  foreach network-saving-list [ listname ->
+    plotxy i count links with [ breed = runresult listname ]
+    set i i + 1
+    show (word listname ": " count links with [ breed = runresult listname ])
   ]
 end
 
@@ -1574,7 +1583,7 @@ num-persons
 num-persons
 100
 10000
-10000.0
+1800.0
 50
 1
 NIL
@@ -1626,7 +1635,7 @@ SWITCH
 83
 output?
 output?
-1
+0
 1
 -1000
 
@@ -1800,9 +1809,9 @@ count prisoners
 
 PLOT
 15
-545
-381
-750
+510
+390
+665
 Age distribution
 age
 count
@@ -2085,7 +2094,7 @@ intervention-end
 intervention-end
 0
 100
-24.0
+63.0
 1
 1
 NIL
@@ -2174,6 +2183,24 @@ crime-size-fails
 17
 1
 11
+
+PLOT
+10
+685
+210
+835
+links by breed
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 1 -16777216 true "" "histogram [ breed ] of links"
 
 @#$#@#$#@
 ## WHAT IS IT?
