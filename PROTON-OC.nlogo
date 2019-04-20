@@ -154,9 +154,9 @@ to setup
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-education-levels
+  setup-persons-and-friendship
   generate-households
   setup-siblings
-  setup-friendship
   setup-schools
   init-students
   setup-employers-jobs
@@ -253,13 +253,50 @@ end
 ;  report sibling-link-neighbor? or offspring-link-neighbor or partner-link-neighbor
 ;end
 
-; citizen procedure
+; person procedure
 to-report my-family-links
-  report (link-set my-sibling-links my-offspring-links my-partner-links)
+  report (link-set my-sibling-links my-offspring-links my-partner-links my-household-links)
+end
+
+to-report family-link-neighbors
+  report (turtle-set sibling-link-neighbors offspring-link-neighbors partner-link-neighbors household-link-neighbors)
+end
+
+; should we have criminal network here, or not?
+to-report my-person-links
+  report (link-set
+    my-sibling-links
+    my-offspring-links
+    my-partner-links
+    my-household-links
+    my-friendship-links
+    my-criminal-links
+    my-professional-links
+    my-school-links)
+end
+
+to-report person-neighbors
+  report (turtle-set
+    sibling-link-neighbors
+    offspring-link-neighbors
+    partner-link-neighbors
+    household-link-neighbors
+    friendship-link-neighbors
+    criminal-link-neighbors
+    professional-link-neighbors
+    school-link-neighbors)
 end
 
 to-report person-links
-  report (link-set my-sibling-links my-offspring-links my-partner-links household-links friendship-links criminal-links professional-links school-links)
+    report (link-set
+    sibling-links
+    offspring-links
+    partner-links
+    household-links
+    friendship-links
+    criminal-links
+    professional-links
+    school-links)
 end
 
 to conclude-wedding [ pool my-partner ]
@@ -318,6 +355,10 @@ to go
   ask links [ hide-link ]
   if view-crim? [ show-criminal-network ]
   make-people-die
+  foreach network-saving-list [ listname ->
+    output (word listname ": " count links with [ breed = runresult listname ])
+  ]
+  output "------------------"
   tick
   if behaviorspace-experiment-name != "" [
     show (word behaviorspace-run-number "." ticks)
@@ -339,15 +380,6 @@ to dump-networks
         nw:save-graphml network-file-name
       ]
     ]
-  ]
-end
-
-to duemp-networks
-  let i 0
-  foreach network-saving-list [ listname ->
-    plotxy i count links with [ breed = runresult listname ]
-    set i i + 1
-    show (word listname ": " count links with [ breed = runresult listname ])
   ]
 end
 
@@ -603,22 +635,23 @@ to set-link-color ; turtle command
   hide-link
 end
 
-to setup-friendship
+to setup-persons-and-friendship
   let age-gender-dist read-csv "initial_age_gender_dist"
   ; Using Watts-Strogatz is a bit arbitrary, but it should at least give us
   ; some clustering to start with. The network structure should evolve as the
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-    nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
+    nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ ; persons are created here
     init-person age-gender-dist
   ]
 end
 
 to setup-siblings
-  ask persons with [ age > 24 ] [ ; people who left the original household
-    let num-siblings random-poisson 3
-    ask n-of num-siblings persons with [ not link-neighbor? myself and abs age - [ age ] of myself < 5 ] [
+  ask persons with [ age > 24 ] [ ; simulates people who left the original household.
+    let num-siblings random-poisson 2
+    ; at this stage links with other persons are only relatives inside households and friends.
+    ask n-of num-siblings other persons with [ not link-neighbor? myself and abs age - [ age ] of myself < 5 ] [
       create-sibling-link-with myself
     ]
   ]
@@ -778,10 +811,6 @@ to assign-job ; job command
     create-job-link-with myself
     assert [ -> not any? my-school-attendance-links ]
   ]
-end
-
-to-report person-neighbors ; turtle reporter
-  report link-neighbors with [ is-person? self ]
 end
 
 to-report current-employees ; employer reporter
@@ -1065,7 +1094,6 @@ report nw:turtles-in-radius max-accomplice-radius
     ]
 end
 
-
 to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
@@ -1164,8 +1192,8 @@ to-report factors-c
       [ 1.97 ] [ 1.0 ] ])
     (list "crim-hist"    [ -> ifelse-value (num-crimes-committed >= 0)       [ 1.62 ] [ 1.0 ] ])
     (list "crim-fam"     [ -> ifelse-value
-      (any? household-link-neighbors and count household-link-neighbors with [ num-crimes-committed > 0 ] /
-        count household-link-neighbors  > 0.5)                                  [ 1.45 ] [ 1.0 ] ])
+      (any? family-link-neighbors and count family-link-neighbors with [ num-crimes-committed > 0 ] /
+        count family-link-neighbors  > 0.5)                                  [ 1.45 ] [ 1.0 ] ])
     (list "crim-neigh"   [ -> ifelse-value
       ( (any? friendship-link-neighbors or any? professional-link-neighbors) and
         (count friendship-link-neighbors with [ num-crimes-committed > 0 ] +
@@ -1212,10 +1240,13 @@ to update-meta-links [ agents ]
       ask other nw:turtles-in-radius 1 [
         create-meta-link-with myself [ ; if that link already exists, it won't be re-created
           let w 0
-          if [ household-link-with other-end ] of myself       != nobody [ set w w + 1 ]
+          if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
           if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
           if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
           if [ professional-link-with other-end ] of myself != nobody [ set w w + 1 ]
+          if [ partner-link-with other-end ] of myself      != nobody [ set w w + 1 ]
+          if [ sibling-link-with other-end ] of myself      != nobody [ set w w + 1 ]
+          if [ offspring-link-with other-end ] of myself    != nobody [ set w w + 1 ]
           if [ criminal-link-with other-end ] of myself     != nobody [
             set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
           ]
@@ -1313,7 +1344,7 @@ to generate-households
   ]
   ; to generate complex households from the remaining population,
   ; we first flatten it into a list
-  show word "complex size: " length complex-hh-sizes
+  output word "complex size: " (word length complex-hh-sizes)
   set population [ self ] of population-pool-to-agentset population
   foreach complex-hh-sizes [ hh-size ->
     set hh-size min (list hh-size length population)
@@ -2183,24 +2214,6 @@ crime-size-fails
 17
 1
 11
-
-PLOT
-10
-685
-210
-835
-links by breed
-NIL
-NIL
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 1 -16777216 true "" "histogram [ breed ] of links"
 
 @#$#@#$#@
 ## WHAT IS IT?
