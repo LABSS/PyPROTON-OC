@@ -1603,7 +1603,7 @@ num-persons
 num-persons
 100
 10000
-5850.0
+550.0
 50
 1
 NIL
@@ -1655,7 +1655,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
@@ -1943,7 +1943,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-57.0
+20.0
 1
 1
 NIL
@@ -1994,7 +1994,7 @@ CHOOSER
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
-1
+0
 
 CHOOSER
 15
@@ -2025,7 +2025,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-50.0
+10.0
 1
 1
 NIL
@@ -2040,7 +2040,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-1.0
+2.0
 1
 1
 NIL
@@ -2099,7 +2099,7 @@ intervention-start
 intervention-start
 0
 100
-0.0
+12.0
 1
 1
 NIL
