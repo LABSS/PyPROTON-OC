@@ -47,7 +47,7 @@ to-report o5
     if criminal-tendency >=  0.8 and criminal-tendency < 0.9 [ table:put criminal-tendency-counts 0.9 ((table:get criminal-tendency-counts 0.9) + 1) ]
     if criminal-tendency >=  0.9 [ table:put criminal-tendency-counts 1.0 ((table:get criminal-tendency-counts 1.0) + 1) ]
   ]
-  report criminal-tendency-counts
+  report table:to-list criminal-tendency-counts
 end
 
 to-report o6
@@ -69,7 +69,7 @@ to-report o6
     if oc >= 0.8 and oc < 0.9 [ table:put embeddedness-counts 0.9 ((table:get embeddedness-counts 0.9) + 1) ]
     if oc >= 0.9 [ table:put embeddedness-counts 1.0 ((table:get embeddedness-counts 1.0) + 1) ]
   ]
-  report embeddedness-counts
+  report table:to-list embeddedness-counts
 end
 
 to-report o7a

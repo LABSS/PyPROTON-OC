@@ -8,7 +8,7 @@
             show timer
         </final>
         <!-- assuming 50 years | ora sta a 5 anni per test -->
-        <timeLimit steps="60"/>
+        <timeLimit steps="24"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
