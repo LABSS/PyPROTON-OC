@@ -45,8 +45,6 @@
         <!-- Population size -->
         <enumeratedValueSet variable="num-persons">
             <value value="550"/>
-            <value value="1000"/>
-            <value value="1500"/>
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
