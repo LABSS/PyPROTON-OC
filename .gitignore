@@ -10,3 +10,5 @@
 *.world
 *.out
 *.swp
+outputs/netlogo.log
+outputs/table-output.csv
