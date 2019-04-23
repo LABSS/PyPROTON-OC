@@ -41,7 +41,7 @@ persons-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
-  crime-activity
+  crime-activity  ; used for making criminals turtles bigger when drawn
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -65,7 +65,7 @@ prisoners-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
-  crime-activity
+  crime-activity  ; used for making criminals turtles bigger when drawn
 ]
 
 jobs-own [
@@ -123,6 +123,7 @@ globals [
   number-weddings
   number-weddings-mean
   number-weddings-sd
+  removed-fatherships
 ]
 
 to profile-setup
@@ -154,6 +155,7 @@ to setup
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-education-levels
+  init-breed-colors
   setup-persons-and-friendship
   generate-households
   setup-siblings
@@ -162,7 +164,6 @@ to setup
   setup-employers-jobs
   assign-jobs
   init-professional-links
-  init-breed-colors
   calculate-criminal-tendency
   setup-oc-groups
   setup-facilitators
@@ -249,20 +250,17 @@ to-report filter-maritable [ pool ]
     not (sibling-link-neighbor? myself or offspring-link-neighbor? myself) ]
 end
 
-;to-report family-neighbor
-;  report sibling-link-neighbor? or offspring-link-neighbor or partner-link-neighbor
-;end
-
 ; person procedure
 to-report my-family-links
   report (link-set my-sibling-links my-offspring-links my-partner-links my-household-links)
 end
 
+; household or not?
 to-report family-link-neighbors
   report (turtle-set sibling-link-neighbors offspring-link-neighbors partner-link-neighbors household-link-neighbors)
 end
 
-; should we have criminal network here, or not?
+; should we have criminal network here, or not? What about household links?
 to-report my-person-links
   report (link-set
     my-sibling-links
@@ -270,19 +268,19 @@ to-report my-person-links
     my-partner-links
     my-household-links
     my-friendship-links
-    my-criminal-links
+    ;my-criminal-links
     my-professional-links
     my-school-links)
 end
 
-to-report person-neighbors
+to-report person-link-neighbors
   report (turtle-set
     sibling-link-neighbors
     offspring-link-neighbors
     partner-link-neighbors
     household-link-neighbors
     friendship-link-neighbors
-    criminal-link-neighbors
+    ;criminal-link-neighbors
     professional-link-neighbors
     school-link-neighbors)
 end
@@ -323,7 +321,7 @@ to go
   if (model-saving-interval > 0) and ((ticks mod model-saving-interval) = 0)[
     dump-model
   ]
-    ; intervention clock
+  ; intervention clock
   if intervention-on? [
     if family-intervention != "none" [ family-intervene        ]
     if social-support    != "none"   [ socialization-intervene ]
@@ -383,12 +381,12 @@ to dump-networks
   ]
 end
 
-to-report add-to-c-for-weighted-extraction
+to-report criminal-tendency-addme-for-weighted-extraction
   report ifelse-value (min [ criminal-tendency ] of persons < 0)
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
 end
 
-to-report subract-c-from-me-weighted-extraction
+to-report criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   report ifelse-value (max [ criminal-tendency ] of persons > 0)
     [ max [ criminal-tendency ] of persons ] [ 0 ]
 end
@@ -396,7 +394,7 @@ end
 to socialization-intervene
   let potential-targets all-persons with [ age <= 18 and age >= 6 and any? school-link-neighbors ]
   let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
-    criminal-tendency + add-to-c-for-weighted-extraction
+    criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ]
   ifelse social-support = "educational" [
     soc-add-educational targets
@@ -419,13 +417,11 @@ to soc-add-psychological [ targets ]
   ; we use a random sample (arbitrarily set to 50 people size max) to avoid weigthed sample from large populations
   ask targets [
     let support-set other persons with [
-      num-crimes-committed = 0 and not friendship-link-neighbor? myself
+      num-crimes-committed = 0 and not member? myself person-link-neighbors
     ]
     if any? support-set [
       create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
         1 - (abs (age - [ age ] of myself ) / 120)
-        ;; nascondi tutti i links
-
       ]
     ]
   ]
@@ -437,10 +433,10 @@ end
 
 to soc-add-more-friends [ targets ]
   ask targets [
-    let support-set other persons with [ not friendship-link-neighbor? myself ]
+    let support-set other persons with [ not member? myself person-link-neighbors ]
     if any? support-set [
       create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
-        subract-c-from-me-weighted-extraction - criminal-tendency
+        criminal-tendency-subtractfromme-for-inverse-weighted-extraction - criminal-tendency
       ]
     ]
   ]
@@ -500,24 +496,20 @@ to family-intervene
     ]
   ]
   let kids-to-protect persons with [
-    age <= 18 and age >= 12 and any? household-link-neighbors with [
-      runresult the-condition
+    age <= 18 and age >= 12 and any? in-offspring-link-neighbors with [
+      male? and oc-member? and runresult the-condition
     ]
   ]
   if any? kids-to-protect [
     ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
       ; notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
-      ask household-link-neighbors with [
-        runresult the-condition
-      ] [
-        ask my-household-links with [ [ not runresult the-condition ] of other-end ] [
-          die
-        ]
-        ask my-friendship-links with [ [ not runresult the-condition ] of other-end ] [
-          die
-        ]
-      ] ; at this point bad dad is out and we help the remaining
-      let family (turtle-set self household-link-neighbors)
+      ; gee but how comes that it increases with the nubmer of targets? We have to do better here
+      let father in-offspring-link-neighbors with [ male? and oc-member? ]
+      ; this also removes household links, leaving the household in an incoherent state.
+      ask father [ ask my-links with [ other-end = myself ] [ die ] ]
+      set removed-fatherships fput removed-fatherships list father self
+      ; at this point bad dad is out and we help the remaining with the whole package
+      let family (turtle-set self family-link-neighbors)
       welfare-createjobs family with [
         not any? my-job-links and age >= 16
         and not any? my-school-links
@@ -536,20 +528,18 @@ to dump-model
   export-world model-file-name
 end
 
-
 ; update to use generic search mechanism
 to make-friends
   ask persons [
-    let num-new-friends min list random-poisson 3 count my-links with [
-      breed = household-links or breed = professional-links or breed = school-links and
-      not [ friendship-link-neighbor? other-end ] of myself
-    ] ; add slider
-    ask rnd:weighted-n-of num-new-friends (my-links with [
-      breed = household-links or breed = professional-links or breed = school-links and
-      not [ friendship-link-neighbor?  other-end ] of myself
-    ]) [
-      [ social-proximity-with other-end ] of myself ] [
-      ask other-end [ create-friendship-link-with other-end ] ]
+    let reachable (turtle-set family-link-neighbors school-link-neighbors professional-link-neighbors) with [
+      not friendship-link-neighbor? myself
+    ]
+    let num-new-friends min list random-poisson 3 count reachable ; add slider
+    ask rnd:weighted-n-of num-new-friends reachable [
+      social-proximity-with myself
+    ] [
+      create-friendship-link-with myself
+    ]
   ]
 end
 
@@ -567,21 +557,25 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
-  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0)
-    [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
-  ask rnd:weighted-n-of num-oc-families persons [ criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
+  ask rnd:weighted-n-of num-oc-families persons [
+    criminal-tendency + criminal-tendency-addme-for-weighted-extraction
+  ] [
+    set oc-member? true
+  ]
   let suitable-candidates-in-families persons with [
     age > 18 and not oc-member? and any? household-link-neighbors with [ oc-member? ]
   ]
   ; fill up the families as much as possible
   ask rnd:weighted-n-of min (list count suitable-candidates-in-families (num-oc-persons - num-oc-families))
   suitable-candidates-in-families [
-    criminal-tendency + min-criminal-tendency ] [ set oc-member? true
+    criminal-tendency + criminal-tendency-addme-for-weighted-extraction
+  ] [
+    set oc-member? true
   ]
   ; take some more if needed (note that this modifies the count of families)
   ask rnd:weighted-n-of (num-oc-persons - count persons with [ oc-member? ])
   persons with [ not oc-member? ] [
-    criminal-tendency + min-criminal-tendency ] [ set oc-member? true ]
+    criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [ set oc-member? true ]
   ask persons with [ oc-member? ] [
     create-criminal-links-with other persons with [ oc-member? ] [
       set num-co-offenses 1
@@ -689,6 +683,9 @@ to init-person-empty ; person command
   set my-job nobody
   set facilitator? false
   set c-t-fresh? false
+  set hobby random 5
+  set-turtle-color-pos
+  set male? one-of [ true false ]
 end
 
 to let-migrants-in
@@ -705,8 +702,6 @@ to let-migrants-in
       set my-job myself
       set wealth-level -1 ; to recognize migrants.
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
-      set male? one-of [ true false ]
-      set-turtle-color-pos
       create-job-link-with myself
     ]
   ]
@@ -722,11 +717,9 @@ to make-baby
         init-person-empty
         set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
-        set male? one-of [ true false ]
-        create-household-links-with turtle-set [ household-link-neighbors ] of myself
-        create-household-link-with myself
-        set hobby random 5 ; see setup procedure
-        set-turtle-color-pos
+        ask [ offspring-link-neighbors ] of myself [ create-sibling-link-with myself ]
+        create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
+        create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
       ]
     ]
   ]
@@ -793,7 +786,7 @@ to assign-job ; job command
     ; First give a chance to current employees to upgrade if they are qualified.
     [ -> employees ]
     ; Then, look for candidates in the immediate network of current employees.
-    [ -> (turtle-set [ person-neighbors ] of employees) with [ not any? my-school-attendance-links and age >= 18 ] ]
+    [ -> (turtle-set [ person-link-neighbors ] of employees) with [ not any? my-school-attendance-links and age >= 18 ] ]
     ; Then look for anyone qualified in the general population.
     [ -> persons with [ not any? my-school-attendance-links and age >= 18] ]
   )
@@ -820,13 +813,8 @@ end
 to-report pick-new-employee-from [ the-candidates ] ; job reporter
   let the-job self
   report one-of the-candidates with [
-    not retired? and interested-in? the-job and qualified-for? the-job
+    not retired? and interested-in? the-job
   ]
-end
-
-; phasing out the old system. There's no such a thing as qualification
-to-report qualified-for? [ the-job ] ; person reporter
-  report true
 end
 
 to-report interested-in? [ the-job ] ; person reporter
@@ -983,7 +971,7 @@ to-report find-facilitator [ co-offending-group ]
     while [ the-facilitator = nobody and any? co-offending-group ] [
       let pool nobody
       ask one-of co-offending-group [
-        nw:with-context persons (link-set friendship-links professional-links household-links) [
+        nw:with-context persons person-links [
           set pool (nw:turtles-in-radius max-accomplice-radius)
           set pool other pool with [ facilitator? ]
         ]
@@ -1117,7 +1105,7 @@ to get-caught [ co-offenders ]
     ask my-school-attendance-links [ die ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
-    ; we keep the friendship links and the OC links for the moment
+    ; we keep the friendship links and the family links for the moment
   ]
 end
 
@@ -1126,6 +1114,7 @@ to-report candidate-weight ; person reporter
   report -1 * (social-proximity-with myself + r)
 end
 
+; this updates the epsilon_c value that corrects the effect sizes
 to calculate-criminal-tendency
   set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
   foreach table:keys c-range-by-age-and-sex [ genderage ->
@@ -1614,7 +1603,7 @@ num-persons
 num-persons
 100
 10000
-1800.0
+5850.0
 50
 1
 NIL
@@ -1954,7 +1943,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-20.0
+57.0
 1
 1
 NIL
@@ -2005,7 +1994,7 @@ CHOOSER
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
-0
+1
 
 CHOOSER
 15
@@ -2036,7 +2025,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-10.0
+50.0
 1
 1
 NIL
@@ -2051,7 +2040,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-2.0
+1.0
 1
 1
 NIL
@@ -2110,7 +2099,7 @@ intervention-start
 intervention-start
 0
 100
-12.0
+0.0
 1
 1
 NIL
