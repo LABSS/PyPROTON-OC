@@ -56,31 +56,26 @@
         <enumeratedValueSet variable="criminal-rate">
             <value value="1"/>
             <value value="2"/>
-            <value value="3"/>
         </enumeratedValueSet>
         <!-- 3a. Employment rate -->
         <enumeratedValueSet variable="employment-rate">
             <value value="1"/>
             <value value="2"/>
-            <value value="3"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
             <value value="1"/>
             <value value="2"/>
-            <value value="3"/>
         </enumeratedValueSet>
         <!-- 4. Law enforcement intervention rate -->
         <enumeratedValueSet variable="law-enforcement-rate">
             <value value="1"/>
             <value value="2"/>
-            <value value="3"/>
         </enumeratedValueSet>
         <!-- 5. Punishment length -->
         <enumeratedValueSet variable="punishment-length">
             <value value="1"/>
             <value value="2"/>
-            <value value="3"/>
         </enumeratedValueSet>
     </experiment>
 </experiments>
