@@ -3,7 +3,7 @@
 
 # this is the simulation
 cd /Users/digitaldust/Documents/clients/LABSS-ISTC-CNR/PROTON-OC
-/Applications/NetLogo\ 6.0.4/netlogo-headless.sh --model PROTON-OC.nlogo --setup-file outputs/exp-OC.xml --threads 4 --table outputs/table-output.csv > outputs/netlogo.log
+/Applications/NetLogo\ 6.0.4/netlogo-headless.sh --model PROTON-OC.nlogo --setup-file outputs/exp-OC.xml --threads 8 --table outputs/table-output.csv > outputs/netlogo.log
 
 # now we save both result and experiment file
 #https://unix.stackexchange.com/questions/340010/how-do-i-create-sequentially-numbered-file-names-in-bash
