@@ -1,11 +1,11 @@
 name, description, group
 "id", run number, id
-"p1", Number of OC members, init
-"p2", Criminal rate, init
-"p3a", Employment rate, init
-"p3b", Education rate, init
-"p4", Law enforcement intervention rate, intervention
-"p5", Punishment length, intervention
+"num-oc-persons", Number of OC members, init
+"criminal-rate", Criminal rate, init
+"employment-rate", Employment rate, init
+"education-rate", Education rate, init
+"aw-enforcement-rate", Law enforcement intervention rate, intervention
+"punishment-length", Punishment length, intervention
 "o1", Number of OC members per time unit, result-base
 "o2", Number of recruited individuals into OC per time unit, result-base
 "o3", Number of crimes per time unit, result-base
