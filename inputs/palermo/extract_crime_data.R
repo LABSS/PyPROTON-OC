@@ -32,7 +32,7 @@ df2<-df %>%
   write_csv(file.path("data", "crime_rate_by_gender_and_age.csv"))  
 
 df3 <- df %>%
-  mutate(age = str_replace_all(age,"\\<|\\+", "")) %>%
+  mutate(age = str_replace_all(age,"\\<|\\+|up to ", "")) %>%
   separate(age, into = c("age_from", "age_to"), sep = "-") %>%
   mutate(
     age_from = as.numeric(age_from),
