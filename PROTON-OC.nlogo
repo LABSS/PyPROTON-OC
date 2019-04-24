@@ -1000,18 +1000,15 @@ end
 
 to commit-crimes
   reset-oc-embeddedness
-  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0) [
-    -1 *  min [ criminal-tendency ] of persons
-  ] [ 0 ]
   let co-offender-groups []
   foreach table:keys c-range-by-age-and-sex [ cell ->
     let value last table:get c-range-by-age-and-sex cell
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value  * count people-in-cell
+    let n-of-crimes last value  * count people-in-cell * criminal-rate
     repeat round n-of-crimes [
-      ask rnd:weighted-one-of people-in-cell [  min-criminal-tendency + criminal-tendency ] [
+      ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
         ; check for big crimes started from a normal guy
@@ -2203,6 +2200,21 @@ crime-size-fails
 17
 1
 11
+
+SLIDER
+875
+705
+1047
+738
+criminal-rate
+criminal-rate
+0
+3
+0.0
+0.1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

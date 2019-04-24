@@ -1,7 +1,3 @@
-# extracts the SES data from BoI files created by UCSC
-# creates 4 files for the cross distributions (3 keys, class, gender, and destination)
-# creates 4 files for the marginal distributions (2 keys, class and gender)
-
 library(tidyverse)
 library(readxl)
 
@@ -11,16 +7,15 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 df <-
   file.path("raw", "authors_sex_age_conditional_prob_ corretto.xlsx") %>%
   read_excel(sheet = "conditional_probability") %>%
-  filter(between(row_number(), 11, 12))
-
-
-# pivot_longer(df, -religion, names_to = "income", values_to = "count")
+  filter(between(row_number(), 11, 12)) %>%
+  select(-Year) %>%
+  gather(key=age, value="p", -Gender) %>%
+  rename(`male?`=Gender)
 
 df2<-df %>%
-  #select(c(1,4,3)) %>%
   mutate(
     age = case_when(
-        age == "<13" ~ "0-13",
+        age == "up to 13" ~ "0-13",
         age == "65+" ~ "65-200",
         TRUE ~ age 
       ),
@@ -29,7 +24,7 @@ df2<-df %>%
       str_extract_all("\\d+") %>%
       map(as.numeric) %>%
       map((lift(seq))), 
-    `male?` = if_else(`male?`=="Female",FALSE, TRUE),
+    `male?` = if_else(`male?`=="Females",FALSE, TRUE),
     p = as.numeric(p)
   ) %>%
   unnest(age) %>%
