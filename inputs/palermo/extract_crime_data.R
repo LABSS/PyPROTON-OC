@@ -3,13 +3,18 @@
 # creates 4 files for the marginal distributions (2 keys, class and gender)
 
 library(tidyverse)
+library(readxl)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-rm(df)
+
+
 df <-
-  file.path("raw", "CrimeYearlyByGenderAgePalermo.csv") %>%
-  read_csv(col_names=TRUE) %>%
-  rename("male?" = 1, "age" = 2, "p" = 3)
+  file.path("raw", "authors_sex_age_conditional_prob_ corretto.xlsx") %>%
+  read_excel(sheet = "conditional_probability") %>%
+  filter(between(row_number(), 11, 12))
+
+
+# pivot_longer(df, -religion, names_to = "income", values_to = "count")
 
 df2<-df %>%
   #select(c(1,4,3)) %>%
