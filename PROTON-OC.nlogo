@@ -504,9 +504,9 @@ to family-intervene
     ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
       ; notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
       ; gee but how comes that it increases with the nubmer of targets? We have to do better here
-      let father in-offspring-link-neighbors with [ male? and oc-member? ]
+      let father one-of in-offspring-link-neighbors with [ male? and oc-member? ]
       ; this also removes household links, leaving the household in an incoherent state.
-      ask father [ ask my-links with [ other-end = myself ] [ die ] ]
+      ask my-in-offspring-links with [ other-end = father ] [ die ]
       set removed-fatherships fput removed-fatherships list father self
       ; at this point bad dad is out and we help the remaining with the whole package
       let family (turtle-set self family-link-neighbors)
@@ -2210,7 +2210,7 @@ criminal-rate
 criminal-rate
 0
 3
-0.0
+1.0
 0.1
 1
 NIL
