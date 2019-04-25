@@ -142,7 +142,7 @@ class OCEmbeddednessTests extends OCModelSuite {
         set oc-member? false
       ]
       ask person 0 [
-        create-partner-link-with-link-with person 1
+        create-partner-link-with person 1
         create-friendship-link-with person 2
         create-professional-link-with person 3
         create-school-link-with person 4
