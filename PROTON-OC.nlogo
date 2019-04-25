@@ -252,12 +252,12 @@ end
 
 ; person procedure
 to-report my-family-links
-  report (link-set my-sibling-links my-offspring-links my-partner-links my-household-links)
+  report (link-set my-sibling-links my-offspring-links my-partner-links)
 end
 
 ; household or not?
 to-report family-link-neighbors
-  report (turtle-set sibling-link-neighbors offspring-link-neighbors partner-link-neighbors household-link-neighbors)
+  report (turtle-set sibling-link-neighbors offspring-link-neighbors partner-link-neighbors)
 end
 
 ; should we have criminal network here, or not? What about household links?
@@ -1545,6 +1545,22 @@ to show-criminal-network
   nw:with-context criminals meta-criminal-links [
     layout-circle sort criminals 14
   ]
+end
+
+
+to test
+          clear-all
+        reset-ticks ; so age can be computed
+        load-stats-tables
+        set facilitator-fails 0
+        set facilitator-crimes 0
+        nw:set-context persons links
+        ask patches [ set pcolor white ]
+        setup-default-shapes
+        setup-education-levels
+        init-breed-colors
+        setup-persons-and-friendship
+        generate-households
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
