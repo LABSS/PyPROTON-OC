@@ -17,7 +17,7 @@ class OCBigCrimesSmallFishTest extends OCModelSuite {
       set num-co-offenders-dist [ [ 5 0.5 ] [ 6 0.5 ] [ 10 0.5 ] ]
       """
     )
-     for (fid <- 1 to 30) {
+     for (fid <- 1 to 20) {
       println(fid)
       ws.cmd("go")
     }

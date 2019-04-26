@@ -252,12 +252,12 @@ end
 
 ; person procedure
 to-report my-family-links
-  report (link-set my-sibling-links my-offspring-links my-partner-links my-household-links)
+  report (link-set my-sibling-links my-offspring-links my-partner-links)
 end
 
 ; household or not?
 to-report family-link-neighbors
-  report (turtle-set sibling-link-neighbors offspring-link-neighbors partner-link-neighbors household-link-neighbors)
+  report (turtle-set sibling-link-neighbors offspring-link-neighbors partner-link-neighbors)
 end
 
 ; should we have criminal network here, or not? What about household links?
@@ -504,9 +504,9 @@ to family-intervene
     ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
       ; notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
       ; gee but how comes that it increases with the nubmer of targets? We have to do better here
-      let father in-offspring-link-neighbors with [ male? and oc-member? ]
+      let father one-of in-offspring-link-neighbors with [ male? and oc-member? ]
       ; this also removes household links, leaving the household in an incoherent state.
-      ask father [ ask my-links with [ other-end = myself ] [ die ] ]
+      ask my-in-offspring-links with [ other-end = father ] [ die ]
       set removed-fatherships fput removed-fatherships list father self
       ; at this point bad dad is out and we help the remaining with the whole package
       let family (turtle-set self family-link-neighbors)
@@ -1000,18 +1000,15 @@ end
 
 to commit-crimes
   reset-oc-embeddedness
-  let min-criminal-tendency ifelse-value (min [ criminal-tendency ] of persons < 0) [
-    -1 *  min [ criminal-tendency ] of persons
-  ] [ 0 ]
   let co-offender-groups []
   foreach table:keys c-range-by-age-and-sex [ cell ->
     let value last table:get c-range-by-age-and-sex cell
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value  * count people-in-cell
+    let n-of-crimes last value  * count people-in-cell * criminal-rate
     repeat round n-of-crimes [
-      ask rnd:weighted-one-of people-in-cell [  min-criminal-tendency + criminal-tendency ] [
+      ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
         ; check for big crimes started from a normal guy
@@ -2203,6 +2200,21 @@ crime-size-fails
 17
 1
 11
+
+SLIDER
+875
+705
+1047
+738
+criminal-rate
+criminal-rate
+0
+3
+1.0
+0.1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
