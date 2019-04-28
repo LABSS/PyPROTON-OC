@@ -29,9 +29,10 @@ class OCRetirementTest extends OCModelSuite {
       """
     )
     // The inequalities are different from the `setup` case here because tick
-    // happens at the end of `go`, but we have a `reset-ticks` near the start of setup
-    ws.rpt("not any? persons with [ age >  retirement-age and any? my-professional-links ]") shouldBe true
-    ws.rpt("not any? persons with [ age <= retirement-age and retired? ]") shouldBe true
-    ws.rpt("not any? persons with [ age >  retirement-age and not retired? ]") shouldBe true
+    // happens at the end of `go`, so I can be 49 at time of retire-check
+    // and 50 at time of report
+    ws.rpt("not any? persons with [ age > retirement-age and any? my-professional-links ]") shouldBe true
+    ws.rpt("not any? persons with [ age < retirement-age and retired? ]") shouldBe true
+    ws.rpt("not any? persons with [ age > retirement-age and not retired? ]") shouldBe true
   }
 }

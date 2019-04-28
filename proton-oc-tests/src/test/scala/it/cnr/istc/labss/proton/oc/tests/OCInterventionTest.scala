@@ -15,24 +15,23 @@ class OCInterventionTest extends OCModelSuite {
       create-persons 1 [
         set oc-member? true
         set birth-tick -1 * ticks-per-year * 50
-        set male? one-of list true false
+        set male? true
         set c-t-fresh? false
       ]
       let kingpin one-of persons with [ oc-member? ]
-      show [who] of kingpin
+      show [ who ] of kingpin
       create-persons 12 [
         set oc-member? false
         set birth-tick -1 * one-of agelist * ticks-per-year
         set agelist remove age agelist
-        create-family-links-with turtle-set kingpin
-        set male? one-of list true false
+        create-offspring-link-from kingpin
+        set male? true
         set c-t-fresh? false
       ]
-      let the-family (turtle-set kingpin [ family-link-neighbors ] of kingpin)
+      let the-family ([ family-link-neighbors ] of kingpin)
       let baby one-of the-family with [ age = 0 ]
       show [who] of baby
-      ask the-family [ create-family-links-with other the-family ]
-      ask the-family with [ age = 40 ] [ set oc-member? true ]
+      ask the-family [ create-sibling-links-with other the-family ]
       set targets-addressed-percent 100
       set family-intervention "remove-if-OC-member"
       family-intervene
@@ -42,11 +41,11 @@ class OCInterventionTest extends OCModelSuite {
       sum [ count friendship-link-neighbors ] of ([ family-link-neighbors ] of (one-of persons with [ age = 0  and propensity = 0])) >= 40
     """) shouldBe true
     ws.rpt("""
-      count [ family-link-neighbors ] of (one-of persons with [ age = 0  and propensity = 0])
-    """) shouldBe 10
+      count [ family-link-neighbors ] of (one-of persons with [ age = 16  and propensity = 0])
+    """) shouldBe 11
     ws.rpt("""
       sum [ count job-link-neighbors ] of (one-of [ family-link-neighbors ] of (persons with [ age = 0  and propensity = 0]))
-    """) shouldBe 7
+    """) shouldBe 8
     ws.rpt("""
       sum [ max-education-level ] of (one-of [ family-link-neighbors ] of (persons with [ age = 0  and propensity = 0]))
     """) shouldBe 6
