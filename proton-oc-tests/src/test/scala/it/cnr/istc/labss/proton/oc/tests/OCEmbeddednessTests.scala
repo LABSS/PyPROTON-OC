@@ -44,7 +44,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ]
       ask person 0 [ set oc-member? false ]
       ask person 1 [ set oc-member? true ]
-      ask person 0 [ create-family-link-with person 1 ]
+      ask person 0 [ create-sibling-link-with person 1 ]
     """)
     ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 1
     ws.rpt("[ dist ] of meta-links") shouldBe Seq(1.0).toLogoList
@@ -60,7 +60,7 @@ class OCEmbeddednessTests extends OCModelSuite {
       ask person 0 [
         ask n-of 5 other persons [ set oc-member? true ]
       ]
-      ask person 0 [ create-family-links-with other persons ]
+      ask person 0 [ create-offspring-links-to other persons ]
     """)
     ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0.5
     ws.rpt("sort [ dist ] of meta-links") shouldBe Seq.fill(10)(1.0).toLogoList
@@ -73,8 +73,8 @@ class OCEmbeddednessTests extends OCModelSuite {
         set cached-oc-embeddedness nobody
         set oc-member? false
       ]
-      ask person 0 [ create-family-link-with person 1 ]
-      ask person 1 [ create-family-link-with person 2 ]
+      ask person 0 [ create-sibling-link-with person 1 ]
+      ask person 1 [ create-sibling-link-with person 2 ]
       ask person 2 [ set oc-member? true ]
     """)
     ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (1.0 / 3.0)
@@ -89,8 +89,8 @@ class OCEmbeddednessTests extends OCModelSuite {
         set oc-member? false
       ]
       ask person 0 [
-        create-family-link-with person 1
-        create-family-link-with person 2
+        create-sibling-link-with person 1
+        create-partner-link-with person 2
         create-friendship-link-with person 2
       ]
       ask person 2 [ set oc-member? true ]
@@ -107,7 +107,7 @@ class OCEmbeddednessTests extends OCModelSuite {
         set oc-member? false
       ]
       ask person 0 [
-        create-family-link-with person 1
+        create-partner-link-with person 1
         create-friendship-link-with person 1
         create-friendship-link-with person 2
       ]
@@ -125,7 +125,7 @@ class OCEmbeddednessTests extends OCModelSuite {
         set oc-member? false
       ]
       ask person 0 [
-        create-family-link-with person 1
+        create-sibling-link-with person 1
         create-criminal-link-with person 2 [ set num-co-offenses 4 ]
       ]
       ask person 2 [ set oc-member? true ]
@@ -142,7 +142,7 @@ class OCEmbeddednessTests extends OCModelSuite {
         set oc-member? false
       ]
       ask person 0 [
-        create-family-link-with person 1
+        create-partner-link-with person 1
         create-friendship-link-with person 2
         create-professional-link-with person 3
         create-school-link-with person 4
