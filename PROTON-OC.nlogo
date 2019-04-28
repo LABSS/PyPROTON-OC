@@ -360,7 +360,7 @@ to go
   tick
   if behaviorspace-experiment-name != "" [
     show (word behaviorspace-run-number "." ticks)
-    ]
+  ]
 end
 
 to-report intervention-on?
@@ -642,11 +642,29 @@ to setup-persons-and-friendship
 end
 
 to setup-siblings
-  ask persons with [ age > 24 ] [ ; simulates people who left the original household.
-    let num-siblings random-poisson 2
-    ; at this stage links with other persons are only relatives inside households and friends.
-    ask n-of num-siblings other persons with [ not link-neighbor? myself and abs age - [ age ] of myself < 5 ] [
-      create-sibling-link-with myself
+  ask persons with [ any? out-offspring-link-neighbors ] [ ; simulates people who left the original household.
+    let num-siblings random-poisson 0.5 ;the number of links is N^3 agents, so let's keep this low
+                                        ; at this stage links with other persons are only relatives inside households and friends.
+    let candidates other persons with [
+      any? out-offspring-link-neighbors and not link-neighbor? myself and abs age - [ age ] of myself < 5
+    ]
+    if count candidates > 50 [ set candidates n-of 50 candidates ] ; othewise with 10K agents it would die
+    ; remove couples from candidates and their neighborhoods
+    let all-potential-siblings [ -> (turtle-set self candidates sibling-link-neighbors [ sibling-link-neighbors ] of candidates)]
+    let check-all-siblings [ ->
+      any? (runresult all-potential-siblings) with [
+        any? (runresult all-potential-siblings) with [ partner-link-neighbor? myself ] ]
+    ]
+    while [ count candidates > 0 and runresult check-all-siblings ] [
+      ; trouble should exist, or check-all-siblings would fail
+      let trouble one-of candidates with [ any? partner-link-neighbors or any? turtle-set [ partner-link-neighbors ] of myself ]
+      ask trouble [ set candidates other candidates ]
+    ]
+    let targets (turtle-set self n-of min (list count candidates num-siblings) candidates)
+    ask targets [ create-sibling-links-with other targets ]
+    let other-targets (turtle-set targets [ sibling-link-neighbors ] of targets)
+    ask turtle-set [ sibling-link-neighbors ] of targets [
+      create-sibling-links-with other other-targets
     ]
   ]
 end
@@ -688,6 +706,7 @@ to init-person-empty ; person command
   set male? one-of [ true false ]
 end
 
+
 to let-migrants-in
   ; calculate the difference between deaths and birth
   let to-replace max list 0 (num-persons - count all-persons)
@@ -717,7 +736,9 @@ to make-baby
         init-person-empty
         set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
-        ask [ offspring-link-neighbors ] of myself [ create-sibling-link-with myself ]
+        ask [ offspring-link-neighbors ] of myself [
+          create-sibling-links-with other [ offspring-link-neighbors ] of myself
+        ]
         create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
         create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
       ]
@@ -1616,23 +1637,6 @@ count jobs
 17
 1
 11
-
-BUTTON
-1095
-78
-1205
-153
-move nodes
-  if mouse-down? [\n    let candidate min-one-of turtles [distancexy mouse-xcor mouse-ycor]\n    if [distancexy mouse-xcor mouse-ycor] of candidate < 1 [\n      ;; The WATCH primitive puts a \"halo\" around the watched turtle.\n      watch candidate\n      while [mouse-down?] [\n        ;; If we don't force the view to update, the user won't\n        ;; be able to see the turtle moving around.\n        display\n        ;; The SUBJECT primitive reports the turtle being watched.\n        ask subject [ setxy mouse-xcor mouse-ycor ]\n      ]\n      ;; Undoes the effects of WATCH.  Can be abbreviated RP.\n      reset-perspective\n    ]\n  ]
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-0
 
 INPUTBOX
 1095
