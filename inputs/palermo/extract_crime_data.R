@@ -3,14 +3,17 @@ library(readxl)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
-
 df <-
   file.path("raw", "authors_sex_age_conditional_prob_ corretto.xlsx") %>%
   read_excel(sheet = "conditional_probability") %>%
   filter(between(row_number(), 11, 12)) %>%
   select(-Year) %>%
   gather(key=age, value="p", -Gender) %>%
-  rename(`male?`=Gender)
+  rename(`male?`=Gender) %>%
+  mutate(  
+    `male?` = if_else(`male?`=="Females", FALSE, TRUE),
+    p = as.numeric(p)
+  )
 
 df2<-df %>%
   mutate(
@@ -23,9 +26,7 @@ df2<-df %>%
       age %>%
       str_extract_all("\\d+") %>%
       map(as.numeric) %>%
-      map((lift(seq))), 
-    `male?` = if_else(`male?`=="Females",FALSE, TRUE),
-    p = as.numeric(p)
+      map((lift(seq)))
   ) %>%
   unnest(age) %>%
   select(`male?`,age,p) %>%
@@ -45,10 +46,7 @@ df3 <- df %>%
     age_from = case_when(
       age_from == 13 ~ 0,
       TRUE ~ age_from
-    ),
-    `male?` = if_else(`male?`=="Female",FALSE, TRUE),
-    p = as.numeric(p)
+    )
   ) %>%
   select(`male?`,age_from,age_to,p) %>%
   write_csv(file.path("data", "crime_rate_by_gender_and_age_range.csv"))  
-
