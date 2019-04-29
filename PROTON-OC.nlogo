@@ -478,7 +478,9 @@ to welfare-createjobs [ targets ]
           set job-level [ job-level ] of target
           create-job-link-with target
           ask target [
-            create-professional-links-with other [ current-employees ] of the-employer
+            let employees [ current-employees ] of the-employer
+            let conn decide-professional-conn-number employees
+            create-professional-links-with n-of conn other employees
           ]
         ]
       ]
@@ -848,10 +850,15 @@ to-report interested-in? [ the-job ] ; person reporter
   ]
 end
 
+to-report decide-professional-conn-number [ employees ]
+  report ifelse-value (count employees <= 20) [ count employees - 1 ] [ 20 ]
+end
+
 to init-professional-links
   ask employers [
     let employees current-employees
-    ask employees [ create-professional-links-with other employees ]
+    let conn decide-professional-conn-number employees
+    ask employees [ create-professional-links-with n-of conn other employees ]
   ]
 end
 
