@@ -1948,7 +1948,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-25.0
+20.0
 1
 1
 NIL
@@ -2216,10 +2216,10 @@ SLIDER
 733
 criminal-rate
 criminal-rate
-1
+0
 3
 1.0
-1
+0.1
 1
 NIL
 HORIZONTAL
