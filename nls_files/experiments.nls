@@ -1,0 +1,144 @@
+to-report o1
+  ; number of OC members per time unit
+  report count all-persons with [ oc-member? ]
+end
+
+to-report o2
+  ; Number of recruited individuals into OC per time unit
+  report count all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o3
+  ; Number of crimes per time unit
+  report sum [ num-crimes-committed ] of all-persons
+end
+
+to-report o4
+  ; Number of crimes committed by OC members per time unit
+  report sum [ num-crimes-committed ] of all-persons with [ oc-member? ]
+end
+
+to-report o5
+  ; Distribution of C (which is the individual propensity towards crime commission)
+  let criminal-tendency-counts table:make 
+  foreach (range -1.0 1.1 0.1) [ i -> 
+    table:put criminal-tendency-counts precision i 1 0 
+  ]
+  table:remove criminal-tendency-counts 0
+  ask all-persons [
+    if criminal-tendency < -0.9 [ table:put criminal-tendency-counts -1.0 ((table:get criminal-tendency-counts -1.0) + 1) ]
+    if criminal-tendency >= -0.9 and criminal-tendency < -0.8 [ table:put criminal-tendency-counts -0.9 ((table:get criminal-tendency-counts -0.9) + 1) ]
+    if criminal-tendency >= -0.8 and criminal-tendency < -0.7 [ table:put criminal-tendency-counts -0.8 ((table:get criminal-tendency-counts -0.8) + 1) ]
+    if criminal-tendency >= -0.7 and criminal-tendency < -0.6 [ table:put criminal-tendency-counts -0.7 ((table:get criminal-tendency-counts -0.7) + 1) ]
+    if criminal-tendency >= -0.6 and criminal-tendency < -0.5 [ table:put criminal-tendency-counts -0.6 ((table:get criminal-tendency-counts -0.6) + 1) ]
+    if criminal-tendency >= -0.5 and criminal-tendency < -0.4 [ table:put criminal-tendency-counts -0.5 ((table:get criminal-tendency-counts -0.5) + 1) ]
+    if criminal-tendency >= -0.4 and criminal-tendency < -0.3 [ table:put criminal-tendency-counts -0.4 ((table:get criminal-tendency-counts -0.4) + 1) ]
+    if criminal-tendency >= -0.3 and criminal-tendency < -0.2 [ table:put criminal-tendency-counts -0.3 ((table:get criminal-tendency-counts -0.3) + 1) ]
+    if criminal-tendency >= -0.2 and criminal-tendency < -0.1 [ table:put criminal-tendency-counts -0.2 ((table:get criminal-tendency-counts -0.2) + 1) ]
+    if criminal-tendency >= -0.1 and criminal-tendency < 0.0 [ table:put criminal-tendency-counts -0.1 ((table:get criminal-tendency-counts -0.1) + 1) ]
+    if criminal-tendency >=  0.0 and criminal-tendency < 0.1 [ table:put criminal-tendency-counts 0.1 ((table:get criminal-tendency-counts 0.1) + 1) ]
+    if criminal-tendency >=  0.1 and criminal-tendency < 0.2 [ table:put criminal-tendency-counts 0.2 ((table:get criminal-tendency-counts 0.2) + 1) ]
+    if criminal-tendency >=  0.2 and criminal-tendency < 0.3 [ table:put criminal-tendency-counts 0.3 ((table:get criminal-tendency-counts 0.3) + 1) ]
+    if criminal-tendency >=  0.3 and criminal-tendency < 0.4 [ table:put criminal-tendency-counts 0.4 ((table:get criminal-tendency-counts 0.4) + 1) ]
+    if criminal-tendency >=  0.4 and criminal-tendency < 0.5 [ table:put criminal-tendency-counts 0.5 ((table:get criminal-tendency-counts 0.5) + 1) ]
+    if criminal-tendency >=  0.5 and criminal-tendency < 0.6 [ table:put criminal-tendency-counts 0.6 ((table:get criminal-tendency-counts 0.6) + 1) ]
+    if criminal-tendency >=  0.6 and criminal-tendency < 0.7 [ table:put criminal-tendency-counts 0.7 ((table:get criminal-tendency-counts 0.7) + 1) ]
+    if criminal-tendency >=  0.7 and criminal-tendency < 0.8 [ table:put criminal-tendency-counts 0.8 ((table:get criminal-tendency-counts 0.8) + 1) ]
+    if criminal-tendency >=  0.8 and criminal-tendency < 0.9 [ table:put criminal-tendency-counts 0.9 ((table:get criminal-tendency-counts 0.9) + 1) ]
+    if criminal-tendency >=  0.9 [ table:put criminal-tendency-counts 1.0 ((table:get criminal-tendency-counts 1.0) + 1) ]
+  ]
+  report table:to-list criminal-tendency-counts
+end
+
+to-report o6
+  ; Distribution of R (which is the individual embededdness into OC-prone local networks)
+  let embeddedness-counts table:make 
+  foreach (range 0 1.1 0.1) [ i -> 
+    table:put embeddedness-counts precision i 1 0 
+  ]
+  ask all-persons [
+    let oc oc-embeddedness
+    if oc >= 0.0 and oc < 0.1 [ table:put embeddedness-counts 0.1 ((table:get embeddedness-counts 0.1) + 1) ]
+    if oc >= 0.1 and oc < 0.2 [ table:put embeddedness-counts 0.2 ((table:get embeddedness-counts 0.2) + 1) ]
+    if oc >= 0.2 and oc < 0.3 [ table:put embeddedness-counts 0.3 ((table:get embeddedness-counts 0.3) + 1) ]
+    if oc >= 0.3 and oc < 0.4 [ table:put embeddedness-counts 0.4 ((table:get embeddedness-counts 0.4) + 1) ]
+    if oc >= 0.4 and oc < 0.5 [ table:put embeddedness-counts 0.5 ((table:get embeddedness-counts 0.5) + 1) ]
+    if oc >= 0.5 and oc < 0.6 [ table:put embeddedness-counts 0.6 ((table:get embeddedness-counts 0.6) + 1) ]
+    if oc >= 0.6 and oc < 0.7 [ table:put embeddedness-counts 0.7 ((table:get embeddedness-counts 0.7) + 1) ]
+    if oc >= 0.7 and oc < 0.8 [ table:put embeddedness-counts 0.8 ((table:get embeddedness-counts 0.8) + 1) ]
+    if oc >= 0.8 and oc < 0.9 [ table:put embeddedness-counts 0.9 ((table:get embeddedness-counts 0.9) + 1) ]
+    if oc >= 0.9 [ table:put embeddedness-counts 1.0 ((table:get embeddedness-counts 1.0) + 1) ]
+  ]
+  report table:to-list embeddedness-counts
+end
+
+to-report o7a
+  ; Distribution of socio-demographic variables on new recruited individuals
+  report table:to-list table:counts[ education-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o7b
+  ; Distribution of socio-demographic variables on new recruited individuals
+  report table:to-list table:counts[ wealth-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o7c
+  ; Distribution of socio-demographic variables on new recruited individuals
+  report table:to-list table:counts[ job-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+end
+
+to-report o8a
+  ; Distribution of socio-demographic variables of OC members
+  report table:to-list table:counts[ education-level ] of all-persons with [ oc-member? ]
+end
+
+to-report o8b
+  ; Distribution of socio-demographic variables of OC members
+  report table:to-list table:counts[ wealth-level ] of all-persons with [ oc-member? ]
+end
+
+to-report o8c
+  ; Distribution of socio-demographic variables of OC members
+  report table:to-list table:counts[ job-level ] of all-persons with [ oc-member? ]
+end
+
+to-report o9a
+  ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
+  report table:to-list table:counts[ education-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+end
+
+to-report o9b
+  ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
+  report table:to-list table:counts[ wealth-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+end
+
+to-report o9c
+  ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
+  report table:to-list table:counts[ job-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+end
+
+to-report o10a
+  ; Distribution of socio-demographic variables of the general population
+  report table:to-list table:counts[ education-level ] of all-persons
+end
+
+to-report o10b
+  ; Distribution of socio-demographic variables of the general population
+  report table:to-list table:counts [ wealth-level ] of all-persons
+end
+
+to-report o10c
+  ; Distribution of socio-demographic variables of the general population
+  report table:to-list table:counts [ job-level ] of all-persons
+end
+
+to-report o11
+  ; Number of crimes committed by facilitator agents per time unit
+  report sum [ num-crimes-committed ] of all-persons with [ facilitator? ]
+end
+
+to-report o12
+  ; Number of law enforcement interventions per time unit
+  report 1
+end
+

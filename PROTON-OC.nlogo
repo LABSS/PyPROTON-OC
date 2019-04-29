@@ -1,3 +1,5 @@
+__includes ["nls_files/experiments.nls"]
+
 extensions [nw table csv profiler rnd]
 
 breed [jobs      job]
@@ -43,6 +45,7 @@ persons-own [
   hobby
   crime-activity  ; used for making criminals turtles bigger when drawn
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
+  new-recruit
 ]
 
 prisoners-own [
@@ -65,6 +68,7 @@ prisoners-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
+  new-recruit
   crime-activity  ; used for making criminals turtles bigger when drawn
 ]
 
@@ -1047,7 +1051,7 @@ to commit-crimes
     any? co-offenders with [ oc-member? ]
   ] co-offender-groups
   foreach oc-co-offender-groups [ co-offenders ->
-    ask co-offenders [ set oc-member? true ]
+    ask co-offenders [ set new-recruit ticks set oc-member? true ]
   ]
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
@@ -2206,16 +2210,76 @@ crime-size-fails
 11
 
 SLIDER
-875
-705
-1047
-738
+865
+700
+1037
+733
 criminal-rate
 criminal-rate
 0
 3
 1.0
 0.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+865
+735
+1037
+768
+employment-rate
+employment-rate
+1
+3
+2.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+865
+770
+1037
+803
+education-rate
+education-rate
+1
+3
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+865
+805
+1037
+838
+law-enforcement-rate
+law-enforcement-rate
+1
+3
+1.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+865
+840
+1037
+873
+punishment-length
+punishment-length
+1
+3
+1.0
+1
 1
 NIL
 HORIZONTAL
