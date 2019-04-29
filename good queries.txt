@@ -6,6 +6,11 @@
 # flux: all new people born
 count all-persons with [ birth-tick >= 0 ]
 
+# networks
+(do not use on large number of links. With 300K, it crashes Netlogo. Go figure why.)
+map [ a -> list a count links with  [ breed = a ] ] remove-duplicates [ breed ]of links
+map [ a -> list a (count links with  [ breed = a ] / count all-persons) ] remove-duplicates [ breed ] of links
+
 # employment
 
 # employment rate
