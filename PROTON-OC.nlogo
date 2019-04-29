@@ -1200,7 +1200,7 @@ to-report factors-c
     (list "propensity"   [ -> ifelse-value (propensity >
       exp (nat-propensity-m - nat-propensity-sigma ^ 2 / 2) + nat-propensity-threshold *
       sqrt (exp nat-propensity-sigma ^ 2 - 1) * exp (nat-propensity-m + nat-propensity-sigma ^ 2 / 2))
-      [ 1.97 ] [ 1.0 ] ])
+                                                                             [ 1.97 ] [ 1.0 ] ])
     (list "crim-hist"    [ -> ifelse-value (num-crimes-committed >= 0)       [ 1.62 ] [ 1.0 ] ])
     (list "crim-fam"     [ -> ifelse-value
       (any? family-link-neighbors and count family-link-neighbors with [ num-crimes-committed > 0 ] /

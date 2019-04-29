@@ -1,5 +1,0 @@
-# linux
-nohup time nice netlogo-headless.sh --model /home/mario/OC/PROTON-OC.nlogo --experiment basic --table basic2.`hostname -s`.csv   > nohup2.`hostname -s`.out &
-# windows
-
-Measure-Command {start /min /low netlogo-headless.sh --model /home/mario/OC/PROTON-OC.nlogo --experiment basic --table basic2.`hostname -s`.csv   > nohup2.`hostname -s`.out -wait}
