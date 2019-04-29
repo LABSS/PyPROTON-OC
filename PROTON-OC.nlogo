@@ -771,13 +771,14 @@ to-report interested-in? [ the-job ] ; person reporter
 end
 
 to-report decide-professional-conn-number [ employees ]
-  report ifelse-value (count employees < 20)[count employees - 1][20]
+  report ifelse-value (count employees <= 20)[count employees - 1][20]
 end
 
 to init-professional-links
   ask employers [
     let employees current-employees
     let conn decide-professional-conn-number employees
+    show self
     ask employees [ create-professional-links-with n-of conn other employees ]
   ]
 end
