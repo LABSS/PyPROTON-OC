@@ -1126,10 +1126,10 @@ to get-caught [ co-offenders ]
   ask co-offenders [
     set breed prisoners
     set shape "face sad"
-    ifelse male? [
-      set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [[p] -> last p ] ] [
-      set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
-    ]
+    ifelse male?
+    [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [ [ p ] -> last p ] ]
+    [ set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [ [ p ] -> last p ] ]
+    set sentence-countdown sentence-countdown * punishment-length
     ask my-job-links [ die ]
     ask my-school-attendance-links [ die ]
     ask my-professional-links [ die ]
