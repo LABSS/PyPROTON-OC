@@ -2283,10 +2283,10 @@ SLIDER
 873
 punishment-length
 punishment-length
-1
-3
+0.5
+2
 1.0
-1
+0.5
 1
 NIL
 HORIZONTAL
