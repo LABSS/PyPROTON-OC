@@ -769,7 +769,7 @@ to setup-employers-jobs
   let job-counts reduce sentence read-csv "employer_sizes"
   let jobs-target count persons with [ job-level != 1 ]
   while [ count jobs < jobs-target ] [
-    let n one-of job-counts
+    let n int (round ((one-of job-counts) * employment-rate))
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
@@ -2236,10 +2236,10 @@ SLIDER
 768
 employment-rate
 employment-rate
-1
-3
-2.0
-1
+0.9
+1.1
+0.9
+0.1
 1
 NIL
 HORIZONTAL
