@@ -1066,11 +1066,9 @@ to commit-crimes
 end
 
 to-report arrest-probability-with-intervention [ group ]
-  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ]) [
-    report probability-of-getting-caught * oc-arrest-multiplier
-  ] [
-    report probability-of-getting-caught
-  ]
+  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ])
+  [ report probability-of-getting-caught * oc-arrest-multiplier ]
+  [ report probability-of-getting-caught * law-enforcement-rate ]
 end
 
 to retire-persons
@@ -2268,10 +2266,10 @@ SLIDER
 838
 law-enforcement-rate
 law-enforcement-rate
-1
-3
+0.5
+2
 1.0
-1
+0.5
 1
 NIL
 HORIZONTAL
@@ -2285,7 +2283,7 @@ punishment-length
 punishment-length
 0.5
 2
-2.0
+1.0
 0.5
 1
 NIL
