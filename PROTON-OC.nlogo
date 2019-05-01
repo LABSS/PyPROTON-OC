@@ -764,12 +764,16 @@ to-report age
   report floor ((ticks - birth-tick) / ticks-per-year)
 end
 
+to-report manipulate-employment-rate [ a-number ]
+  report int (round (a-number * employment-rate))
+end
+
 to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence read-csv "employer_sizes"
-  let jobs-target count persons with [ job-level != 1 ]
+  let jobs-target manipulate-employment-rate (count persons with [ job-level != 1 ])
   while [ count jobs < jobs-target ] [
-    let n int (round ((one-of job-counts) * employment-rate))
+    let n one-of job-counts ;manipulate-employment-rate
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
@@ -2238,7 +2242,7 @@ employment-rate
 employment-rate
 0.9
 1.1
-0.9
+1.1
 0.1
 1
 NIL
@@ -2701,6 +2705,16 @@ NetLogo 6.0.4
     </enumeratedValueSet>
     <enumeratedValueSet variable="nat-propensity-threshold">
       <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="employment-rate-check" repetitions="100" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>stop</go>
+    <metric>sum [count job-link-neighbors] of persons</metric>
+    <enumeratedValueSet variable="employment-rate">
+      <value value="0.9"/>
+      <value value="1"/>
+      <value value="1.1"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
