@@ -44,8 +44,9 @@ persons-own [
   c-t
   hobby
   crime-activity  ; used for making criminals turtles bigger when drawn
-  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
   new-recruit
+  migrant?
+  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
 prisoners-own [
@@ -68,8 +69,9 @@ prisoners-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
-  new-recruit
   crime-activity  ; used for making criminals turtles bigger when drawn
+  new-recruit
+  migrant?
 ]
 
 jobs-own [
@@ -710,8 +712,8 @@ to init-person-empty ; person command
   set hobby random 5
   set-turtle-color-pos
   set male? one-of [ true false ]
+  set migrant? false
 end
-
 
 to let-migrants-in
   ; calculate the difference between deaths and birth
@@ -725,9 +727,13 @@ to let-migrants-in
     hatch-persons 1 [
       init-person-empty
       set my-job myself
-      set wealth-level -1 ; to recognize migrants.
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
       create-job-link-with myself
+      let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
+      let conn decide-professional-conn-number employees
+      create-professional-links-with n-of conn other employees
+      set wealth-level [ job-level ] of myself
+      set migrant? true
     ]
   ]
 end
@@ -1863,7 +1869,7 @@ MONITOR
 375
 333
 migrants
-count persons with [ wealth-level = -1 ]
+count persons with [ migrant? ]
 17
 1
 11
@@ -2240,7 +2246,7 @@ employment-rate
 employment-rate
 1
 3
-2.0
+1.0
 1
 1
 NIL
