@@ -791,7 +791,6 @@ to setup-employers-jobs
       hatch-jobs n [
         create-position-link-with myself
         set job-level random-level-by-size n
-        ;set job-level random 4
         set label self
       ]
       set label self
