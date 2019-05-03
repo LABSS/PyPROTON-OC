@@ -168,7 +168,7 @@ to setup
   setup-schools
   init-students
   setup-employers-jobs
-  ask persons with [ not any? my-school-attendance-links and age >= 18 and age <= 65 and job-level > 1 ] [ find-job ]
+  ask persons with [ not any? my-school-attendance-links and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
   setup-oc-groups
@@ -345,7 +345,7 @@ to go
     calculate-criminal-tendency
     graduate
     ask persons with [
-      not any? my-school-attendance-links and age >= 18 and age <= 65 and not any? my-job-links and
+      not any? my-school-attendance-links and age >= 18 and age < retirement-age and not any? my-job-links and
       not retired? and job-level > 1
     ] [
      find-job
