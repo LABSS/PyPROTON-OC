@@ -19,7 +19,7 @@ RUN git clone -b "${OC_VERSION}" --single-branch --depth 1 git@github.com:LABSS/
 
 FROM openjdk:8-jdk AS production
 COPY --from=netlogobase:latest /opt/netlogo /opt/netlogo
-COPY --from=source /PROTON-T/ /PROTON-T/
+COPY --from=source /PROTON-OC/ /PROTON-OC/
 
 ARG OC_VERSION  
 ENV VERSION "${OC_VERSION}"
