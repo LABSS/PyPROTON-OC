@@ -28,19 +28,22 @@ cd ..
 
 # interactive run - testing the docker
 
-docker run --entrypoint "/bin/bash" -v /home/mario/commondisk:/extdisk -it  oc 
+docker run --entrypoint "/bin/bash" -v ~/commondisk:/extdisk -it  oc 
 
 # run!
 Copy the content of the skeleton on the common disk, then substitute the file `exp.xml` with your own. Then call the docker run command.
 
 ```
 cp ~/OC/docker/extdisk-skeleton/* ~/commondisk
-docker run -v /home/mario/commondisk:/extdisk  -t oc
+docker run -v ~/commondisk:/extdisk  -d labss/oc
 ```
 
 It will run in the container, dumping the results in the commondisk.
 
 # useful docker instructions
+
+## run a terminal in a running container
+`docker ps` to retrieve the `_ID_`, then `docker exec -it _ID_ /bin/bash`
 
 ## clean up
 ```docker ps -a
@@ -48,15 +51,11 @@ docker ps --filter "status=exited" | grep 'weeks ago' | awk '{print $1}' | xargs
 ```
 
 # push the container on the online repository
-
+```
 docker push labss/protont
-
-
-
-
-
+```
 # share results (in the directory to share; turn off other servers on 80, like R)
-
+```
 sudo rstudio-server stop
 python -m SimpleHTTPServer
-
+```
