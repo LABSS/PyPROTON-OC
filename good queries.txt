@@ -23,7 +23,9 @@ map [ a -> list a count persons with  [ job-level = a ] ] remove-duplicates [ jo
 ## unemployed
 count persons with  [ job-level = 1 ]
 persons with [ job-level = 1 and any? my-job-links ]
-count persons with [ age > 18 and age <= 65 and not any? my-job-links and job-level > 1]
+count persons with [ age >=18 and age <= 65 and not any? my-job-links and job-level > 1 ]
+## fillable jobs
+jobs with [ not any? my-job-links and  any? persons with [ age >= 18 and age <= 65 and not any? my-job-links and job-level = [ job-level ] of myself  and not any? my-school-attendance-links ] ]
 
 # employment rate
 count all-persons with [ any? job-links ] / count all-persons
@@ -36,7 +38,6 @@ persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
 [ (list job-level count my-job-links job-level)] of persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
 #unemployed women in the family
 persons with [not male? and any? family-link-neighbors with [ oc-member? ] and not any? my-job-links]
-
 
 
 #families with different wealth levels inside

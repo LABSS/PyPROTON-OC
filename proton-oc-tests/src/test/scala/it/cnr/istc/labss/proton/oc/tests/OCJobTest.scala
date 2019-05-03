@@ -6,19 +6,23 @@ import org.nlogo.api.ScalaConversions.RichSeq
 
 class OCJobTest extends OCModelSuite {
 
-  // note that persons have a birth tick, not an age (age is a reporter)
-  // thus, after the tick, a person can be just turned 65 but not retired yet (it will be after the go)
-  // that's why we use age > retirement-age and not >=.
-  test("People should not work underage ") { ws =>
+  test("Work system stays coherent ") { ws =>
     ws.cmd("""
-      set num-persons 500
+      set num-persons 1000
       setup
       """
     )
     for (fid <- 1 to 36) {
       println(fid)
       ws.cmd("go")
+      // no minors working
       ws.rpt("any? persons with [ any? job-link-neighbors and age < 18 ] ") shouldBe false
+      // unemployed stay so
+      ws.rpt("any? persons with [ job-level = 1 and any? my-job-links ] ") shouldBe false
+      // job levels are coherent
+      ws.rpt("""
+        all? persons with [ any? my-job-links ] [ job-level = [ job-level ] of one-of job-link-neighbors ]
+      """) shouldBe true      
     }
   }
 }

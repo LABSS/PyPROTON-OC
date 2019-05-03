@@ -168,7 +168,7 @@ to setup
   setup-schools
   init-students
   setup-employers-jobs
-  assign-jobs
+  ask persons with [ not any? my-school-attendance-links and age >= 18 and age <= 65 and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
   setup-oc-groups
@@ -342,8 +342,19 @@ to go
      if crime-activity <= 1 [ set crime-activity 1 ]
   ]
   if ((ticks mod ticks-per-year) = 0) [
-    graduate
     calculate-criminal-tendency
+    graduate
+    ask persons with [
+      not any? my-school-attendance-links and age >= 18 and age <= 65 and not any? my-job-links and
+      not retired? and job-level > 1
+    ] [
+     find-job
+     if any? my-job-links [
+        let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
+        let conn decide-professional-conn-number employees
+        create-professional-links-with n-of conn other employees
+      ]
+    ]
     let-migrants-in
   ]
   wedding
@@ -792,38 +803,17 @@ to-report random-level-by-size [ employer-size ]
   report pick-from-pair-list table:get jobs_by_company_size employer-size
 end
 
-to assign-jobs
-  output "Assigning jobs"
-  ask jobs with [ not any? my-job-links ] [ assign-job ]
-end
-
-to assign-job ; job command
-  assert [ -> not any? my-job-links ]
-  let the-employer one-of position-link-neighbors
-  assert [ -> is-employer? the-employer ]
-  let new-employee pick-new-employee-from persons with [
-    not any? my-school-attendance-links and age >= 18 and not any? my-job-links
-  ]
-  ask turtle-set new-employee [
-    set my-job myself
-    create-job-link-with myself
+to find-job ; person procedure
+  output "Looking for jobs"
+  let the-job one-of jobs with [ not any? my-job-links and [ job-level ] of myself = job-level ]
+  if the-job != nobody [
+    set my-job the-job
+    create-job-link-with the-job
   ]
 end
 
 to-report current-employees ; employer reporter
   report turtle-set [ job-link-neighbors ] of position-link-neighbors
-end
-
-to-report pick-new-employee-from [ the-candidates ] ; job reporter
-  report one-of the-candidates with [
-    not retired? and [ job-level ] of myself = job-level
-  ]
-end
-
-to-report interested-in? [ the-job ] ; person reporter
-  report ifelse-value (my-job = nobody) [ true ] [
-    [ job-level ] of the-job = [ job-level ] of my-job
-  ]
 end
 
 to-report decide-professional-conn-number [ employees ]
@@ -1608,7 +1598,7 @@ num-persons
 num-persons
 100
 10000
-250.0
+550.0
 50
 1
 NIL
@@ -1753,7 +1743,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-0.0
+2.0
 1
 1
 NIL
