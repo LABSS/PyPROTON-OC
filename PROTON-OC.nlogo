@@ -479,7 +479,7 @@ to welfare-createjobs [ targets ]
           create-job-link-with target
           ask target [
             let employees [ current-employees ] of the-employer
-            let conn decide-professional-conn-number employees
+            let conn decide-conn-number employees 20
             create-professional-links-with n-of conn other employees
           ]
         ]
@@ -642,9 +642,10 @@ to setup-persons-and-friendship
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-    nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ ; persons are created here
+  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ ; persons are created here
     init-person age-gender-dist
   ]
+
 end
 
 to setup-siblings
@@ -773,7 +774,7 @@ to setup-employers-jobs
   let job-counts reduce sentence read-csv "employer_sizes"
   let jobs-target manipulate-employment-rate (count persons with [ job-level != 1 ])
   while [ count jobs < jobs-target ] [
-    let n one-of job-counts ;manipulate-employment-rate
+    let n manipulate-employment-rate (one-of job-counts)
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
@@ -854,14 +855,14 @@ to-report interested-in? [ the-job ] ; person reporter
   ]
 end
 
-to-report decide-professional-conn-number [ employees ]
-  report ifelse-value (count employees <= 20) [ count employees - 1 ] [ 20 ]
+to-report decide-conn-number [ people max-lim ]
+  report ifelse-value (count people <= max-lim) [ count people - 1 ] [ max-lim ]
 end
 
 to init-professional-links
   ask employers [
     let employees current-employees
-    let conn decide-professional-conn-number employees
+    let conn decide-conn-number employees 20
     ask employees [ create-professional-links-with n-of conn other employees ]
   ]
 end
@@ -923,7 +924,8 @@ to init-students
   ]
   ask schools [
     let students school-attendance-link-neighbors
-    ask students [ create-school-links-with other students ]
+    let conn decide-conn-number students 15
+    ask students [ create-school-links-with n-of conn other students ]
   ]
 end
 
