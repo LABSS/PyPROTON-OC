@@ -210,6 +210,7 @@ to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
   set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
+  set edu group-by-first-of-three read-csv "edu"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
@@ -695,7 +696,7 @@ to init-person [ age-gender-dist ] ; person command
   set male? (item 1 row)                                ; ...and gender according to values in that row.
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
   ; education level is chosen, job and wealth follow in a conditioned sequence
-  set max-education-level pick-from-pair-list table:get group-by-first-of-three read-csv "edu" male?
+  set max-education-level pick-from-pair-list table:get edu male?
   set education-level max-education-level
   limit-education-by-age
   ifelse age > 16 [
@@ -710,7 +711,7 @@ end
 to init-person-empty ; person command
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set education-level -1                                ; we set starting education level in init-students
-  set max-education-level 0 ; useful only for children, will be updated in the case
+  set max-education-level 0 ; useful only for children, will be updated in that case
   set wealth-level 1 ; this will be updated by family membership
   set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime  propensity
   set oc-member? false                                  ; the seed OC network are initialised separately
@@ -764,6 +765,7 @@ to make-baby
         ]
         create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
         create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
+        set max-education-level [ max-education-level ] of one-of in-offspring-link-neighbors with [ male? ]
       ]
     ]
   ]
