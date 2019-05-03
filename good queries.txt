@@ -18,6 +18,12 @@ map [ a -> list a count links with  [ breed = a ] ] remove-duplicates [ breed ]o
 map [ a -> list a (count links with  [ breed = a ] / count all-persons) ] remove-duplicates [ breed ] of links
 
 # employment
+map [ a -> list a count jobs with  [ job-level = a ] ] remove-duplicates [ job-level ] of jobs
+map [ a -> list a count persons with  [ job-level = a ] ] remove-duplicates [ job-level ] of persons
+## unemployed
+count persons with  [ job-level = 1 ]
+persons with [ job-level = 1 and any? my-job-links ]
+count persons with [ age > 18 and age <= 65 and not any? my-job-links and job-level > 1]
 
 # employment rate
 count all-persons with [ any? job-links ] / count all-persons

@@ -780,6 +780,7 @@ to setup-employers-jobs
       hatch-jobs n [
         create-position-link-with myself
         set job-level random-level-by-size n
+        ;set job-level random 4
         set label self
       ]
       set label self
@@ -793,49 +794,19 @@ end
 
 to assign-jobs
   output "Assigning jobs"
-  let find-jobs-to-fill [ -> jobs with [ not any? my-job-links ] ]
-  let old-jobs-to-fill no-turtles
-  let jobs-to-fill runresult find-jobs-to-fill
-  while [ any? jobs-to-fill and jobs-to-fill != old-jobs-to-fill ] [
-    foreach sort-on [ 0 - job-level ] jobs-to-fill [ the-job ->
-      ; start with highest position jobs, the decrease the amount of job hopping
-      ask the-job [ assign-job ]
-    ]
-    set old-jobs-to-fill jobs-to-fill
-    set jobs-to-fill runresult find-jobs-to-fill
-  ]
+  ask jobs with [ not any? my-job-links ] [ assign-job ]
 end
 
 to assign-job ; job command
-
   assert [ -> not any? my-job-links ]
-
   let the-employer one-of position-link-neighbors
   assert [ -> is-employer? the-employer ]
-
-  let employees [ current-employees ] of the-employer
-
-  let candidate-pools (list
-    ; First give a chance to current employees to upgrade if they are qualified.
-    [ -> employees ]
-    ; Then, look for candidates in the immediate network of current employees.
-    [ -> (turtle-set [ person-link-neighbors ] of employees) with [ not any? my-school-attendance-links and age >= 18 ] ]
-    ; Then look for anyone qualified in the general population.
-    [ -> persons with [ not any? my-school-attendance-links and age >= 18] ]
-  )
-
-  let new-employee nobody
-  while [ new-employee = nobody and not empty? candidate-pools ] [
-    let candidates runresult first candidate-pools
-    set candidate-pools but-first candidate-pools
-    set new-employee pick-new-employee-from candidates
+  let new-employee pick-new-employee-from persons with [
+    not any? my-school-attendance-links and age >= 18 and not any? my-job-links
   ]
-
   ask turtle-set new-employee [
-    ask my-job-links [ die ]
     set my-job myself
     create-job-link-with myself
-    assert [ -> not any? my-school-attendance-links ]
   ]
 end
 
@@ -844,15 +815,14 @@ to-report current-employees ; employer reporter
 end
 
 to-report pick-new-employee-from [ the-candidates ] ; job reporter
-  let the-job self
   report one-of the-candidates with [
-    not retired? and interested-in? the-job
+    not retired? and [ job-level ] of myself = job-level
   ]
 end
 
 to-report interested-in? [ the-job ] ; person reporter
   report ifelse-value (my-job = nobody) [ true ] [
-    [ job-level ] of the-job > [ job-level ] of my-job
+    [ job-level ] of the-job = [ job-level ] of my-job
   ]
 end
 
@@ -1638,17 +1608,17 @@ num-persons
 num-persons
 100
 10000
-550.0
+250.0
 50
 1
 NIL
 HORIZONTAL
 
 MONITOR
-267
-138
-377
-183
+270
+185
+380
+230
 NIL
 count jobs
 17
@@ -1678,10 +1648,10 @@ output?
 -1000
 
 MONITOR
-267
-188
-377
-233
+270
+235
+380
+280
 NIL
 count links
 17
@@ -1783,7 +1753,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-2.0
+0.0
 1
 1
 NIL
@@ -1835,10 +1805,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-267
-238
-377
-283
+270
+285
+380
+330
 NIL
 count prisoners
 17
@@ -1846,10 +1816,10 @@ count prisoners
 11
 
 PLOT
-15
-510
-390
-665
+10
+645
+385
+800
 Age distribution
 age
 count
@@ -1864,10 +1834,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [ age ] of persons"
 
 MONITOR
-267
-288
-375
-333
+270
+335
+378
+380
 migrants
 count persons with [ migrant? ]
 17
@@ -1875,10 +1845,10 @@ count persons with [ migrant? ]
 11
 
 MONITOR
-267
-338
-377
-383
+270
+385
+380
+430
 NIL
 number-deceased
 17
@@ -1886,10 +1856,10 @@ number-deceased
 11
 
 MONITOR
-267
-388
-377
-433
+270
+435
+380
+480
 crimes
 sum [ num-crimes-committed ] of persons
 17
@@ -1983,10 +1953,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-267
-439
-379
-484
+270
+486
+382
+531
 NIL
 number-born
 17
@@ -1994,10 +1964,10 @@ number-born
 11
 
 MONITOR
-267
-89
-377
-134
+270
+136
+380
+181
 OC members
 count all-persons with [ oc-member? ]
 17
@@ -2246,7 +2216,7 @@ employment-rate
 employment-rate
 1
 3
-1.0
+3.0
 1
 1
 NIL
@@ -2296,6 +2266,39 @@ punishment-length
 1
 NIL
 HORIZONTAL
+
+MONITOR
+268
+537
+383
+582
+employed
+count persons with [ any? job-link-neighbors ]
+17
+1
+11
+
+MONITOR
+268
+587
+383
+632
+open positions
+count jobs with [ not any? my-job-links  ]
+17
+1
+11
+
+MONITOR
+270
+85
+380
+130
+people
+count all-persons
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
