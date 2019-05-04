@@ -152,7 +152,7 @@ to profile-go
 end
 
 to setup
-  random-seed 1234567
+  ;random-seed 1234567
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
@@ -537,18 +537,22 @@ to dump-model
   export-world model-file-name
 end
 
+to-report potential-friends
+  report (turtle-set
+    family-link-neighbors
+    school-link-neighbors
+    professional-link-neighbors
+  ) with [ not friendship-link-neighbor? myself ]
+end
+
 ; update to use generic search mechanism
 to make-friends
   ask persons [
-    let reachable (turtle-set family-link-neighbors school-link-neighbors professional-link-neighbors) with [
-      not friendship-link-neighbor? myself
-    ]
+    let reachable potential-friends
     let num-new-friends min list random-poisson 3 count reachable ; add slider
-    ask rnd:weighted-n-of num-new-friends reachable [
-      social-proximity-with myself
-    ] [
-      create-friendship-link-with myself
-    ]
+    ask rnd:weighted-n-of num-new-friends reachable
+    [ social-proximity-with myself ]
+    [ create-friendship-link-with myself ]
   ]
 end
 
