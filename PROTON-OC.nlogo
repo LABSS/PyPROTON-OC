@@ -655,7 +655,7 @@ to setup-persons-and-friendship
   let caves-size 20
   let num-caves int(num-persons / caves-size)
   foreach range num-caves [ a ->
-    nw:generate-wheel persons friendship-links caves-size [
+    nw:generate-ring persons friendship-links caves-size [
       init-person age-gender-dist
       set group-label a
     ]
@@ -666,9 +666,15 @@ end
 to random-rewire
   ask persons [
     ask other persons with [ group-label != [ group-label ] of myself ] [
-      if random-float 1 < 0.0005 [ create-friendship-link-with myself ]
+      if random-float 1 < 0.00005 [ create-friendship-link-with myself ]
     ]
   ]
+end
+
+to choose-intervention-setting
+  if intervention = "baseline" [ set family-intervention "none" set social-support "none" set welfare-support "none" ]
+  if intervention = "contructive" [ set family-intervention "remove-if-caught"  ]
+  if intervention = "disruptive" [  ]
 end
 
 to setup-siblings
@@ -735,7 +741,6 @@ to init-person-empty ; person command
   set-turtle-color-pos
   set male? one-of [ true false ]
 end
-
 
 to let-migrants-in
   ; calculate the difference between deaths and birth
@@ -1694,7 +1699,7 @@ SWITCH
 83
 output?
 output?
-0
+1
 1
 -1000
 
@@ -2267,7 +2272,7 @@ employment-rate
 employment-rate
 0.9
 1.1
-1.1
+1.0
 0.1
 1
 NIL
@@ -2317,6 +2322,16 @@ punishment-length
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+720
+700
+858
+745
+intervention
+intervention
+"baseline" "constructive" "disruptive"
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
