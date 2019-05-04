@@ -152,8 +152,8 @@ to profile-go
 end
 
 to setup
-  ;random-seed 1234567
   clear-all
+  choose-intervention-setting
   reset-ticks ; so age can be computed
   load-stats-tables
   set facilitator-fails 0
@@ -196,7 +196,7 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   if view-crim? [ show-criminal-network ]
-  choose-intervention-setting
+
   update-plots
 end
 
@@ -649,14 +649,11 @@ to setup-persons-and-friendship
   ; some clustering to start with. The network structure should evolve as the
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
-  ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  ;nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ ; persons are created here
-  ;  init-person age-gender-dist
-  ;]
+  ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.]
   let caves-size 20
   let num-caves int(num-persons / caves-size)
   foreach range num-caves [ a ->
-    nw:generate-ring persons friendship-links caves-size [
+    nw:generate-watts-strogatz persons friendship-links caves-size (1 + random 2) 0 [
       init-person age-gender-dist
       set group-label a
     ]
@@ -664,17 +661,27 @@ to setup-persons-and-friendship
   random-rewire
 end
 
+to-report pick-prob
+  ; must do better here, just find a ratio
+  if num-persons = 10000 [ report 0.00005 ]
+  if num-persons = 5000 [ report 0.0001 ]
+  if num-persons = 2500 [ report 0.0002 ]
+  if num-persons = 1250 [ report 0.0004 ]
+  if num-persons = 650 [ report 0.0008 ]
+end
+
 to random-rewire
   ask persons [
     ask other persons with [ group-label != [ group-label ] of myself ] [
-      if random-float 1 < 0.00005 [ create-friendship-link-with myself ]
+      ;; make prob invariant with num-persons
+      if random-float 1 < pick-prob [ create-friendship-link-with myself ]
     ]
   ]
 end
 
 to choose-intervention-setting
   if intervention = "baseline" [ set family-intervention "none" set social-support "none" set welfare-support "none" ]
-  if intervention = "contructive" [ set family-intervention "remove-if-caught" set social-support "none" set welfare-support "none" ]
+  if intervention = "constructive" [ set family-intervention "remove-if-caught" set social-support "none" set welfare-support "none" ]
   if intervention = "disruptive" [ set family-intervention "none" set social-support "none" set welfare-support "job-mother" ]
 end
 
@@ -1665,7 +1672,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+650.0
 50
 1
 NIL
@@ -2332,7 +2339,7 @@ CHOOSER
 intervention
 intervention
 "baseline" "constructive" "disruptive"
-1
+0
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -2748,14 +2755,20 @@ NetLogo 6.0.4
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="employment-rate-check" repetitions="100" runMetricsEveryStep="true">
+  <experiment name="friendship-links-count" repetitions="10" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>stop</go>
-    <metric>sum [count job-link-neighbors] of persons</metric>
-    <enumeratedValueSet variable="employment-rate">
-      <value value="0.9"/>
-      <value value="1"/>
-      <value value="1.1"/>
+    <metric>count friendship-links</metric>
+    <metric>nw:with-context persons friendship-links [print mean [ nw:clustering-coefficient ] of persons]</metric>
+    <metric>count professional-links</metric>
+    <metric>count school-links</metric>
+    <metric>count (link-set partner-links offspring-links sibling-links)</metric>
+    <enumeratedValueSet variable="num-persons">
+      <value value="625"/>
+      <value value="1250"/>
+      <value value="2500"/>
+      <value value="5000"/>
+      <value value="10000"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
