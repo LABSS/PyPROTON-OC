@@ -196,6 +196,7 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   if view-crim? [ show-criminal-network ]
+  choose-intervention-setting
   update-plots
 end
 
@@ -673,8 +674,8 @@ end
 
 to choose-intervention-setting
   if intervention = "baseline" [ set family-intervention "none" set social-support "none" set welfare-support "none" ]
-  if intervention = "contructive" [ set family-intervention "remove-if-caught"  ]
-  if intervention = "disruptive" [  ]
+  if intervention = "contructive" [ set family-intervention "remove-if-caught" set social-support "none" set welfare-support "none" ]
+  if intervention = "disruptive" [ set family-intervention "none" set social-support "none" set welfare-support "job-mother" ]
 end
 
 to setup-siblings
@@ -2331,7 +2332,7 @@ CHOOSER
 intervention
 intervention
 "baseline" "constructive" "disruptive"
-0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
