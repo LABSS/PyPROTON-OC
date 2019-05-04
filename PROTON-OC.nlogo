@@ -46,6 +46,7 @@ persons-own [
   crime-activity  ; used for making criminals turtles bigger when drawn
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
   new-recruit
+  group-label
 ]
 
 prisoners-own [
@@ -70,6 +71,7 @@ prisoners-own [
   hobby
   new-recruit
   crime-activity  ; used for making criminals turtles bigger when drawn
+  group-label
 ]
 
 jobs-own [
@@ -150,6 +152,7 @@ to profile-go
 end
 
 to setup
+  random-seed 1234567
   clear-all
   reset-ticks ; so age can be computed
   load-stats-tables
@@ -642,10 +645,26 @@ to setup-persons-and-friendship
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ ; persons are created here
-    init-person age-gender-dist
+  ;nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ ; persons are created here
+  ;  init-person age-gender-dist
+  ;]
+  let caves-size 20
+  let num-caves int(num-persons / caves-size)
+  foreach range num-caves [ a ->
+    nw:generate-wheel persons friendship-links caves-size [
+      init-person age-gender-dist
+      set group-label a
+    ]
   ]
+  random-rewire
+end
 
+to random-rewire
+  ask persons [
+    ask other persons with [ group-label != [ group-label ] of myself ] [
+      if random-float 1 < 0.0005 [ create-friendship-link-with myself ]
+    ]
+  ]
 end
 
 to setup-siblings
@@ -1671,7 +1690,7 @@ SWITCH
 83
 output?
 output?
-1
+0
 1
 -1000
 
