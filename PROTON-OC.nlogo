@@ -153,7 +153,6 @@ end
 
 to setup
   clear-all
-  random-seed 1
   choose-intervention-setting
   reset-ticks ; so age can be computed
   load-stats-tables
