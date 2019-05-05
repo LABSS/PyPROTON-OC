@@ -153,6 +153,7 @@ end
 
 to setup
   clear-all
+  random-seed 1
   choose-intervention-setting
   reset-ticks ; so age can be computed
   load-stats-tables
@@ -685,14 +686,24 @@ to choose-intervention-setting
   if intervention = "disruptive" [ set family-intervention "none" set social-support "none" set welfare-support "job-mother" ]
 end
 
+to-report up-to-n-of-other-with [ n p ]
+  let result []
+  ask other persons [
+    if (runresult p self) [
+      ifelse length result = n
+      [ stop ]
+      [ set result lput self result ]
+    ]
+  ]
+  report (turtle-set result)
+end
+
 to setup-siblings
   ask persons with [ any? out-offspring-link-neighbors ] [ ; simulates people who left the original household.
     let num-siblings random-poisson 0.5 ;the number of links is N^3 agents, so let's keep this low
                                         ; at this stage links with other persons are only relatives inside households and friends.
-    let candidates other persons with [
-      any? out-offspring-link-neighbors and not link-neighbor? myself and abs age - [ age ] of myself < 5
-    ]
-    if count candidates > 50 [ set candidates n-of 50 candidates ] ; othewise with 10K agents it would die
+    let p [ t -> any? out-offspring-link-neighbors and not link-neighbor? myself and abs age - [ age ] of myself < 5 ]
+    let candidates up-to-n-of-other-with 50 p
     ; remove couples from candidates and their neighborhoods
     let all-potential-siblings [ -> (turtle-set self candidates sibling-link-neighbors [ sibling-link-neighbors ] of candidates)]
     let check-all-siblings [ ->
