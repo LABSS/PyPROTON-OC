@@ -681,7 +681,7 @@ end
 
 to choose-intervention-setting
   if intervention = "baseline" [ set family-intervention "none" set social-support "none" set welfare-support "none" ]
-  if intervention = "constructive" [ set family-intervention "remove-if-caught" set social-support "none" set welfare-support "none" ]
+  if intervention = "preventive" [ set family-intervention "remove-if-caught" set social-support "none" set welfare-support "none" ]
   if intervention = "disruptive" [ set family-intervention "none" set social-support "none" set welfare-support "job-mother" ]
 end
 
@@ -1672,7 +1672,7 @@ num-persons
 num-persons
 100
 10000
-650.0
+10000.0
 50
 1
 NIL
@@ -2338,7 +2338,7 @@ CHOOSER
 745
 intervention
 intervention
-"baseline" "constructive" "disruptive"
+"baseline" "preventive" "disruptive"
 0
 
 @#$#@#$#@
@@ -2759,12 +2759,11 @@ NetLogo 6.0.4
     <setup>setup</setup>
     <go>stop</go>
     <metric>count friendship-links</metric>
-    <metric>nw:with-context persons friendship-links [print mean [ nw:clustering-coefficient ] of persons]</metric>
     <metric>count professional-links</metric>
     <metric>count school-links</metric>
     <metric>count (link-set partner-links offspring-links sibling-links)</metric>
     <enumeratedValueSet variable="num-persons">
-      <value value="625"/>
+      <value value="650"/>
       <value value="1250"/>
       <value value="2500"/>
       <value value="5000"/>
