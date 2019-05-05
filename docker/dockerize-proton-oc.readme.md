@@ -42,6 +42,11 @@ It will run in the container, dumping the results in the commondisk.
 
 # useful docker instructions
 
+# run a terminal in the latest container
+``` 
+docker exec -it `docker ps -l -q`  /bin/bash
+``` 
+
 ## run a terminal in a running container
 `docker ps` to retrieve the `_ID_`, then `docker exec -it _ID_ /bin/bash`
 
