@@ -662,20 +662,11 @@ to setup-persons-and-friendship
   random-rewire
 end
 
-to-report pick-prob
-  ; must do better here, just find a ratio
-  if num-persons = 10000 [ report 0.00005 ]
-  if num-persons = 5000 [ report 0.0001 ]
-  if num-persons = 2500 [ report 0.0002 ]
-  if num-persons = 1250 [ report 0.0004 ]
-  if num-persons = 650 [ report 0.0008 ]
-end
-
 to random-rewire
   ask persons [
     ask other persons with [ group-label != [ group-label ] of myself ] [
-      ;; make prob invariant with num-persons
-      if random-float 1 < pick-prob [ create-friendship-link-with myself ]
+      ;; this prob is good for 10k persons, with less people it should be bigger
+      if random-float 1 < 0.00005 [ create-friendship-link-with myself ]
     ]
   ]
 end
