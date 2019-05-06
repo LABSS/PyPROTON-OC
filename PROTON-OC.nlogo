@@ -776,10 +776,10 @@ to make-baby
         create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
         create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
         let dad one-of in-offspring-link-neighbors with [ male? ]
-        set max-education-level ifelse-value (dad = nobody) [
-          [ max-education-level ] of myself
+        set max-education-level ifelse-value (any? turtle-set dad) [
+          [ max-education-level ] of dad
         ][
-          [ max-education-level ] of one-of in-offspring-link-neighbors with [ male? ]
+          [ max-education-level ] of myself
         ]
       ]
     ]
