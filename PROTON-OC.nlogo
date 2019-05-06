@@ -648,7 +648,7 @@ to setup-persons-and-friendship
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.]
-  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.005 [
+  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
     init-person age-gender-dist
   ]
 end
