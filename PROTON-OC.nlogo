@@ -354,7 +354,6 @@ to go
      if any? my-job-links [
         let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
         let conn decide-conn-number employees 20
-        let conn decide-professional-conn-number employees
         create-professional-links-with n-of conn other employees
       ]
     ]
@@ -794,7 +793,6 @@ to let-migrants-in
       create-job-link-with myself
       let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
       let conn decide-conn-number employees 20
-      let conn decide-professional-conn-number employees
       create-professional-links-with n-of conn other employees
       set wealth-level [ job-level ] of myself
       set migrant? true
