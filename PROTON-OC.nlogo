@@ -678,13 +678,17 @@ end
 
 to-report up-to-n-of-other-with [ n p ]
   let result []
+  let nt 0
   ask other persons [
+    set nt nt + 1
     if (runresult p self) [
       ifelse length result = n
       [ stop ]
       [ set result lput self result ]
     ]
   ]
+  show (word "examined " nt " persons")
+  show (word "reporting " length result " turtles.")
   report (turtle-set result)
 end
 
@@ -1673,7 +1677,7 @@ num-persons
 num-persons
 100
 10000
-10000.0
+450.0
 50
 1
 NIL
@@ -2341,6 +2345,21 @@ intervention
 intervention
 "baseline" "preventive" "disruptive"
 0
+
+SLIDER
+1095
+805
+1335
+838
+caveman-init-size
+caveman-init-size
+1
+40
+10.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
