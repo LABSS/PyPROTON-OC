@@ -194,7 +194,6 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   if view-crim? [ show-criminal-network ]
-
   update-plots
 end
 
@@ -654,17 +653,36 @@ to setup-persons-and-friendship
 end
 
 to choose-intervention-setting
-  if intervention = "baseline" [ set family-intervention "none" set social-support "none" set welfare-support "none" ]
-  if intervention = "preventive" [ set family-intervention "remove-if-caught" set social-support "none" set welfare-support "none" ]
-  if intervention = "disruptive" [ set family-intervention "none" set social-support "none" set welfare-support "job-mother" ]
+  if intervention = "baseline" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+  ]
+  if intervention = "preventive" [
+    set family-intervention "none"
+    set social-support "educational"
+    set welfare-support "none"
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 36
+  ]
+  if intervention = "disruptive" [
+    set family-intervention "remove-if-caught-and-OC-member"
+    set social-support "none"
+    set welfare-support "none"
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 36
+  ]
 end
 
 to-report up-to-n-of-other-with [ n p ]
   let result []
   ask other persons [
     if (runresult p self) [
-      ifelse length result = n
-      [ stop ]
+      if length result < n
       [ set result lput self result ]
     ]
   ]
@@ -1093,7 +1111,7 @@ end
 
 to-report arrest-probability-with-intervention [ group ]
   if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ])
-  [ report probability-of-getting-caught * oc-arrest-multiplier ]
+  [ report probability-of-getting-caught * oc-arrest-multiplier * law-enforcement-rate ]
   [ report probability-of-getting-caught * law-enforcement-rate ]
 end
 
@@ -2076,7 +2094,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-2.0
+1.0
 1
 1
 NIL
@@ -2135,7 +2153,7 @@ intervention-start
 intervention-start
 0
 100
-12.0
+13.0
 1
 1
 NIL
@@ -2150,7 +2168,7 @@ intervention-end
 intervention-end
 0
 100
-24.0
+36.0
 1
 1
 NIL
@@ -2262,8 +2280,8 @@ SLIDER
 768
 employment-rate
 employment-rate
-0.9
-1.1
+0
+2
 1.0
 0.1
 1
@@ -2737,21 +2755,6 @@ NetLogo 6.0.4
     </enumeratedValueSet>
     <enumeratedValueSet variable="nat-propensity-threshold">
       <value value="1"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="friendship-links-count" repetitions="10" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>stop</go>
-    <metric>count friendship-links</metric>
-    <metric>count professional-links</metric>
-    <metric>count school-links</metric>
-    <metric>count (link-set partner-links offspring-links sibling-links)</metric>
-    <enumeratedValueSet variable="num-persons">
-      <value value="650"/>
-      <value value="1250"/>
-      <value value="2500"/>
-      <value value="5000"/>
-      <value value="10000"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
