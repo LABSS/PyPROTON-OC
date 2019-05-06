@@ -44,8 +44,9 @@ persons-own [
   c-t
   hobby
   crime-activity  ; used for making criminals turtles bigger when drawn
-  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
   new-recruit
+  migrant?
+  ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
 prisoners-own [
@@ -68,8 +69,9 @@ prisoners-own [
   c-t-fresh?  ; stored c value and its freshness.
   c-t
   hobby
-  new-recruit
   crime-activity  ; used for making criminals turtles bigger when drawn
+  new-recruit
+  migrant?
 ]
 
 jobs-own [
@@ -167,7 +169,7 @@ to setup
   setup-schools
   init-students
   setup-employers-jobs
-  assign-jobs
+  ask persons with [ not any? my-school-attendance-links and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
   setup-oc-groups
@@ -209,6 +211,7 @@ to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
   set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
   set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
+  set edu group-by-first-of-three read-csv "edu"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
@@ -341,8 +344,19 @@ to go
      if crime-activity <= 1 [ set crime-activity 1 ]
   ]
   if ((ticks mod ticks-per-year) = 0) [
-    graduate
     calculate-criminal-tendency
+    graduate
+    ask persons with [
+      not any? my-school-attendance-links and age >= 18 and age < retirement-age and not any? my-job-links and
+      not retired? and job-level > 1
+    ] [
+     find-job
+     if any? my-job-links [
+        let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
+        let conn decide-conn-number employees 20
+        create-professional-links-with n-of conn other employees
+      ]
+    ]
     let-migrants-in
   ]
   wedding
@@ -722,7 +736,7 @@ to init-person [ age-gender-dist ] ; person command
   set male? (item 1 row)                                ; ...and gender according to values in that row.
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
   ; education level is chosen, job and wealth follow in a conditioned sequence
-  set max-education-level pick-from-pair-list table:get group-by-first-of-three read-csv "edu" male?
+  set max-education-level tune-edu pick-from-pair-list table:get edu male?
   set education-level max-education-level
   limit-education-by-age
   ifelse age > 16 [
@@ -734,10 +748,20 @@ to init-person [ age-gender-dist ] ; person command
   ]
 end
 
+to-report tune-edu [ level ]
+  if education-rate = 1 [ report level ]
+  if random-float 1 < abs (education-rate - 1) [ ; modify it
+    set level level + ifelse-value (education-rate > 1) [ 1 ] [ -1 ]
+    if level > 4 [ set level 4 ]
+    if level < 1 [ set level 1 ]
+  ]
+  report level
+end
+
 to init-person-empty ; person command
   set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
   set education-level -1                                ; we set starting education level in init-students
-  set max-education-level 0 ; useful only for children, will be updated in the case
+  set max-education-level 0 ; useful only for children, will be updated in that case
   set wealth-level 1 ; this will be updated by family membership
   set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime  propensity
   set oc-member? false                                  ; the seed OC network are initialised separately
@@ -750,6 +774,7 @@ to init-person-empty ; person command
   set hobby random 5
   set-turtle-color-pos
   set male? one-of [ true false ]
+  set migrant? false
 end
 
 to let-migrants-in
@@ -764,9 +789,13 @@ to let-migrants-in
     hatch-persons 1 [
       init-person-empty
       set my-job myself
-      set wealth-level -1 ; to recognize migrants.
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
       create-job-link-with myself
+      let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
+      let conn decide-conn-number employees 20
+      create-professional-links-with n-of conn other employees
+      set wealth-level [ job-level ] of myself
+      set migrant? true
     ]
   ]
 end
@@ -786,6 +815,12 @@ to make-baby
         ]
         create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
         create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
+        let dad one-of in-offspring-link-neighbors with [ male? ]
+        set max-education-level ifelse-value (any? turtle-set dad) [
+          [ max-education-level ] of dad
+        ][
+          [ max-education-level ] of myself
+        ]
       ]
     ]
   ]
@@ -828,51 +863,12 @@ to-report random-level-by-size [ employer-size ]
   report pick-from-pair-list table:get jobs_by_company_size employer-size
 end
 
-to assign-jobs
-  output "Assigning jobs"
-  let find-jobs-to-fill [ -> jobs with [ not any? my-job-links ] ]
-  let old-jobs-to-fill no-turtles
-  let jobs-to-fill runresult find-jobs-to-fill
-  while [ any? jobs-to-fill and jobs-to-fill != old-jobs-to-fill ] [
-    foreach sort-on [ 0 - job-level ] jobs-to-fill [ the-job ->
-      ; start with highest position jobs, the decrease the amount of job hopping
-      ask the-job [ assign-job ]
-    ]
-    set old-jobs-to-fill jobs-to-fill
-    set jobs-to-fill runresult find-jobs-to-fill
-  ]
-end
-
-to assign-job ; job command
-
-  assert [ -> not any? my-job-links ]
-
-  let the-employer one-of position-link-neighbors
-  assert [ -> is-employer? the-employer ]
-
-  let employees [ current-employees ] of the-employer
-
-  let candidate-pools (list
-    ; First give a chance to current employees to upgrade if they are qualified.
-    [ -> employees ]
-    ; Then, look for candidates in the immediate network of current employees.
-    [ -> (turtle-set [ person-link-neighbors ] of employees) with [ not any? my-school-attendance-links and age >= 18 ] ]
-    ; Then look for anyone qualified in the general population.
-    [ -> persons with [ not any? my-school-attendance-links and age >= 18] ]
-  )
-
-  let new-employee nobody
-  while [ new-employee = nobody and not empty? candidate-pools ] [
-    let candidates runresult first candidate-pools
-    set candidate-pools but-first candidate-pools
-    set new-employee pick-new-employee-from candidates
-  ]
-
-  ask turtle-set new-employee [
-    ask my-job-links [ die ]
-    set my-job myself
-    create-job-link-with myself
-    assert [ -> not any? my-school-attendance-links ]
+to find-job ; person procedure
+  output "Looking for jobs"
+  let the-job one-of jobs with [ not any? my-job-links and [ job-level ] of myself = job-level ]
+  if the-job != nobody [
+    set my-job the-job
+    create-job-link-with the-job
   ]
 end
 
@@ -1681,10 +1677,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-267
-138
-377
-183
+270
+185
+380
+230
 NIL
 count jobs
 17
@@ -1714,10 +1710,10 @@ output?
 -1000
 
 MONITOR
-267
-188
-377
-233
+270
+235
+380
+280
 NIL
 count links
 17
@@ -1871,10 +1867,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-267
-238
-377
-283
+270
+285
+380
+330
 NIL
 count prisoners
 17
@@ -1882,10 +1878,10 @@ count prisoners
 11
 
 PLOT
-15
-510
-390
-665
+10
+645
+385
+800
 Age distribution
 age
 count
@@ -1900,21 +1896,21 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [ age ] of persons"
 
 MONITOR
-267
-288
-375
-333
+270
+335
+378
+380
 migrants
-count persons with [ wealth-level = -1 ]
+count persons with [ migrant? ]
 17
 1
 11
 
 MONITOR
-267
-338
-377
-383
+270
+385
+380
+430
 NIL
 number-deceased
 17
@@ -1922,10 +1918,10 @@ number-deceased
 11
 
 MONITOR
-267
-388
-377
-433
+270
+435
+380
+480
 crimes
 sum [ num-crimes-committed ] of persons
 17
@@ -2019,10 +2015,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-267
-439
-379
-484
+270
+486
+382
+531
 NIL
 number-born
 17
@@ -2030,10 +2026,10 @@ number-born
 11
 
 MONITOR
-267
-89
-377
-134
+270
+136
+380
+181
 OC members
 count all-persons with [ oc-member? ]
 17
@@ -2167,7 +2163,7 @@ SLIDER
 intervention-end
 intervention-end
 0
-100
+50
 36.0
 1
 1
@@ -2295,10 +2291,10 @@ SLIDER
 803
 education-rate
 education-rate
-1
-3
+0
+2
 1.0
-1
+0.1
 1
 NIL
 HORIZONTAL
@@ -2342,6 +2338,39 @@ intervention
 intervention
 "baseline" "preventive" "disruptive"
 0
+
+MONITOR
+268
+537
+383
+582
+employed
+count persons with [ any? job-link-neighbors ]
+17
+1
+11
+
+MONITOR
+268
+587
+383
+632
+open positions
+count jobs with [ not any? my-job-links  ]
+17
+1
+11
+
+MONITOR
+270
+85
+380
+130
+people
+count all-persons
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
