@@ -46,7 +46,6 @@ persons-own [
   crime-activity  ; used for making criminals turtles bigger when drawn
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
   new-recruit
-  group-label
 ]
 
 prisoners-own [
@@ -71,7 +70,6 @@ prisoners-own [
   hobby
   new-recruit
   crime-activity  ; used for making criminals turtles bigger when drawn
-  group-label
 ]
 
 jobs-own [
@@ -650,23 +648,8 @@ to setup-persons-and-friendship
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.]
-  let caves-size 20
-  let num-caves int(num-persons / caves-size)
-  foreach range num-caves [ a ->
-    nw:generate-watts-strogatz persons friendship-links caves-size (1 + random 2) 0 [
-      init-person age-gender-dist
-      set group-label a
-    ]
-  ]
-  random-rewire
-end
-
-to random-rewire
-  ask persons [
-    ask other persons with [ group-label != [ group-label ] of myself ] [
-      ;; this prob is good for 10k persons, with less people it should be bigger
-      if random-float 1 < 0.00005 [ create-friendship-link-with myself ]
-    ]
+  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.005 [
+    init-person age-gender-dist
   ]
 end
 
@@ -1673,7 +1656,7 @@ num-persons
 num-persons
 100
 10000
-10000.0
+550.0
 50
 1
 NIL
