@@ -2354,7 +2354,7 @@ CHOOSER
 intervention
 intervention
 "use current values" "baseline" "preventive" "disruptive"
-1
+0
 
 MONITOR
 268
