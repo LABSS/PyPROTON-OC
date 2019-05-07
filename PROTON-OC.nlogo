@@ -196,6 +196,7 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   if view-crim? [ show-criminal-network ]
+  set removed-fatherships []
   update-plots
 end
 
@@ -358,6 +359,7 @@ to go
       ]
     ]
     let-migrants-in
+    return-kids
   ]
   wedding
   commit-crimes
@@ -517,7 +519,7 @@ to family-intervene
     ]
   ]
   let kids-to-protect persons with [
-    age <= 18 and age >= 12 and any? in-offspring-link-neighbors with [
+    age < 18 and age >= 12 and any? in-offspring-link-neighbors with [
       male? and oc-member? and runresult the-condition
     ]
   ]
@@ -528,7 +530,7 @@ to family-intervene
       let father one-of in-offspring-link-neighbors with [ male? and oc-member? ]
       ; this also removes household links, leaving the household in an incoherent state.
       ask my-in-offspring-links with [ other-end = father ] [ die ]
-      set removed-fatherships fput removed-fatherships list father self
+      set removed-fatherships fput (list ((18 * ticks-per-year + birth-tick) - ticks) father self) removed-fatherships
       ; at this point bad dad is out and we help the remaining with the whole package
       let family (turtle-set self family-link-neighbors)
       welfare-createjobs family with [
@@ -540,6 +542,21 @@ to family-intervene
       ]
       soc-add-psychological family
       soc-add-more-friends family
+    ]
+  ]
+end
+
+to return-kids
+  foreach removed-fatherships [ a ->
+    ; list tick father son
+    let father last but-last a
+    if any? turtle-set father [
+      if [ age ] of last a >= 18 [
+        if (random-float 1) < 6 / (first a) [
+          ask last a [ create-offspring-link-from father ]
+          set removed-fatherships remove a removed-fatherships
+        ]
+      ]
     ]
   ]
 end
@@ -2330,14 +2347,14 @@ NIL
 HORIZONTAL
 
 CHOOSER
-720
-700
-858
-745
+690
+705
+852
+750
 intervention
 intervention
-"baseline" "preventive" "disruptive"
-0
+"use current values" "baseline" "preventive" "disruptive"
+1
 
 MONITOR
 268
