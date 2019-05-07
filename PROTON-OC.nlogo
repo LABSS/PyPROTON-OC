@@ -153,6 +153,7 @@ end
 
 to setup
   clear-all
+  choose-intervention-setting
   reset-ticks ; so age can be computed
   load-stats-tables
   set facilitator-fails 0
@@ -352,7 +353,7 @@ to go
      find-job
      if any? my-job-links [
         let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
-        let conn decide-professional-conn-number employees
+        let conn decide-conn-number employees 20
         create-professional-links-with n-of conn other employees
       ]
     ]
@@ -493,7 +494,7 @@ to welfare-createjobs [ targets ]
           create-job-link-with target
           ask target [
             let employees [ current-employees ] of the-employer
-            let conn decide-professional-conn-number employees
+            let conn decide-conn-number employees 20
             create-professional-links-with n-of conn other employees
           ]
         ]
@@ -548,18 +549,22 @@ to dump-model
   export-world model-file-name
 end
 
+to-report potential-friends
+  report (turtle-set
+    family-link-neighbors
+    school-link-neighbors
+    professional-link-neighbors
+  ) with [ not friendship-link-neighbor? myself ]
+end
+
 ; update to use generic search mechanism
 to make-friends
   ask persons [
-    let reachable (turtle-set family-link-neighbors school-link-neighbors professional-link-neighbors) with [
-      not friendship-link-neighbor? myself
-    ]
+    let reachable potential-friends
     let num-new-friends min list random-poisson 3 count reachable ; add slider
-    ask rnd:weighted-n-of num-new-friends reachable [
-      social-proximity-with myself
-    ] [
-      create-friendship-link-with myself
-    ]
+    ask rnd:weighted-n-of num-new-friends reachable
+    [ social-proximity-with myself ]
+    [ create-friendship-link-with myself ]
   ]
 end
 
@@ -655,20 +660,55 @@ to setup-persons-and-friendship
   ; some clustering to start with. The network structure should evolve as the
   ; model runs anyway. Still, if we could find some data on the properties of
   ; real world friendship networks, we could use something like
-  ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
-    nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [ ; persons are created here
+  ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.]
+  nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
     init-person age-gender-dist
   ]
+end
+
+to choose-intervention-setting
+  if intervention = "baseline" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+  ]
+  if intervention = "preventive" [
+    set family-intervention "none"
+    set social-support "educational"
+    set welfare-support "none"
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 36
+  ]
+  if intervention = "disruptive" [
+    set family-intervention "remove-if-caught-and-OC-member"
+    set social-support "none"
+    set welfare-support "none"
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 36
+  ]
+end
+
+to-report up-to-n-of-other-with [ n p ]
+  let result []
+  ask other persons [
+    if (runresult p self) [
+      if length result < n
+      [ set result lput self result ]
+    ]
+  ]
+  report (turtle-set result)
 end
 
 to setup-siblings
   ask persons with [ any? out-offspring-link-neighbors ] [ ; simulates people who left the original household.
     let num-siblings random-poisson 0.5 ;the number of links is N^3 agents, so let's keep this low
                                         ; at this stage links with other persons are only relatives inside households and friends.
-    let candidates other persons with [
-      any? out-offspring-link-neighbors and not link-neighbor? myself and abs age - [ age ] of myself < 5
-    ]
-    if count candidates > 50 [ set candidates n-of 50 candidates ] ; othewise with 10K agents it would die
+    let p [ t -> any? out-offspring-link-neighbors and not link-neighbor? myself and abs age - [ age ] of myself < 5 ]
+    let candidates up-to-n-of-other-with 50 p
     ; remove couples from candidates and their neighborhoods
     let all-potential-siblings [ -> (turtle-set self candidates sibling-link-neighbors [ sibling-link-neighbors ] of candidates)]
     let check-all-siblings [ ->
@@ -752,7 +792,7 @@ to let-migrants-in
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
       create-job-link-with myself
       let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
-      let conn decide-professional-conn-number employees
+      let conn decide-conn-number employees 20
       create-professional-links-with n-of conn other employees
       set wealth-level [ job-level ] of myself
       set migrant? true
@@ -798,12 +838,16 @@ to-report age
   report floor ((ticks - birth-tick) / ticks-per-year)
 end
 
+to-report manipulate-employment-rate [ a-number ]
+  report int (round (a-number * employment-rate))
+end
+
 to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence read-csv "employer_sizes"
-  let jobs-target count persons with [ job-level != 1 ]
+  let jobs-target manipulate-employment-rate (count persons with [ job-level != 1 ])
   while [ count jobs < jobs-target ] [
-    let n one-of job-counts
+    let n manipulate-employment-rate (one-of job-counts)
     create-employers 1 [
       hatch-jobs n [
         create-position-link-with myself
@@ -832,14 +876,27 @@ to-report current-employees ; employer reporter
   report turtle-set [ job-link-neighbors ] of position-link-neighbors
 end
 
-to-report decide-professional-conn-number [ employees ]
-  report ifelse-value (count employees <= 20) [ count employees - 1 ] [ 20 ]
+to-report pick-new-employee-from [ the-candidates ] ; job reporter
+  let the-job self
+  report one-of the-candidates with [
+    not retired? and interested-in? the-job
+  ]
+end
+
+to-report interested-in? [ the-job ] ; person reporter
+  report ifelse-value (my-job = nobody) [ true ] [
+    [ job-level ] of the-job > [ job-level ] of my-job
+  ]
+end
+
+to-report decide-conn-number [ people max-lim ]
+  report ifelse-value (count people <= max-lim) [ count people - 1 ] [ max-lim ]
 end
 
 to init-professional-links
   ask employers [
     let employees current-employees
-    let conn decide-professional-conn-number employees
+    let conn decide-conn-number employees 20
     ask employees [ create-professional-links-with n-of conn other employees ]
   ]
 end
@@ -901,7 +958,8 @@ to init-students
   ]
   ask schools [
     let students school-attendance-link-neighbors
-    ask students [ create-school-links-with other students ]
+    let conn decide-conn-number students 15
+    ask students [ create-school-links-with n-of conn other students ]
   ]
 end
 
@@ -1048,11 +1106,9 @@ to commit-crimes
 end
 
 to-report arrest-probability-with-intervention [ group ]
-  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ]) [
-    report probability-of-getting-caught * oc-arrest-multiplier
-  ] [
-    report probability-of-getting-caught
-  ]
+  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ])
+  [ report probability-of-getting-caught * oc-arrest-multiplier * law-enforcement-rate ]
+  [ report probability-of-getting-caught * law-enforcement-rate ]
 end
 
 to retire-persons
@@ -1108,10 +1164,10 @@ to get-caught [ co-offenders ]
   ask co-offenders [
     set breed prisoners
     set shape "face sad"
-    ifelse male? [
-      set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [[p] -> last p ] ] [
-      set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [[p] -> last p ]
-    ]
+    ifelse male?
+    [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [ [ p ] -> last p ] ]
+    [ set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [ [ p ] -> last p ] ]
+    set sentence-countdown sentence-countdown * punishment-length
     ask my-job-links [ die ]
     ask my-school-attendance-links [ die ]
     ask my-professional-links [ die ]
@@ -2034,7 +2090,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-2.0
+1.0
 1
 1
 NIL
@@ -2093,7 +2149,7 @@ intervention-start
 intervention-start
 0
 100
-12.0
+13.0
 1
 1
 NIL
@@ -2107,8 +2163,8 @@ SLIDER
 intervention-end
 intervention-end
 0
-40
-24.0
+50
+36.0
 1
 1
 NIL
@@ -2220,10 +2276,10 @@ SLIDER
 768
 employment-rate
 employment-rate
-1
-3
+0
+2
 1.0
-1
+0.1
 1
 NIL
 HORIZONTAL
@@ -2250,10 +2306,10 @@ SLIDER
 838
 law-enforcement-rate
 law-enforcement-rate
-1
-3
+0.5
+2
 1.0
-1
+0.5
 1
 NIL
 HORIZONTAL
@@ -2265,13 +2321,23 @@ SLIDER
 873
 punishment-length
 punishment-length
-1
-3
+0.5
+2
 1.0
-1
+0.5
 1
 NIL
 HORIZONTAL
+
+CHOOSER
+720
+700
+858
+745
+intervention
+intervention
+"baseline" "preventive" "disruptive"
+0
 
 MONITOR
 268
