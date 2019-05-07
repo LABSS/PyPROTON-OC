@@ -1128,6 +1128,12 @@ to-report arrest-probability-with-intervention [ group ]
   [ report probability-of-getting-caught * law-enforcement-rate ]
 end
 
+to OC-member-repress
+  nw:with-context people with [ oc-member? ] person-links [
+    ask weigthed-one-of people with [ oc-member? ] [ count nw:turtles-in-radius 1 ] [ get-caught ]
+  ]
+end
+
 to retire-persons
   ask persons with [ age >= retirement-age and not retired? ] [
     set retired? true
