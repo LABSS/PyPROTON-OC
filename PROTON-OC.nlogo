@@ -690,13 +690,13 @@ to choose-intervention-setting
     set welfare-support "none"
   ]
   if intervention = "preventive" [
-    set family-intervention "none"
-    set social-support "educational"
+    set family-intervention "remove-if-caught-and-OC-member"
+    set social-support "none"
     set welfare-support "none"
-    set targets-addressed-percent 10
+    set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 48
   ]
   if intervention = "disruptive" [
     set family-intervention "remove-if-caught-and-OC-member"
@@ -2187,16 +2187,6 @@ intervention-end
 NIL
 HORIZONTAL
 
-CHOOSER
-405
-705
-565
-750
-LEAs
-LEAs
-"None" "vsFacilitators" "vsBosses"
-0
-
 SLIDER
 405
 750
@@ -2751,59 +2741,6 @@ NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
-<experiments>
-  <experiment name="basic" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <timeLimit steps="1200"/>
-    <metric>big-crime-from-small-fish</metric>
-    <metric>count prisoners</metric>
-    <metric>number-deceased</metric>
-    <metric>sum [ num-crimes-committed ] of all-persons</metric>
-    <metric>count (all-persons) with [ oc-member? ]</metric>
-    <metric>[ age ] of (all-persons)</metric>
-    <metric>[ oc-embeddedness ] of (all-persons)</metric>
-    <enumeratedValueSet variable="num-persons">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="data-folder">
-      <value value="&quot;inputs/palermo/data/&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="output?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="ticks-per-year">
-      <value value="12"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-accomplice-radius">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="probability-of-getting-caught">
-      <value value="0.05"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="retirement-age">
-      <value value="65"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="oc-embeddedness-radius">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-oc-persons">
-      <value value="25"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-oc-families">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-m">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-sigma">
-      <value value="0.25"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-threshold">
-      <value value="1"/>
-    </enumeratedValueSet>
-  </experiment>
-</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
