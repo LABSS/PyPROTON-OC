@@ -332,9 +332,10 @@ to go
   ]
   ; intervention clock
   if intervention-on? [
-    if family-intervention != "none" [ family-intervene        ]
-    if social-support    != "none"   [ socialization-intervene ]
-    if welfare-support   != "none"   [ welfare-intervene       ]
+    if family-intervention != "none"   [ family-intervene        ]
+    if social-support    != "none"     [ socialization-intervene ]
+    if welfare-support   != "none"     [ welfare-intervene       ]
+    if OC-bosses-repression? != "none" [ if random-float 1 < OC-bosses-probability [ OC-member-repress ] ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
@@ -690,13 +691,13 @@ to choose-intervention-setting
     set welfare-support "none"
   ]
   if intervention = "preventive" [
-    set family-intervention "none"
-    set social-support "educational"
+    set family-intervention "remove-if-caught-and-OC-member"
+    set social-support "none"
     set welfare-support "none"
-    set targets-addressed-percent 10
+    set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 48
   ]
   if intervention = "disruptive" [
     set family-intervention "remove-if-caught-and-OC-member"
@@ -1633,6 +1634,12 @@ to show-criminal-network
     layout-circle sort criminals 14
   ]
 end
+
+to OC-member-repress
+  nw:with-context persons with [ oc-member? ] person-links [
+    ask rnd:weighted-one-of persons with [ oc-member? ] [ count nw:turtles-in-radius 1 ] [ get-caught self ]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -2187,16 +2194,6 @@ intervention-end
 NIL
 HORIZONTAL
 
-CHOOSER
-405
-705
-565
-750
-LEAs
-LEAs
-"None" "vsFacilitators" "vsBosses"
-0
-
 SLIDER
 405
 750
@@ -2388,6 +2385,32 @@ count all-persons
 17
 1
 11
+
+SWITCH
+1095
+805
+1340
+838
+OC-bosses-repression?
+OC-bosses-repression?
+1
+1
+-1000
+
+SLIDER
+1095
+845
+1340
+878
+OC-bosses-probability
+OC-bosses-probability
+0.05
+1
+0.05
+0.05
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -2751,59 +2774,6 @@ NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
-<experiments>
-  <experiment name="basic" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <timeLimit steps="1200"/>
-    <metric>big-crime-from-small-fish</metric>
-    <metric>count prisoners</metric>
-    <metric>number-deceased</metric>
-    <metric>sum [ num-crimes-committed ] of all-persons</metric>
-    <metric>count (all-persons) with [ oc-member? ]</metric>
-    <metric>[ age ] of (all-persons)</metric>
-    <metric>[ oc-embeddedness ] of (all-persons)</metric>
-    <enumeratedValueSet variable="num-persons">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="data-folder">
-      <value value="&quot;inputs/palermo/data/&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="output?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="ticks-per-year">
-      <value value="12"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-accomplice-radius">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="probability-of-getting-caught">
-      <value value="0.05"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="retirement-age">
-      <value value="65"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="oc-embeddedness-radius">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-oc-persons">
-      <value value="25"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-oc-families">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-m">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-sigma">
-      <value value="0.25"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-threshold">
-      <value value="1"/>
-    </enumeratedValueSet>
-  </experiment>
-</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
