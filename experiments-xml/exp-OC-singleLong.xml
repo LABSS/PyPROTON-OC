@@ -102,7 +102,7 @@
           <value value="8"/>
         </enumeratedValueSet>
         <enumeratedValueSet variable="num-persons">
-          <value value="200"/>
+          <value value="10000"/>
         </enumeratedValueSet>    
         <enumeratedValueSet variable="welfare-support">
           <value value="&quot;none&quot;"/>
