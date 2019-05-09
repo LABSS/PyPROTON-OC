@@ -332,9 +332,10 @@ to go
   ]
   ; intervention clock
   if intervention-on? [
-    if family-intervention != "none" [ family-intervene        ]
-    if social-support    != "none"   [ socialization-intervene ]
-    if welfare-support   != "none"   [ welfare-intervene       ]
+    if family-intervention != "none"   [ family-intervene        ]
+    if social-support    != "none"     [ socialization-intervene ]
+    if welfare-support   != "none"     [ welfare-intervene       ]
+    if OC-bosses-repression? != "none" [ if random-float 1 < OC-bosses-probability [ OC-member-repress ] ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
@@ -1128,12 +1129,6 @@ to-report arrest-probability-with-intervention [ group ]
   [ report probability-of-getting-caught * law-enforcement-rate ]
 end
 
-to OC-member-repress
-  nw:with-context people with [ oc-member? ] person-links [
-    ask weigthed-one-of people with [ oc-member? ] [ count nw:turtles-in-radius 1 ] [ get-caught ]
-  ]
-end
-
 to retire-persons
   ask persons with [ age >= retirement-age and not retired? ] [
     set retired? true
@@ -1637,6 +1632,12 @@ to show-criminal-network
   ask meta-criminal-links [ show-link ]
   nw:with-context criminals meta-criminal-links [
     layout-circle sort criminals 14
+  ]
+end
+
+to OC-member-repress
+  nw:with-context persons with [ oc-member? ] person-links [
+    ask rnd:weighted-one-of persons with [ oc-member? ] [ count nw:turtles-in-radius 1 ] [ get-caught self ]
   ]
 end
 @#$#@#$#@
@@ -2384,6 +2385,32 @@ count all-persons
 17
 1
 11
+
+SWITCH
+1105
+810
+1307
+843
+OC-bosses-repression?
+OC-bosses-repression?
+1
+1
+-1000
+
+SLIDER
+1100
+850
+1297
+883
+OC-bosses-probability
+OC-bosses-probability
+0.05
+1
+0.05
+0.05
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
