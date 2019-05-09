@@ -130,6 +130,8 @@ globals [
   number-weddings-mean
   number-weddings-sd
   removed-fatherships
+  count-fresh
+  count-stale
 ]
 
 to profile-setup
@@ -689,21 +691,28 @@ to choose-intervention-setting
     set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
+    set OC-bosses-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 36
   ]
   if intervention = "preventive" [
     set family-intervention "remove-if-caught-and-OC-member"
     set social-support "none"
     set welfare-support "none"
+    set OC-bosses-repression? false
     set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 48
+    set intervention-end 36
   ]
   if intervention = "disruptive" [
     set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
     set OC-bosses-repression? true
+    set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 36
@@ -1215,7 +1224,8 @@ to calculate-criminal-tendency
 end
 
 to-report criminal-tendency ; person reporter
-  ifelse c-t-fresh? [ report c-t ] [
+  ifelse c-t-fresh? [ set count-fresh count-fresh + 1  report c-t  ] [
+    set count-stale count-stale + 1
     let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
     foreach  factors-c [ x ->
       set c c * (runresult item 1 x)
