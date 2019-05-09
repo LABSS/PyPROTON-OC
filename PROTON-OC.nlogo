@@ -700,10 +700,10 @@ to choose-intervention-setting
     set intervention-end 48
   ]
   if intervention = "disruptive" [
-    set family-intervention "remove-if-caught-and-OC-member"
+    set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
-    set targets-addressed-percent 10
+    set OC-bosses-repression? true
     set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 36
