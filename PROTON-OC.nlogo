@@ -130,6 +130,8 @@ globals [
   number-weddings-mean
   number-weddings-sd
   removed-fatherships
+  count-fresh
+  count-stale
 ]
 
 to profile-setup
@@ -196,6 +198,7 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   if view-crim? [ show-criminal-network ]
+  set removed-fatherships []
   update-plots
 end
 
@@ -331,9 +334,10 @@ to go
   ]
   ; intervention clock
   if intervention-on? [
-    if family-intervention != "none" [ family-intervene        ]
-    if social-support    != "none"   [ socialization-intervene ]
-    if welfare-support   != "none"   [ welfare-intervene       ]
+    if family-intervention != "none"   [ family-intervene        ]
+    if social-support    != "none"     [ socialization-intervene ]
+    if welfare-support   != "none"     [ welfare-intervene       ]
+    if OC-bosses-repression? != "none" [ if random-float 1 < OC-bosses-probability [ OC-member-repress ] ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
@@ -358,6 +362,7 @@ to go
       ]
     ]
     let-migrants-in
+    return-kids
   ]
   wedding
   commit-crimes
@@ -517,7 +522,7 @@ to family-intervene
     ]
   ]
   let kids-to-protect persons with [
-    age <= 18 and age >= 12 and any? in-offspring-link-neighbors with [
+    age < 18 and age >= 12 and any? in-offspring-link-neighbors with [
       male? and oc-member? and runresult the-condition
     ]
   ]
@@ -528,7 +533,7 @@ to family-intervene
       let father one-of in-offspring-link-neighbors with [ male? and oc-member? ]
       ; this also removes household links, leaving the household in an incoherent state.
       ask my-in-offspring-links with [ other-end = father ] [ die ]
-      set removed-fatherships fput removed-fatherships list father self
+      set removed-fatherships fput (list ((18 * ticks-per-year + birth-tick) - ticks) father self) removed-fatherships
       ; at this point bad dad is out and we help the remaining with the whole package
       let family (turtle-set self family-link-neighbors)
       welfare-createjobs family with [
@@ -540,6 +545,21 @@ to family-intervene
       ]
       soc-add-psychological family
       soc-add-more-friends family
+    ]
+  ]
+end
+
+to return-kids
+  foreach removed-fatherships [ a ->
+    ; list tick father son
+    let father last but-last a
+    if any? turtle-set father [
+      if [ age ] of last a >= 18 [
+        if (random-float 1) < 6 / (first a) [
+          ask last a [ create-offspring-link-from father ]
+          set removed-fatherships remove a removed-fatherships
+        ]
+      ]
     ]
   ]
 end
@@ -671,20 +691,27 @@ to choose-intervention-setting
     set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
-  ]
-  if intervention = "preventive" [
-    set family-intervention "none"
-    set social-support "educational"
-    set welfare-support "none"
+    set OC-bosses-repression? false
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 36
   ]
-  if intervention = "disruptive" [
+  if intervention = "preventive" [
     set family-intervention "remove-if-caught-and-OC-member"
     set social-support "none"
     set welfare-support "none"
+    set OC-bosses-repression? false
+    set targets-addressed-percent 50
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 36
+  ]
+  if intervention = "disruptive" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-bosses-repression? true
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -1197,7 +1224,8 @@ to calculate-criminal-tendency
 end
 
 to-report criminal-tendency ; person reporter
-  ifelse c-t-fresh? [ report c-t ] [
+  ifelse c-t-fresh? [ set count-fresh count-fresh + 1  report c-t  ] [
+    set count-stale count-stale + 1
     let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
     foreach  factors-c [ x ->
       set c c * (runresult item 1 x)
@@ -1614,6 +1642,12 @@ to show-criminal-network
   ask meta-criminal-links [ show-link ]
   nw:with-context criminals meta-criminal-links [
     layout-circle sort criminals 14
+  ]
+end
+
+to OC-member-repress
+  nw:with-context persons with [ oc-member? ] person-links [
+    ask rnd:weighted-one-of persons with [ oc-member? ] [ count nw:turtles-in-radius 1 ] [ get-caught self ]
   ]
 end
 @#$#@#$#@
@@ -2170,16 +2204,6 @@ intervention-end
 NIL
 HORIZONTAL
 
-CHOOSER
-405
-705
-565
-750
-LEAs
-LEAs
-"None" "vsFacilitators" "vsBosses"
-0
-
 SLIDER
 405
 750
@@ -2330,13 +2354,13 @@ NIL
 HORIZONTAL
 
 CHOOSER
-720
-700
-858
-745
+690
+705
+852
+750
 intervention
 intervention
-"baseline" "preventive" "disruptive"
+"use current values" "baseline" "preventive" "disruptive"
 0
 
 MONITOR
@@ -2371,6 +2395,32 @@ count all-persons
 17
 1
 11
+
+SWITCH
+1095
+805
+1340
+838
+OC-bosses-repression?
+OC-bosses-repression?
+1
+1
+-1000
+
+SLIDER
+1095
+845
+1340
+878
+OC-bosses-probability
+OC-bosses-probability
+0.05
+1
+0.05
+0.05
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -2734,59 +2784,6 @@ NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
-<experiments>
-  <experiment name="basic" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <timeLimit steps="1200"/>
-    <metric>big-crime-from-small-fish</metric>
-    <metric>count prisoners</metric>
-    <metric>number-deceased</metric>
-    <metric>sum [ num-crimes-committed ] of all-persons</metric>
-    <metric>count (all-persons) with [ oc-member? ]</metric>
-    <metric>[ age ] of (all-persons)</metric>
-    <metric>[ oc-embeddedness ] of (all-persons)</metric>
-    <enumeratedValueSet variable="num-persons">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="data-folder">
-      <value value="&quot;inputs/palermo/data/&quot;"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="output?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="ticks-per-year">
-      <value value="12"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-accomplice-radius">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="probability-of-getting-caught">
-      <value value="0.05"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="retirement-age">
-      <value value="65"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="oc-embeddedness-radius">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-oc-persons">
-      <value value="25"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-oc-families">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-m">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-sigma">
-      <value value="0.25"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="nat-propensity-threshold">
-      <value value="1"/>
-    </enumeratedValueSet>
-  </experiment>
-</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
