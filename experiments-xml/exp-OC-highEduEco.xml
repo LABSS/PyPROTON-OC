@@ -41,6 +41,30 @@
         <metric>o11</metric>
         <!-- 12. Number of law enforcement interventions per time unit -->
         <metric>o12</metric>
+        <!-- Other reporters for debug and check -->
+        <metric>count persons</metric>
+        <metric>count links</metric>
+        <metric>count prisoners</metric>
+        <metric>count persons with [ migrant? ]</metric>
+        <metric>number-deceased</metric>
+        <metric>sum [ num-crimes-committed ] of persons</metric>
+        <metric>count persons with [ any? job-link-neighbors ]</metric>
+        <metric>count jobs with [ not any? my-job-links  ]</metric>
+        <metric>crime-size-fails</metric>
+        <metric>count persons with [facilitator?]</metric>       
+        <metric>facilitator-fails</metric>        
+        <metric>facilitator-crimes</metric>        
+        <metric>count household-links </metric>
+        <metric>count partner-links</metric>
+        <metric>count sibling-links</metric>
+        <metric>count offspring-links</metric>
+        <metric>count friendship-links</metric>
+        <metric>count criminal-links</metric>
+        <metric>count professional-links</metric>
+        <metric>count school-links</metric>
+        <metric>count meta-links</metric>
+        <metric>count school-attendance-links</metric>
+        <metric>count job-links</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
