@@ -2387,10 +2387,10 @@ count all-persons
 11
 
 SWITCH
-1105
-810
-1307
-843
+1095
+805
+1340
+838
 OC-bosses-repression?
 OC-bosses-repression?
 1
@@ -2398,10 +2398,10 @@ OC-bosses-repression?
 -1000
 
 SLIDER
-1100
-850
-1297
-883
+1095
+845
+1340
+878
 OC-bosses-probability
 OC-bosses-probability
 0.05

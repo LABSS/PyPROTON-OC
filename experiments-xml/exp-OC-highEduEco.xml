@@ -43,9 +43,9 @@
         <metric>o12</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
-            <value value="baseline"/>
-            <value value="disruptive"/>
-            <value value="constructive"/>
+            <value value="&quot;baseline&quot;"/>
+             <value value="&quot;preventive&quot;"/>
+             <value value="&quot;disruptive&quot;"/>
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
@@ -83,11 +83,13 @@
             <value value="1.0"/>
             <value value="1.5"/>
         </enumeratedValueSet>
-<!-- FIXED parameters                                                 -->
-    <enumeratedValueSet variable="law-enforcement-rate">
-      <value value="1"/>
+<!-- FIXED parameters     -->
+    <enumeratedValueSet variable="num-oc-families">
+      <value value="8"/>
     </enumeratedValueSet>
-    </enumeratedValueSet>
+    <enumeratedValueSet variable="num-persons">
+      <value value="200"/>
+    </enumeratedValueSet>    
     <enumeratedValueSet variable="welfare-support">
       <value value="&quot;none&quot;"/>
     </enumeratedValueSet>
@@ -132,12 +134,6 @@
     </enumeratedValueSet>
     <enumeratedValueSet variable="probability-of-getting-caught">
       <value value="0.05"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-oc-families">
-      <value value="8"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="num-persons">
-      <value value="2000"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="OC-arrest-multiplier">
       <value value="1"/>
