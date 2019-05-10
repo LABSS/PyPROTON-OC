@@ -1222,15 +1222,17 @@ to calculate-criminal-tendency
   foreach table:keys c-range-by-age-and-sex [ genderage ->
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
     if any? subpop [
-      let c-mean-subpop mean [ criminal-tendency ] of subpop
-      let c item 1 item 0 table:get c-range-by-age-and-sex genderage
-      set c c + -1 * (c-mean-subpop - c)
+      ; update personal values
       ask subpop [
+        let c item 1 item 0 table:get c-range-by-age-and-sex genderage
         set criminal-tendency c
         foreach  factors-c [ x ->
           set criminal-tendency criminal-tendency * (runresult item 1 x)
         ]
       ]
+      ; then put the correction so that averages hold
+      let c-mean-subpop mean [ criminal-tendency ] of subpop
+      set c c + -1 * (c-mean-subpop - c)
     ]
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
