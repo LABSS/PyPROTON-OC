@@ -1216,7 +1216,6 @@ end
 to calculate-criminal-tendency
   set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
   foreach table:keys c-range-by-age-and-sex [ genderage ->
-    show genderage
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
     if any? subpop [
       let c item 1 item 0 table:get c-range-by-age-and-sex genderage
