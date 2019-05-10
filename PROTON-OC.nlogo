@@ -136,6 +136,8 @@ globals [
   removed-fatherships
   count-fresh
   count-stale
+  criminal-tendency-addme-for-weighted-extraction
+  criminal-tendency-subtractfromme-for-inverse-weighted-extraction
 ]
 
 to profile-setup
@@ -410,13 +412,13 @@ to dump-networks
   ]
 end
 
-to-report criminal-tendency-addme-for-weighted-extraction
-  report ifelse-value (min [ criminal-tendency ] of persons < 0)
+to calc-criminal-tendency-addme-for-weighted-extraction
+  set criminal-tendency-addme-for-weighted-extraction ifelse-value (min [ criminal-tendency ] of persons < 0)
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
 end
 
-to-report criminal-tendency-subtractfromme-for-inverse-weighted-extraction
-  report ifelse-value (max [ criminal-tendency ] of persons > 0)
+to calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
+  set criminal-tendency-subtractfromme-for-inverse-weighted-extraction ifelse-value (max [ criminal-tendency ] of persons > 0)
     [ max [ criminal-tendency ] of persons ] [ 0 ]
 end
 
@@ -1231,6 +1233,8 @@ to calculate-criminal-tendency
       ]
     ]
   ]
+  calc-criminal-tendency-addme-for-weighted-extraction
+  calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
 end
 
 to-report social-proximity-with [ target ] ; person reporter
