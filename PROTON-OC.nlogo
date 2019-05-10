@@ -1219,18 +1219,20 @@ to calculate-criminal-tendency
     show genderage
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
     if any? subpop [
-      ; update personal values
+      let c item 1 item 0 table:get c-range-by-age-and-sex genderage
+      ; put only the individual part into personal values
       ask subpop [
-        let c item 1 item 0 table:get c-range-by-age-and-sex genderage
-        set criminal-tendency c
+        set criminal-tendency 0
         foreach  factors-c [ x ->
           set criminal-tendency criminal-tendency * (runresult item 1 x)
         ]
       ]
-      ; then put the correction so that averages hold
-      let c-mean-subpop mean [ criminal-tendency ] of subpop
-      set c c + -1 * (c-mean-subpop - c)
-
+      ; then derive the correction from the average of
+      let epsilon mean [ criminal-tendency ] of subpop
+      ask subpop [
+        set criminal-tendency criminal-tendency + c - epsilon
+      ]
+      assert [ -> mean [ criminal-tendency ] of subpop - c < 0.01 * c ]
     ]
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
@@ -1705,7 +1707,7 @@ num-persons
 num-persons
 100
 10000
-100.0
+550.0
 50
 1
 NIL
