@@ -47,6 +47,7 @@ persons-own [
   new-recruit
   migrant?
   age
+  criminal-tendency
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -74,6 +75,7 @@ prisoners-own [
   new-recruit
   migrant?
   age
+  criminal-tendency
 ]
 
 jobs-own [
@@ -350,7 +352,6 @@ to go
      if crime-activity <= 1 [ set crime-activity 1 ]
   ]
   if ((ticks mod ticks-per-year) = 0) [
-    calculate-criminal-tendency
     graduate
     ask persons with [
       not any? my-school-attendance-links and age >= 18 and age < retirement-age and not any? my-job-links and
@@ -366,6 +367,7 @@ to go
     let-migrants-in
     return-kids
   ]
+  calculate-criminal-tendency
   wedding
   commit-crimes
   retire-persons
@@ -1218,26 +1220,17 @@ to calculate-criminal-tendency
   foreach table:keys c-range-by-age-and-sex [ genderage ->
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
     if any? subpop [
-      let c-subpop mean [ criminal-tendency ] of subpop
-      let rangep table:get c-range-by-age-and-sex genderage
-      foreach (range item 1 genderage item 0 item 0 rangep) [ the-age ->
-        table:put epsilon_c list item 0 genderage the-age -1 * (c-subpop - item 1 item 0 table:get c-range-by-age-and-sex genderage)
+      let c-mean-subpop mean [ criminal-tendency ] of subpop
+      let c item 1 item 0 table:get c-range-by-age-and-sex genderage
+      set c c + -1 * (c-mean-subpop - c)
+      ask subpop [
+        set criminal-tendency c
+        foreach  factors-c [ x ->
+          set criminal-tendency criminal-tendency * (runresult item 1 x)
+        ]
       ]
     ]
   ]
-end
-
-to-report criminal-tendency ; person reporter
-  ifelse c-t-fresh? [ set count-fresh count-fresh + 1  report c-t  ] [
-    set count-stale count-stale + 1
-    let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
-    foreach  factors-c [ x ->
-      set c c * (runresult item 1 x)
-    ]
-    set c-t-fresh? true
-    set c-t c
-  ]
-  report c-t
 end
 
 to-report social-proximity-with [ target ] ; person reporter
