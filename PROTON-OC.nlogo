@@ -46,6 +46,7 @@ persons-own [
   crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
+  criminal-tendency
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -72,6 +73,7 @@ prisoners-own [
   crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
+  criminal-tendency
 ]
 
 jobs-own [
@@ -1212,28 +1214,21 @@ end
 to calculate-criminal-tendency
   set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
   foreach table:keys c-range-by-age-and-sex [ genderage ->
+    show genderage
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
     if any? subpop [
-      let c-subpop mean [ criminal-tendency ] of subpop
-      let rangep table:get c-range-by-age-and-sex genderage
-      foreach (range item 1 genderage item 0 item 0 rangep) [ the-age ->
-        table:put epsilon_c list item 0 genderage the-age -1 * (c-subpop - item 1 item 0 table:get c-range-by-age-and-sex genderage)
+      let c-mean-subpop mean [ criminal-tendency ] of subpop
+      let c item 1 item 0 table:get c-range-by-age-and-sex genderage
+      show c
+      set c c + -1 * (c-mean-subpop - c)
+      ask subpop [
+        set criminal-tendency c
+        foreach  factors-c [ x ->
+          set criminal-tendency criminal-tendency * (runresult item 1 x)
+        ]
       ]
     ]
   ]
-end
-
-to-report criminal-tendency ; person reporter
-  ifelse c-t-fresh? [ set count-fresh count-fresh + 1  report c-t  ] [
-    set count-stale count-stale + 1
-    let c item 0 table:get c-by-age-and-sex list male? age + table:get epsilon_c list male? age
-    foreach  factors-c [ x ->
-      set c c * (runresult item 1 x)
-    ]
-    set c-t-fresh? true
-    set c-t c
-  ]
-  report c-t
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -1704,7 +1699,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+100.0
 50
 1
 NIL
