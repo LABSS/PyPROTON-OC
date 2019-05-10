@@ -46,6 +46,7 @@ persons-own [
   crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
+  age
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -72,6 +73,7 @@ prisoners-own [
   crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
+  age
 ]
 
 jobs-own [
@@ -382,6 +384,7 @@ to go
   ]
   output "------------------"
   tick
+  ask all-persons [ set age calculate-age ]
   if behaviorspace-experiment-name != "" [
     show (word behaviorspace-run-number "." ticks)
   ]
@@ -802,6 +805,7 @@ to init-person-empty ; person command
   set-turtle-color-pos
   set male? one-of [ true false ]
   set migrant? false
+  set age calculate-age
 end
 
 to let-migrants-in
@@ -861,7 +865,7 @@ to limit-education-by-age ; person command
   ]
 end
 
-to-report age
+to-report calculate-age
   report floor ((ticks - birth-tick) / ticks-per-year)
 end
 
