@@ -53,7 +53,7 @@ persons-own [
 prisoners-own [
   sentence-countdown
   num-crimes-committed
-  num-crimes-committed-last-tick
+  num-crimes-committed-this-tick
   education-level
   max-education-level
   wealth-level
@@ -331,7 +331,7 @@ end
 to go
   ask all-persons [
     set age calculate-age
-    set num-crimes-committed-last-tick 0
+    set num-crimes-committed-this-tick 0
   ]
   set number-law-interventions-this-tick 0
   if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
@@ -699,6 +699,7 @@ to choose-intervention-setting
     set social-support "none"
     set welfare-support "none"
     set OC-bosses-repression? false
+    set OC-bosses-probability 0.05
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -709,6 +710,7 @@ to choose-intervention-setting
     set social-support "none"
     set welfare-support "none"
     set OC-bosses-repression? false
+    set OC-bosses-probability 0.05
     set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
@@ -719,6 +721,7 @@ to choose-intervention-setting
     set social-support "none"
     set welfare-support "none"
     set OC-bosses-repression? true
+    set OC-bosses-probability 0.2
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -794,7 +797,7 @@ end
 
 to init-person-empty ; person command
   set num-crimes-committed 0
-  set num-crimes-committed-last-tick 0
+  set num-crimes-committed-this-tick 0
   ; some agents should probably have a few initial crimes at start
   set education-level -1                                ; we set starting education level in init-students
   set max-education-level 0 ; useful only for children, will be updated in that case
