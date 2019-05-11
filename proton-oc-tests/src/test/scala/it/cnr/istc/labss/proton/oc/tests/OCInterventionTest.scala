@@ -14,7 +14,7 @@ class OCInterventionTest extends OCModelSuite {
       let agelist (range 0 (12 * 4) 4)
       create-persons 1 [
         set birth-tick -1 * ticks-per-year * 50
-		init-person-empty
+		    init-person-empty
         set oc-member? true
         set male? true
         show list age birth-tick
@@ -23,8 +23,9 @@ class OCInterventionTest extends OCModelSuite {
       show [ who ] of kingpin
       create-persons 12 [
         set birth-tick -1 * one-of agelist * ticks-per-year
-		init-person-empty
-		set oc-member? false
+		    init-person-empty
+		    set oc-member? false
+        set propensity 0
         set agelist remove age agelist
         create-offspring-link-from kingpin
         set male? true
@@ -35,10 +36,7 @@ class OCInterventionTest extends OCModelSuite {
       ask the-family [ create-sibling-links-with other the-family ]
       set targets-addressed-percent 100
       set family-intervention "remove-if-OC-member"
-      
-      show "interv"
       family-intervene
-      show "post"
       """)
     // the baby is (one-of persons with [ age = 0  and propensity = 0])
     ws.rpt("""

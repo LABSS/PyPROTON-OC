@@ -764,9 +764,9 @@ to setup-siblings
 end
 
 to init-person [ age-gender-dist ] ; person command
-  init-person-empty
   let row rnd:weighted-one-of-list age-gender-dist last ; select a row from our age-gender distribution
   set birth-tick 0 - (item 0 row) * ticks-per-year      ; ...and set age...
+  init-person-empty
   set male? (item 1 row)                                ; ...and gender according to values in that row.
   set retired? age >= retirement-age                    ; persons older than retirement-age are retired
   ; education level is chosen, job and wealth follow in a conditioned sequence
@@ -822,13 +822,13 @@ to let-migrants-in
     ; we do not care about education level and wealth of migrants, as those variables
     ; exist only in order to generate the job position.
     hatch-persons 1 [
-      init-person-empty
       set my-job myself
-      set birth-tick ticks - (random 20 + 18) * ticks-per-year
       create-job-link-with myself
       let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
       let conn decide-conn-number employees 20
       create-professional-links-with n-of conn other employees
+      set birth-tick ticks - (random 20 + 18) * ticks-per-year
+      init-person-empty
       set wealth-level [ job-level ] of myself
       set migrant? true
     ]
@@ -842,9 +842,9 @@ to make-baby
       set number-of-children number-of-children + 1
       set number-born number-born + 1
       hatch-persons 1 [
-        init-person-empty
         set wealth-level [ wealth-level ] of myself
         set birth-tick ticks
+        init-person-empty
         ask [ offspring-link-neighbors ] of myself [
           create-sibling-links-with other [ offspring-link-neighbors ] of myself
         ]
@@ -2115,7 +2115,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-10.0
+11.0
 1
 1
 NIL
