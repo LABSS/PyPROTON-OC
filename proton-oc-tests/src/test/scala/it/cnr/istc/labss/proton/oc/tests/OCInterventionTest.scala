@@ -13,28 +13,32 @@ class OCInterventionTest extends OCModelSuite {
       ask all-persons [ set oc-member? false ]
       let agelist (range 0 (12 * 4) 4)
       create-persons 1 [
-        set oc-member? true
         set birth-tick -1 * ticks-per-year * 50
+		init-person-empty
+        set oc-member? true
         set male? true
-        set c-t-fresh? false
+        show list age birth-tick
       ]
       let kingpin one-of persons with [ oc-member? ]
       show [ who ] of kingpin
       create-persons 12 [
-        set oc-member? false
         set birth-tick -1 * one-of agelist * ticks-per-year
+		init-person-empty
+		set oc-member? false
         set agelist remove age agelist
         create-offspring-link-from kingpin
         set male? true
-        set c-t-fresh? false
       ]
       let the-family ([ family-link-neighbors ] of kingpin)
       let baby one-of the-family with [ age = 0 ]
-      show [who] of baby
+      show [ who ] of baby
       ask the-family [ create-sibling-links-with other the-family ]
       set targets-addressed-percent 100
       set family-intervention "remove-if-OC-member"
+      
+      show "interv"
       family-intervene
+      show "post"
       """)
     // the baby is (one-of persons with [ age = 0  and propensity = 0])
     ws.rpt("""
@@ -94,5 +98,4 @@ test("Educational intervention works.") { ws =>
     after > before shouldBe true
     println("more friends done")
   } 
-  
 }
