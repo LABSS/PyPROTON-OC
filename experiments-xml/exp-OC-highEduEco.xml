@@ -65,6 +65,7 @@
         <metric>count meta-links</metric>
         <metric>count school-attendance-links</metric>
         <metric>count job-links</metric>
+        <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>

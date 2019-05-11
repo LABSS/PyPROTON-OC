@@ -26,6 +26,7 @@ undirected-link-breed [school-attendance-links school-attendance-link] ; person 
 
 persons-own [
   num-crimes-committed
+  num-crimes-committed-this-tick
   education-level
   max-education-level
   wealth-level           ; -1 for migrants
@@ -40,8 +41,6 @@ persons-own [
   retired?
   number-of-children
   facilitator?
-  c-t-fresh?  ; stored c value and its freshness.
-  c-t
   hobby
   crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
@@ -54,6 +53,7 @@ persons-own [
 prisoners-own [
   sentence-countdown
   num-crimes-committed
+  num-crimes-committed-last-tick
   education-level
   max-education-level
   wealth-level
@@ -68,8 +68,6 @@ prisoners-own [
   retired?
   number-of-children
   facilitator?
-  c-t-fresh?  ; stored c value and its freshness.
-  c-t
   hobby
   crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
@@ -134,10 +132,9 @@ globals [
   number-weddings-mean
   number-weddings-sd
   removed-fatherships
-  count-fresh
-  count-stale
   criminal-tendency-addme-for-weighted-extraction
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
+  number-law-interventions-this-tick
 ]
 
 to profile-setup
@@ -332,6 +329,11 @@ to-report wedding-proximity-with [ p-partner ]
 end
 
 to go
+  ask all-persons [
+    set age calculate-age
+    set num-crimes-committed-last-tick 0
+  ]
+  set number-law-interventions-this-tick 0
   if (network-saving-interval > 0) and ((ticks mod network-saving-interval) = 0) [
     dump-networks
   ]
@@ -348,10 +350,8 @@ to go
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
   ]
-  ask all-persons [
-     set c-t-fresh? false
+  ask all-persons with [ crime-activity > 1 ] [
      set crime-activity crime-activity - 1
-     if crime-activity <= 1 [ set crime-activity 1 ]
   ]
   if ((ticks mod ticks-per-year) = 0) [
     graduate
@@ -387,8 +387,8 @@ to go
     output (word listname ": " count links with [ breed = runresult listname ])
   ]
   output "------------------"
+
   tick
-  ask all-persons [ set age calculate-age ]
   if behaviorspace-experiment-name != "" [
     show (word behaviorspace-run-number "." ticks)
   ]
@@ -793,7 +793,9 @@ to-report tune-edu [ level ]
 end
 
 to init-person-empty ; person command
-  set num-crimes-committed 0                            ; some agents should probably have a few initial crimes at start
+  set num-crimes-committed 0
+  set num-crimes-committed-last-tick 0
+  ; some agents should probably have a few initial crimes at start
   set education-level -1                                ; we set starting education level in init-students
   set max-education-level 0 ; useful only for children, will be updated in that case
   set wealth-level 1 ; this will be updated by family membership
@@ -804,7 +806,6 @@ to init-person-empty ; person command
   set number-of-children 0
   set my-job nobody
   set facilitator? false
-  set c-t-fresh? false
   set hobby random 5
   set-turtle-color-pos
   set male? one-of [ true false ]
@@ -1187,6 +1188,7 @@ end
 to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
+    set num-crimes-committed-this-tick num-crimes-committed-this-tick + 1
     set crime-activity 3
     create-criminal-links-with other co-offenders
   ]
@@ -1196,6 +1198,7 @@ to commit-crime [ co-offenders ] ; observer command
 end
 
 to get-caught [ co-offenders ]
+  set number-law-interventions-this-tick number-law-interventions-this-tick + 1
   ask co-offenders [
     set breed prisoners
     set shape "face sad"

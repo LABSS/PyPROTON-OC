@@ -1,5 +1,5 @@
 to-report o1
-  ; number of OC members per time unit
+  ; number of current OC members
   report count all-persons with [ oc-member? ]
 end
 
@@ -10,12 +10,12 @@ end
 
 to-report o3
   ; Number of crimes per time unit
-  report sum [ num-crimes-committed ] of all-persons
+  report sum [ num-crimes-committed-this-tick ] of all-persons
 end
 
 to-report o4
   ; Number of crimes committed by OC members per time unit
-  report sum [ num-crimes-committed ] of all-persons with [ oc-member? ]
+  report sum [ num-crimes-committed-this-tick ] of all-persons with [ oc-member? ]
 end
 
 to-report o5
@@ -74,17 +74,17 @@ end
 
 to-report o7a
   ; Distribution of socio-demographic variables on new recruited individuals
-  report table:to-list table:counts[ education-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+  report table:to-list table:counts [ education-level ] of all-persons with [ new-recruit = (ticks - 1) ]
 end
 
 to-report o7b
   ; Distribution of socio-demographic variables on new recruited individuals
-  report table:to-list table:counts[ wealth-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+  report table:to-list table:counts [ wealth-level ] of all-persons with [ new-recruit = (ticks - 1) ]
 end
 
 to-report o7c
   ; Distribution of socio-demographic variables on new recruited individuals
-  report table:to-list table:counts[ job-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+  report table:to-list table:counts [ job-level ] of all-persons with [ new-recruit = (ticks - 1) ]
 end
 
 to-report o8a
@@ -104,17 +104,17 @@ end
 
 to-report o9a
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report table:to-list table:counts[ education-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+  report table:to-list table:counts [ education-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ]
 end
 
 to-report o9b
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report table:to-list table:counts[ wealth-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+  report table:to-list table:counts[ wealth-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ]
 end
 
 to-report o9c
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report table:to-list table:counts[ job-level ] of all-persons with [ not oc-member? and c-t-fresh? ]
+  report table:to-list table:counts[ job-level ] of all-persons with [ not oc-member?  and num-crimes-committed > 0 ]
 end
 
 to-report o10a
@@ -139,6 +139,6 @@ end
 
 to-report o12
   ; Number of law enforcement interventions per time unit
-  report 1
+  report number-law-interventions-this-tick
 end
 
