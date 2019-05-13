@@ -436,7 +436,7 @@ to soc-add-psychological [ targets ]
         1 - (abs (age - [ age ] of myself ) / 120)
       ]
       create-friendship-link-with p-targets
-      create-person-links-with p-targets
+      create-person-link-with p-targets
     ]
   ]
 end
@@ -453,7 +453,7 @@ to soc-add-more-friends [ targets ]
         criminal-tendency-subtractfromme-for-inverse-weighted-extraction - criminal-tendency
       ]
       create-friendship-link-with p-targets
-      create-person-links-with p-targets
+      create-person-link-with p-targets
     ]
   ]
 end
