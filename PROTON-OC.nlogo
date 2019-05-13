@@ -354,6 +354,7 @@ to go
      set crime-activity crime-activity - 1
   ]
   if ((ticks mod ticks-per-year) = 0) [
+    calculate-criminal-tendency
     graduate
     ask persons with [
       not any? my-school-attendance-links and age >= 18 and age < retirement-age and not any? my-job-links and
@@ -369,7 +370,6 @@ to go
     let-migrants-in
     return-kids
   ]
-  calculate-criminal-tendency
   wedding
   commit-crimes
   retire-persons

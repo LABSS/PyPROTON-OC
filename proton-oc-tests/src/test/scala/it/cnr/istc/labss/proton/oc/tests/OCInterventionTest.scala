@@ -17,7 +17,6 @@ class OCInterventionTest extends OCModelSuite {
 		    init-person-empty
         set oc-member? true
         set male? true
-        show list age birth-tick
       ]
       let kingpin one-of persons with [ oc-member? ]
       show [ who ] of kingpin
