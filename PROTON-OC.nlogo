@@ -1201,6 +1201,14 @@ to get-caught [ co-offenders ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
     ; we keep the friendship links and the family links for the moment
+    let links-to-remove my-person-links with [
+      not any? links with [
+        both-ends = [ both-ends ] of myself and
+        member? (word breed) [ "sibling-links" "offspring-links" "partner-links" "household-links" "friendship-links"
+        ]
+      ]
+    ]
+    ask links-to-remove [ die ]
   ]
 end
 
