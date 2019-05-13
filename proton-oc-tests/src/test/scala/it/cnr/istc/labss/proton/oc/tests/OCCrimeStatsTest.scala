@@ -6,7 +6,7 @@ import org.nlogo.api.ScalaConversions.RichSeq
 
 class OCCrimeStatsTest extends OCModelSuite {
 
-  test("Stats on crime accurate to one SD") { ws =>
+  test("Stats on crime accurate to two SD") { ws =>
     ws.cmd("""
       set num-persons 1500
       setup
