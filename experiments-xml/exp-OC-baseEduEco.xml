@@ -89,11 +89,11 @@
         </enumeratedValueSet>
         <!-- 3a. Employment rate and education rate must vary together -->
         <enumeratedValueSet variable="employment-rate">
-            <value value="1.5"/>
+            <value value="1"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
-            <value value="1.5"/>
+            <value value="1"/>
         </enumeratedValueSet>
         <!-- 4. Law enforcement intervention rate -->
         <enumeratedValueSet variable="law-enforcement-rate">
