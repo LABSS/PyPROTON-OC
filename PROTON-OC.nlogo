@@ -17,6 +17,7 @@ undirected-link-breed [criminal-links     criminal-link]     ; person <--> perso
 undirected-link-breed [professional-links professional-link] ; person <--> person
 undirected-link-breed [school-links       school-link]       ; person <--> person
 undirected-link-breed [meta-links         meta-link]         ; person <--> person
+undirected-link-breed [person-links       person-link]       ; person <--> person
 
 undirected-link-breed [meta-criminal-links meta-criminal-link]         ; person <--> person
 
@@ -274,43 +275,6 @@ to-report family-link-neighbors
   report (turtle-set sibling-link-neighbors offspring-link-neighbors partner-link-neighbors)
 end
 
-; should we have criminal network here, or not? What about household links?
-to-report my-person-links
-  report (link-set
-    my-sibling-links
-    my-offspring-links
-    my-partner-links
-    my-household-links
-    my-friendship-links
-    ;my-criminal-links
-    my-professional-links
-    my-school-links)
-end
-
-to-report person-link-neighbors
-  report (turtle-set
-    sibling-link-neighbors
-    offspring-link-neighbors
-    partner-link-neighbors
-    household-link-neighbors
-    friendship-link-neighbors
-    ;criminal-link-neighbors
-    professional-link-neighbors
-    school-link-neighbors)
-end
-
-to-report person-links
-    report (link-set
-    sibling-links
-    offspring-links
-    partner-links
-    household-links
-    friendship-links
-    criminal-links
-    professional-links
-    school-links)
-end
-
 to conclude-wedding [ pool my-partner ]
   ask my-household-links [ die ]
   set partner my-partner
@@ -320,6 +284,7 @@ to conclude-wedding [ pool my-partner ]
   ]
   create-household-link-with my-partner
   create-partner-link-with my-partner
+  create-person-link-with my-partner
 end
 
 to-report wedding-proximity-with [ p-partner ]
@@ -363,7 +328,9 @@ to go
      if any? my-job-links [
         let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
         let conn decide-conn-number employees 20
-        create-professional-links-with n-of conn other employees
+        let targets n-of conn other employees
+        create-professional-links-with targets
+        create-person-links-with targets
       ]
     ]
     let-migrants-in
@@ -451,9 +418,11 @@ to soc-add-psychological [ targets ]
       num-crimes-committed = 0 and not member? myself person-link-neighbors
     ]
     if any? support-set [
-      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
+      let p-targets rnd:weighted-one-of (limited-extraction support-set) [
         1 - (abs (age - [ age ] of myself ) / 120)
       ]
+      create-friendship-link-with p-targets
+      create-person-links-with p-targets
     ]
   ]
 end
@@ -466,9 +435,11 @@ to soc-add-more-friends [ targets ]
   ask targets [
     let support-set other persons with [ not member? myself person-link-neighbors ]
     if any? support-set [
-      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
+      let p-targets rnd:weighted-one-of (limited-extraction support-set) [
         criminal-tendency-subtractfromme-for-inverse-weighted-extraction - criminal-tendency
       ]
+      create-friendship-link-with p-targets
+      create-person-links-with p-targets
     ]
   ]
 end
@@ -507,7 +478,9 @@ to welfare-createjobs [ targets ]
           ask target [
             let employees [ current-employees ] of the-employer
             let conn decide-conn-number employees 20
-            create-professional-links-with n-of conn other employees
+            let p-targets n-of conn other employees
+            create-professional-links-with  p-targets
+            create-person-links-with p-targets
           ]
         ]
       ]
@@ -563,7 +536,7 @@ to return-kids
     if any? turtle-set father [
       if [ age ] of last a >= 18 [
         if (random-float 1) < 6 / (first a) [
-          ask last a [ create-offspring-link-from father ]
+          ask last a [ create-offspring-link-from father create-person-links-with father]
           set removed-fatherships remove a removed-fatherships
         ]
       ]
@@ -591,7 +564,7 @@ to make-friends
     let num-new-friends min list random-poisson 3 count reachable ; add slider
     ask rnd:weighted-n-of num-new-friends reachable
     [ social-proximity-with myself ]
-    [ create-friendship-link-with myself ]
+    [ create-friendship-link-with myself create-person-link-with myself]
   ]
 end
 
@@ -691,6 +664,7 @@ to setup-persons-and-friendship
   nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
     init-person age-gender-dist
   ]
+  ask friendship-links [ ask end1 [ create-person-link-with [ end2 ] of myself ] ]
 end
 
 to choose-intervention-setting
@@ -758,10 +732,10 @@ to setup-siblings
       ask trouble [ set candidates other candidates ]
     ]
     let targets (turtle-set self n-of min (list count candidates num-siblings) candidates)
-    ask targets [ create-sibling-links-with other targets ]
+    ask targets [ create-sibling-links-with other targets create-person-links-with other targets ]
     let other-targets (turtle-set targets [ sibling-link-neighbors ] of targets)
     ask turtle-set [ sibling-link-neighbors ] of targets [
-      create-sibling-links-with other other-targets
+      create-sibling-links-with other other-targets create-person-links-with other other-targets
     ]
   ]
 end
@@ -830,7 +804,9 @@ to let-migrants-in
       create-job-link-with myself
       let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
       let conn decide-conn-number employees 20
-      create-professional-links-with n-of conn other employees
+      let p-targets n-of conn other employees
+      create-professional-links-with p-targets
+      create-person-links-with p-targets
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
       init-person-empty
       set wealth-level [ job-level ] of myself
@@ -850,10 +826,14 @@ to make-baby
         set birth-tick ticks
         init-person-empty
         ask [ offspring-link-neighbors ] of myself [
-          create-sibling-links-with other [ offspring-link-neighbors ] of myself
+          let p-targets other [ offspring-link-neighbors ] of myself
+          create-sibling-links-with  p-targets
+          create-person-links-with p-targets
         ]
-        create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
-        create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
+        let p-targets (turtle-set myself [ household-link-neighbors ] of myself)
+        create-household-links-with p-targets create-person-links-with  p-targets
+        set p-targets (turtle-set myself [ partner-link-neighbors ] of myself)
+        create-person-links-with p-targets  create-person-links-with p-targets
         let dad one-of in-offspring-link-neighbors with [ male? ]
         set max-education-level ifelse-value (any? turtle-set dad) [
           [ max-education-level ] of dad
@@ -936,7 +916,11 @@ to init-professional-links
   ask employers [
     let employees current-employees
     let conn decide-conn-number employees 20
-    ask employees [ create-professional-links-with n-of conn other employees ]
+    ask employees [
+      let p-targets n-of conn other employees
+      create-professional-links-with p-targets
+      create-person-links-with p-targets
+    ]
   ]
 end
 
@@ -998,7 +982,10 @@ to init-students
   ask schools [
     let students school-attendance-link-neighbors
     let conn decide-conn-number students 15
-    ask students [ create-school-links-with n-of conn other students ]
+    ask students [ let p-targets  n-of conn other students
+      create-school-links-with p-targets
+      create-person-links-with p-targets
+    ]
   ]
 end
 
@@ -1420,16 +1407,16 @@ to generate-households
           let family-wealth-level [ wealth-level ] of item 0 hh-members
           if hh-type = "couple" [ ; if it's a couple, partner up the first two members and set the others as offspring
             ask item 0 hh-members [ set partner item 1 hh-members
-              create-partner-link-with item 1 hh-members
+              create-partner-link-with item 1 hh-members create-person-link-with item 1 hh-members
             ]
             ask item 1 hh-members [ set partner item 0 hh-members ]
             let couple (turtle-set item 0 hh-members item 1 hh-members)
             let offspring turtle-set but-first but-first hh-members
-            ask couple [ create-offspring-links-to offspring ]
-            ask offspring [ create-sibling-links-with other offspring ]
+            ask couple [ create-offspring-links-to offspring create-person-links-with offspring ]
+            ask offspring [ create-sibling-links-with other offspring create-person-links-with other offspring ]
           ]
           set hh-members turtle-set hh-members
-          ask hh-members [ create-household-links-with other hh-members set wealth-level family-wealth-level ]
+          ask hh-members [ create-household-links-with other hh-members create-person-links-with other hh-members set wealth-level family-wealth-level ]
         ] [
           ; in case of failure, we need to put the selected members back in the population
           foreach hh-members [ m -> put-in-population-pool m population ]
@@ -1447,7 +1434,7 @@ to generate-households
     let hh-members turtle-set sublist population 0 hh-size       ; grab the first persons in the list,
     set population sublist population hh-size length population  ; remove them from the population
     let family-wealth-level [ wealth-level ] of max-one-of hh-members [ age ]
-    ask hh-members [ create-household-links-with other hh-members
+    ask hh-members [ create-household-links-with other hh-members create-person-links-with other hh-members
       set wealth-level family-wealth-level ]                     ; and link them up.
   ]
 end
@@ -2121,7 +2108,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-11.0
+10.0
 1
 1
 NIL

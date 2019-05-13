@@ -12,6 +12,18 @@ show [ age ] of persons with [ not migrant? and birth-tick >= 0 ]
 ## jobs for newborns
 turtle-set [ job-neighbors ] of persons with [ not migrant? and birth-tick > 0 ]
 
+# checking the new person-links
+## false if there's a link of those breeds without the correspondent person-link
+all? (links with [ member? (word breed) [ "sibling-links" "offspring-links" "partner-links" "household-links" "friendship-links" "professional-links" "school-links" ] ]) [ any? person-links with [ both-ends = [ both-ends ] of myself ] ]
+## culprit of the above
+ report [who] of  [both-ends] of one-of (links with [
+    (member? (word breed) [ "sibling-links" "offspring-links" "partner-links" "household-links" "friendship-links" "professional-links" "school-links" ])
+  ]) with [ not any? person-links with [ both-ends = [ both-ends ] of myself ] ]
+## false if there's a person-link without correspondent link (different strategy; above better)
+all? all-persons [ not any? person-link-neighbors with [ not sibling-link-neighbor? myself  and not offspring-link-neighbor?  myself and not partner-link-neighbor? myself and not household-link-neighbor? myself and not friendship-link-neighbor? myself and not professional-link-neighbor? myself and not school-link-neighbor? myself ] ]
+## culprit
+[who] of all-persons with [ any? person-link-neighbors and any? person-link-neighbors with [ not sibling-link-neighbor? myself  and not offspring-link-neighbor?  myself and not partner-link-neighbor? myself and not household-link-neighbor? myself and not friendship-link-neighbor? myself and not professional-link-neighbor? myself and not school-link-neighbor? myself ] ]
+
 # networks
 (do not use on large number of links. With 300K, it crashes Netlogo. Go figure why.)
 map [ a -> list a count links with  [ breed = a ] ] remove-duplicates [ breed ]of links
