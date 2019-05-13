@@ -277,14 +277,28 @@ end
 
 to conclude-wedding [ pool my-partner ]
   ask my-household-links [ die ]
+  remove-redundant-person-links
   set partner my-partner
   ask my-partner [
     ask my-household-links [ die ]
+    remove-redundant-person-links
     set partner myself
   ]
   create-household-link-with my-partner
   create-partner-link-with my-partner
   create-person-link-with my-partner
+end
+
+; person context
+to remove-redundant-person-links
+  let links-to-remove my-person-links with [
+    not any? links with [
+      both-ends = [ both-ends ] of myself and
+      member? (word breed) [ "sibling-links" "offspring-links" "partner-links" "household-links" "friendship-links" "professional-links" "school-links"
+      ]
+    ]
+  ]
+  ask links-to-remove [ die ]
 end
 
 to-report wedding-proximity-with [ p-partner ]
@@ -1143,6 +1157,7 @@ to retire-persons
     ask my-job-links [ die ]
     set my-job nobody
     ask my-professional-links [ die ]
+    remove-redundant-person-links
     ; Figure out how to preserve socio-economic status (see issue #22)
   ]
 end
@@ -1201,14 +1216,7 @@ to get-caught [ co-offenders ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
     ; we keep the friendship links and the family links for the moment
-    let links-to-remove my-person-links with [
-      not any? links with [
-        both-ends = [ both-ends ] of myself and
-        member? (word breed) [ "sibling-links" "offspring-links" "partner-links" "household-links" "friendship-links"
-        ]
-      ]
-    ]
-    ask links-to-remove [ die ]
+    remove-redundant-person-links
   ]
 end
 

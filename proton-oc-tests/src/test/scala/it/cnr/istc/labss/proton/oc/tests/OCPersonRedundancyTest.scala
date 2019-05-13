@@ -8,7 +8,7 @@ class OCPersonRedundancyTest extends OCModelSuite {
 
   test("equivalence between person links and connected links") { ws =>
     ws.cmd("""
-      set num-persons 100
+      set num-persons 1000
       setup
       """)
     for (fid <- 1 to 20) {
@@ -17,7 +17,7 @@ class OCPersonRedundancyTest extends OCModelSuite {
         all? (links with [ member? (word breed) [ "sibling-links" "offspring-links" "partner-links" "household-links" "friendship-links" "professional-links" "school-links" ] ]) [ any? person-links with [ both-ends = [ both-ends ] of myself ] ]
       """) shouldBe true
       ws.rpt("""
-        all? all-persons [ not any? person-link-neighbors with [ not sibling-link-neighbor? myself  and not offspring-link-neighbor?  myself and not partner-link-neighbor? myself and not household-link-neighbor? myself and not friendship-link-neighbor? myself and not professional-link-neighbor? myself and not school-link-neighbor? myself ] ]
+        all? person-links [ any? links with [ member? (word breed) [ "sibling-links" "offspring-links" "partner-links" "household-links" "friendship-links" "professional-links" "school-links" ] and both-ends = [ both-ends ] of myself ] ]
       """) shouldBe true
       println(fid)
     } 
