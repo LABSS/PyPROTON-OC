@@ -67,3 +67,14 @@ all-persons with [ any? school-attendance-link-neighbors and [ education-level ]
     ws.show("[ (list who age education-level possible-school-level [ education-level ] of one-of school-attendance-link-neighbors [ who ] of one-of school-attendance-link-neighbors [ breed = schools ] of one-of school-attendance-link-neighbors) ] of persons with [ any? school-attendance-link-neighbors and education-level != (possible-school-level - 1) ]")
 
 
+# how to plot times
+
+filter them with 
+
+grep -A 1 Time netlogo.log |grep -o -E '[0-9.]+'
+
+then
+
+library(clipr)
+x <- read_clip()
+plot(x)
