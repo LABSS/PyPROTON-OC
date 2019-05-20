@@ -135,6 +135,7 @@ globals [
   criminal-tendency-addme-for-weighted-extraction
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
+  total-degree-oc-members
 ]
 
 to profile-setup
@@ -345,7 +346,6 @@ to go
     if family-intervention != "none"   [ family-intervene        ]
     if social-support    != "none"     [ socialization-intervene ]
     if welfare-support   != "none"     [ welfare-intervene       ]
-    if OC-bosses-repression? != "none" [ if random-float 1 < OC-bosses-probability [ OC-member-repress ] ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
@@ -698,8 +698,7 @@ to choose-intervention-setting
     set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
-    set OC-bosses-repression? false
-    set OC-bosses-probability 0.05
+    set OC-members-repression? false
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -709,8 +708,7 @@ to choose-intervention-setting
     set family-intervention "remove-if-caught-and-OC-member"
     set social-support "none"
     set welfare-support "none"
-    set OC-bosses-repression? false
-    set OC-bosses-probability 0.05
+    set OC-members-repression? false
     set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
@@ -720,8 +718,7 @@ to choose-intervention-setting
     set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
-    set OC-bosses-repression? true
-    set OC-bosses-probability 0.2
+    set OC-members-repression? true
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -1145,9 +1142,13 @@ to commit-crimes
 end
 
 to-report arrest-probability-with-intervention [ group ]
-  if-else (intervention-on? and OC-members-scrutinize? and any? group with [ oc-member? ])
-  [ report probability-of-getting-caught * oc-arrest-multiplier * law-enforcement-rate ]
+  if-else (intervention-on? and OC-members-repression? and any? group with [ oc-member? ])
+  [ report probability-of-getting-caught * law-enforcement-rate * OC-repression-weight group ]
   [ report probability-of-getting-caught * law-enforcement-rate ]
+end
+
+to-report OC-repression-weight [ a-group ]
+  report [ count person-link-neighbors with [ OC-member? ] + 1 ] of one-of a-group with [ oc-member? ] / total-degree-oc-members
 end
 
 to retire-persons
@@ -1246,6 +1247,11 @@ to calculate-criminal-tendency
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
   calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
+  calc-total-degree-oc-members
+end
+
+to calc-total-degree-oc-members
+  set total-degree-oc-members sum [ count person-link-neighbors with [ oc-member? ] + 1 ] of persons with [ oc-member? ]
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -1654,12 +1660,6 @@ to show-criminal-network
   ask meta-criminal-links [ show-link ]
   nw:with-context criminals meta-criminal-links [
     layout-circle sort criminals 14
-  ]
-end
-
-to OC-member-repress
-  nw:with-context persons with [ oc-member? ] person-links [
-    ask rnd:weighted-one-of persons with [ oc-member? ] [ count nw:turtles-in-radius 1 ] [ get-caught self ]
   ]
 end
 @#$#@#$#@
@@ -2164,28 +2164,6 @@ OC-members-repression?
 1
 -1000
 
-INPUTBOX
-1095
-645
-1340
-705
-OC-arrest-multiplier
-1.0
-1
-0
-Number
-
-INPUTBOX
-1095
-740
-1340
-800
-OC-members-per-tick
-1.0
-1
-0
-Number
-
 SLIDER
 15
 435
@@ -2407,32 +2385,6 @@ count all-persons
 17
 1
 11
-
-SWITCH
-1095
-805
-1340
-838
-OC-bosses-repression?
-OC-bosses-repression?
-1
-1
--1000
-
-SLIDER
-1095
-845
-1340
-878
-OC-bosses-probability
-OC-bosses-probability
-0.05
-1
-0.05
-0.05
-1
-NIL
-HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
