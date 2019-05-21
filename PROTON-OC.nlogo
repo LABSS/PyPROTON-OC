@@ -135,7 +135,7 @@ globals [
   criminal-tendency-addme-for-weighted-extraction
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
-  total-degree-oc-members
+  degree-correction-for-bosses
 ]
 
 to profile-setup
@@ -698,7 +698,7 @@ to choose-intervention-setting
     set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
-    set OC-members-repression? false
+    set OC-boss-repression? false
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -708,7 +708,7 @@ to choose-intervention-setting
     set family-intervention "remove-if-caught-and-OC-member"
     set social-support "none"
     set welfare-support "none"
-    set OC-members-repression? false
+    set OC-boss-repression? false
     set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
@@ -718,7 +718,7 @@ to choose-intervention-setting
     set family-intervention "none"
     set social-support "none"
     set welfare-support "none"
-    set OC-members-repression? true
+    set OC-boss-repression? true
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -1142,13 +1142,16 @@ to commit-crimes
 end
 
 to-report arrest-probability-with-intervention [ group ]
-  if-else (intervention-on? and OC-members-repression? and any? group with [ oc-member? ])
-  [ report probability-of-getting-caught * law-enforcement-rate * OC-repression-weight group ]
+  if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ])
+  [ report law-enforcement-rate * OC-repression-prob group ]
   [ report probability-of-getting-caught * law-enforcement-rate ]
 end
 
-to-report OC-repression-weight [ a-group ]
-  report [ count person-link-neighbors with [ OC-member? ] + 1 ] of one-of a-group with [ oc-member? ] / total-degree-oc-members
+to-report OC-repression-prob [ a-group ]
+  let representative one-of a-group with [ OC-member? ]
+  let n [ count person-link-neighbors with [ OC-member? ] ] of representative
+  ;show list n (n / (n + 1) * degree-correction-for-bosses)
+  report (n / (n + 1)) ^ 2 * degree-correction-for-bosses
 end
 
 to retire-persons
@@ -1247,11 +1250,41 @@ to calculate-criminal-tendency
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
   calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
-  calc-total-degree-oc-members
+  calc-degree-correction-for-bosses
 end
 
-to calc-total-degree-oc-members
-  set total-degree-oc-members sum [ count person-link-neighbors with [ oc-member? ] + 1 ] of persons with [ oc-member? ]
+to calc-degree-correction-for-bosses
+  let gang persons with [ oc-member? ]
+  if any? gang [
+    let to-sum []
+    ask gang [
+      let n count person-link-neighbors with [ oc-member? ]
+      set to-sum lput (n / (n + 1)) to-sum
+    ]
+    let p-mean mean [ probability-of-getting-caught ] of gang
+    set degree-correction-for-bosses p-mean / sum to-sum
+  ]
+end
+
+to show-calc-degree-correction-for-bosses
+  let gang persons with [ oc-member? ]
+
+  if any? gang [
+    let to-sum []
+    ask gang [
+      let n count person-link-neighbors with [ oc-member? ]
+      set to-sum lput ((n / (n + 1)) ^ 2) to-sum
+    ]
+    show word "sum: "  to-sum
+    let p-mean mean [ probability-of-getting-caught ] of gang
+    set degree-correction-for-bosses p-mean / mean to-sum
+    show  [(list degree-correction-for-bosses ((OC-repression-prob turtle-set self) * degree-correction-for-bosses)
+      count person-link-neighbors with [ oc-member? ] ) ] of gang
+    show max [ (OC-repression-prob turtle-set self) ] of gang
+    show min [ (OC-repression-prob turtle-set self) ] of gang
+    show sum [ probability-of-getting-caught ] of gang
+    show sum [ (OC-repression-prob turtle-set self) ] of gang
+  ]
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -1906,7 +1939,7 @@ probability-of-getting-caught
 probability-of-getting-caught
 0
 1
-0.05
+0.3
 0.05
 1
 NIL
@@ -1981,7 +2014,7 @@ SWITCH
 48
 view-crim?
 view-crim?
-1
+0
 1
 -1000
 
@@ -2158,9 +2191,9 @@ SWITCH
 710
 1340
 743
-OC-members-repression?
-OC-members-repression?
-1
+OC-boss-repression?
+OC-boss-repression?
+0
 1
 -1000
 
@@ -2173,7 +2206,7 @@ intervention-start
 intervention-start
 0
 100
-13.0
+6.0
 1
 1
 NIL
