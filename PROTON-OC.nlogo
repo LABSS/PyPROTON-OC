@@ -307,7 +307,7 @@ to-report person-links
     partner-links
     household-links
     friendship-links
-    criminal-links
+    ;criminal-links
     professional-links
     school-links)
 end
@@ -1143,14 +1143,13 @@ end
 
 to-report arrest-probability-with-intervention [ group ]
   if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ])
-  [ report law-enforcement-rate * OC-repression-prob group ]
+  [ report OC-repression-prob group * law-enforcement-rate ]
   [ report probability-of-getting-caught * law-enforcement-rate ]
 end
 
 to-report OC-repression-prob [ a-group ]
   let representative one-of a-group with [ OC-member? ]
   let n [ count person-link-neighbors with [ OC-member? ] ] of representative
-  ;show list n (n / (n + 1) * degree-correction-for-bosses)
   report (n / (n + 1)) ^ 2 * degree-correction-for-bosses
 end
 
@@ -1259,31 +1258,10 @@ to calc-degree-correction-for-bosses
     let to-sum []
     ask gang [
       let n count person-link-neighbors with [ oc-member? ]
-      set to-sum lput (n / (n + 1)) to-sum
+      set to-sum lput (n / (n + 1) ^ 2) to-sum
     ]
-    let p-mean mean [ probability-of-getting-caught ] of gang
-    set degree-correction-for-bosses p-mean / sum to-sum
-  ]
-end
-
-to show-calc-degree-correction-for-bosses
-  let gang persons with [ oc-member? ]
-
-  if any? gang [
-    let to-sum []
-    ask gang [
-      let n count person-link-neighbors with [ oc-member? ]
-      set to-sum lput ((n / (n + 1)) ^ 2) to-sum
-    ]
-    show word "sum: "  to-sum
     let p-mean mean [ probability-of-getting-caught ] of gang
     set degree-correction-for-bosses p-mean / mean to-sum
-    show  [(list degree-correction-for-bosses ((OC-repression-prob turtle-set self) * degree-correction-for-bosses)
-      count person-link-neighbors with [ oc-member? ] ) ] of gang
-    show max [ (OC-repression-prob turtle-set self) ] of gang
-    show min [ (OC-repression-prob turtle-set self) ] of gang
-    show sum [ probability-of-getting-caught ] of gang
-    show sum [ (OC-repression-prob turtle-set self) ] of gang
   ]
 end
 
@@ -1939,7 +1917,7 @@ probability-of-getting-caught
 probability-of-getting-caught
 0
 1
-0.3
+0.05
 0.05
 1
 NIL
@@ -2014,7 +1992,7 @@ SWITCH
 48
 view-crim?
 view-crim?
-0
+1
 1
 -1000
 
@@ -2154,7 +2132,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-11.0
+10.0
 1
 1
 NIL
@@ -2193,7 +2171,7 @@ SWITCH
 743
 OC-boss-repression?
 OC-boss-repression?
-0
+1
 1
 -1000
 
@@ -2206,7 +2184,7 @@ intervention-start
 intervention-start
 0
 100
-6.0
+13.0
 1
 1
 NIL

@@ -37,8 +37,6 @@ class OCRetirementTest extends OCModelSuite {
       ws.rpt("not any? persons with [ age > retirement-age and any? my-professional-links ]") shouldBe true
       ws.rpt("not any? persons with [ age < retirement-age and retired? ]") shouldBe true
       ws.rpt("not any? persons with [ age > retirement-age and not retired? ]") shouldBe true
-      // general coherency checks
-      ws.rpt("nw:with-context persons person-links [ count nw:turtles-in-radius 1 = person-link-neighbors ]") shouldBe true
     }
   }
 }
