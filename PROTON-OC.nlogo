@@ -1367,9 +1367,7 @@ end
 to update-meta-links [ agents ]
   nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
     ask agents [
-      ask other (turtle-set nw:turtles-in-radius oc-embeddedness-radius nw:turtles-in-reverse-radius oc-embeddedness-radius) [
-        let due myself
-        show [breed] of links with [ both-ends = (turtle-set myself due)]
+      ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
         create-meta-link-with myself [ ; if that link already exists, it won't be re-created
           let w 0
           if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
@@ -1669,7 +1667,6 @@ end
 to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1932,10 +1929,10 @@ count prisoners
 11
 
 PLOT
-10
-645
-385
-800
+15
+690
+390
+845
 Age distribution
 age
 count
@@ -2379,6 +2376,17 @@ MONITOR
 130
 people
 count all-persons
+17
+1
+11
+
+MONITOR
+270
+635
+385
+680
+NIL
+number-weddings
 17
 1
 11
