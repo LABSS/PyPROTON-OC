@@ -8,7 +8,7 @@
             show timer
         </final>
         <!-- assuming 40 years  -->
-        <timeLimit steps="4"/>
+        <timeLimit steps="480"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
@@ -120,9 +120,6 @@
         <enumeratedValueSet variable="output?">
           <value value="false"/>
         </enumeratedValueSet>
-        <enumeratedValueSet variable="OC-members-per-tick">
-          <value value="1"/>
-        </enumeratedValueSet>
         <enumeratedValueSet variable="intervention-start">
           <value value="13"/>
         </enumeratedValueSet>
@@ -180,11 +177,8 @@
         <enumeratedValueSet variable="retirement-age">
           <value value="65"/>
         </enumeratedValueSet> 
-        <enumeratedValueSet variable="OC-bosses-repression?">
+        <enumeratedValueSet variable="OC-boss-repression?">
           <value value="false"/>
-        </enumeratedValueSet> 
-        <enumeratedValueSet variable="OC-bosses-probability">
-          <value value="0.05"/>
         </enumeratedValueSet> 
     </experiment>
 </experiments>
