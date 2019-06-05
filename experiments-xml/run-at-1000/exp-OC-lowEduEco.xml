@@ -162,9 +162,6 @@
         <enumeratedValueSet variable="OC-members-scrutinize?">
           <value value="false"/>
         </enumeratedValueSet>
-        <enumeratedValueSet variable="punishment-length">
-          <value value="1"/>
-        </enumeratedValueSet>
         <enumeratedValueSet variable="family-intervention">
           <value value="&quot;none&quot;"/>
         </enumeratedValueSet>
