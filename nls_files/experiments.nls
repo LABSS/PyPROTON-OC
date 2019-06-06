@@ -20,56 +20,40 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  let criminal-tendency-counts table:make 
-  foreach (range -1.0 1.1 0.1) [ i -> 
-    table:put criminal-tendency-counts precision i 1 0 
+  report make-histo [ -> criminal-tendency ] 7
+end
+
+to-report make-histo [ citizen-reporter bins ]
+  let values [ runresult citizen-reporter ] of all-persons
+  let min-v min values 
+  let max-v max values
+  let counts n-values bins [ 0 ]
+  if min-v = max-v [
+    report replace-item 0 counts length values
   ]
-  table:remove criminal-tendency-counts 0
-  ask all-persons [
-    if criminal-tendency < -0.9 [ table:put criminal-tendency-counts -1.0 ((table:get criminal-tendency-counts -1.0) + 1) ]
-    if criminal-tendency >= -0.9 and criminal-tendency < -0.8 [ table:put criminal-tendency-counts -0.9 ((table:get criminal-tendency-counts -0.9) + 1) ]
-    if criminal-tendency >= -0.8 and criminal-tendency < -0.7 [ table:put criminal-tendency-counts -0.8 ((table:get criminal-tendency-counts -0.8) + 1) ]
-    if criminal-tendency >= -0.7 and criminal-tendency < -0.6 [ table:put criminal-tendency-counts -0.7 ((table:get criminal-tendency-counts -0.7) + 1) ]
-    if criminal-tendency >= -0.6 and criminal-tendency < -0.5 [ table:put criminal-tendency-counts -0.6 ((table:get criminal-tendency-counts -0.6) + 1) ]
-    if criminal-tendency >= -0.5 and criminal-tendency < -0.4 [ table:put criminal-tendency-counts -0.5 ((table:get criminal-tendency-counts -0.5) + 1) ]
-    if criminal-tendency >= -0.4 and criminal-tendency < -0.3 [ table:put criminal-tendency-counts -0.4 ((table:get criminal-tendency-counts -0.4) + 1) ]
-    if criminal-tendency >= -0.3 and criminal-tendency < -0.2 [ table:put criminal-tendency-counts -0.3 ((table:get criminal-tendency-counts -0.3) + 1) ]
-    if criminal-tendency >= -0.2 and criminal-tendency < -0.1 [ table:put criminal-tendency-counts -0.2 ((table:get criminal-tendency-counts -0.2) + 1) ]
-    if criminal-tendency >= -0.1 and criminal-tendency < 0.0 [ table:put criminal-tendency-counts -0.1 ((table:get criminal-tendency-counts -0.1) + 1) ]
-    if criminal-tendency >=  0.0 and criminal-tendency < 0.1 [ table:put criminal-tendency-counts 0.1 ((table:get criminal-tendency-counts 0.1) + 1) ]
-    if criminal-tendency >=  0.1 and criminal-tendency < 0.2 [ table:put criminal-tendency-counts 0.2 ((table:get criminal-tendency-counts 0.2) + 1) ]
-    if criminal-tendency >=  0.2 and criminal-tendency < 0.3 [ table:put criminal-tendency-counts 0.3 ((table:get criminal-tendency-counts 0.3) + 1) ]
-    if criminal-tendency >=  0.3 and criminal-tendency < 0.4 [ table:put criminal-tendency-counts 0.4 ((table:get criminal-tendency-counts 0.4) + 1) ]
-    if criminal-tendency >=  0.4 and criminal-tendency < 0.5 [ table:put criminal-tendency-counts 0.5 ((table:get criminal-tendency-counts 0.5) + 1) ]
-    if criminal-tendency >=  0.5 and criminal-tendency < 0.6 [ table:put criminal-tendency-counts 0.6 ((table:get criminal-tendency-counts 0.6) + 1) ]
-    if criminal-tendency >=  0.6 and criminal-tendency < 0.7 [ table:put criminal-tendency-counts 0.7 ((table:get criminal-tendency-counts 0.7) + 1) ]
-    if criminal-tendency >=  0.7 and criminal-tendency < 0.8 [ table:put criminal-tendency-counts 0.8 ((table:get criminal-tendency-counts 0.8) + 1) ]
-    if criminal-tendency >=  0.8 and criminal-tendency < 0.9 [ table:put criminal-tendency-counts 0.9 ((table:get criminal-tendency-counts 0.9) + 1) ]
-    if criminal-tendency >=  0.9 [ table:put criminal-tendency-counts 1.0 ((table:get criminal-tendency-counts 1.0) + 1) ]
+  let thresholds (sentence (range min-v max-v ((max-v - min-v) / bins)) max-v) 
+  let i 0 
+  foreach values [ v ->
+    set i 0 
+    while [ v > item (i + 1) thresholds ] [ set i i + 1 ]
+    set counts replace-item i counts (item i counts + 1)
   ]
-  report table:to-list criminal-tendency-counts
+  report (map [ [ a b ] -> (list a  b) ] but-last thresholds counts)
+end
+
+to-report o5a
+  ; average of C (which is the individual propensity towards crime commission)
+  report mean [ criminal-tendency ] of all-persons
 end
 
 to-report o6
   ; Distribution of R (which is the individual embededdness into OC-prone local networks)
-  let embeddedness-counts table:make 
-  foreach (range 0 1.1 0.1) [ i -> 
-    table:put embeddedness-counts precision i 1 0 
-  ]
-  ask all-persons [
-    let oc oc-embeddedness
-    if oc >= 0.0 and oc < 0.1 [ table:put embeddedness-counts 0.1 ((table:get embeddedness-counts 0.1) + 1) ]
-    if oc >= 0.1 and oc < 0.2 [ table:put embeddedness-counts 0.2 ((table:get embeddedness-counts 0.2) + 1) ]
-    if oc >= 0.2 and oc < 0.3 [ table:put embeddedness-counts 0.3 ((table:get embeddedness-counts 0.3) + 1) ]
-    if oc >= 0.3 and oc < 0.4 [ table:put embeddedness-counts 0.4 ((table:get embeddedness-counts 0.4) + 1) ]
-    if oc >= 0.4 and oc < 0.5 [ table:put embeddedness-counts 0.5 ((table:get embeddedness-counts 0.5) + 1) ]
-    if oc >= 0.5 and oc < 0.6 [ table:put embeddedness-counts 0.6 ((table:get embeddedness-counts 0.6) + 1) ]
-    if oc >= 0.6 and oc < 0.7 [ table:put embeddedness-counts 0.7 ((table:get embeddedness-counts 0.7) + 1) ]
-    if oc >= 0.7 and oc < 0.8 [ table:put embeddedness-counts 0.8 ((table:get embeddedness-counts 0.8) + 1) ]
-    if oc >= 0.8 and oc < 0.9 [ table:put embeddedness-counts 0.9 ((table:get embeddedness-counts 0.9) + 1) ]
-    if oc >= 0.9 [ table:put embeddedness-counts 1.0 ((table:get embeddedness-counts 1.0) + 1) ]
-  ]
-  report table:to-list embeddedness-counts
+  report make-histo [ -> oc-embeddedness ] 7
+end
+
+to-report o6a
+  ; average of R (which is the individual embededdness into OC-prone local networks)
+  report mean [ oc-embeddedness ] of all-persons
 end
 
 to-report o7a
