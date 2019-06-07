@@ -18,10 +18,8 @@ undirected-link-breed [professional-links professional-link] ; person <--> perso
 undirected-link-breed [school-links       school-link]       ; person <--> person
 undirected-link-breed [meta-links         meta-link]         ; person <--> person
 
-undirected-link-breed [meta-criminal-links meta-criminal-link]         ; person <--> person
-
-undirected-link-breed [positions-links         position-link]          ; job <--> employer
-undirected-link-breed [job-links               job-link]               ; person <--> job
+;undirected-link-breed [positions-links         position-link]          ; job <--> employer
+;undirected-link-breed [job-links               job-link]               ; person <--> job
 undirected-link-breed [school-attendance-links school-attendance-link] ; person <--> school
 
 persons-own [
@@ -78,6 +76,12 @@ prisoners-own [
 
 jobs-own [
   job-level
+  my-employer
+  my-worker
+]
+
+employers-own [
+  my-jobs
 ]
 
 schools-own [
@@ -201,7 +205,6 @@ to setup
   set good-guy-threshold        0.6
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
-  if view-crim? [ show-criminal-network ]
   set removed-fatherships []
   update-plots
 end
@@ -357,12 +360,12 @@ to go
     calculate-criminal-tendency
     graduate
     ask persons with [
-      not any? my-school-attendance-links and age >= 18 and age < retirement-age and not any? my-job-links and
+      not any? my-school-attendance-links and age >= 18 and age < retirement-age and my-job = nobody and
       not retired? and job-level > 1
     ] [
      find-job
-     if any? my-job-links [
-        let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
+     if my-job != nobody [
+        let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
         let conn decide-conn-number employees 20
         create-professional-links-with n-of conn other employees
       ]
@@ -381,7 +384,6 @@ to go
     if sentence-countdown = 0 [ set breed persons set shape "person"]
   ]
   ask links [ hide-link ]
-  if view-crim? [ show-criminal-network ]
   make-people-die
   foreach network-saving-list [ listname ->
     output (word listname ": " count links with [ breed = runresult listname ])
@@ -477,13 +479,13 @@ to welfare-intervene
   let the-employer nobody
   let targets no-turtles
   ifelse welfare-support = "job-mother" [
-    set targets all-persons with [not male? and any? partner-link-neighbors with [ oc-member? ] and not any? my-job-links]
+    set targets all-persons with [not male? and any? partner-link-neighbors with [ oc-member? ] and my-job = nobody ]
   ][
     if welfare-support = "job-child" [
       set targets all-persons with [ age > 16 and age < 24
         and not any? my-school-links
         and any? in-offspring-link-neighbors with [ male? and oc-member? ]
-        and not any? my-job-links ]
+        and my-job = nobody ]
     ]
   ]
   if any? targets [
@@ -500,11 +502,13 @@ to welfare-createjobs [ targets ]
       set the-employer one-of employers
       ask the-employer [
         hatch-jobs 1 [
-          create-position-link-with myself
+          set my-employer myself
+          ask my-employer [ set my-jobs (turtle-set my-jobs myself) ]
           set label self
           set job-level [ job-level ] of target
-          create-job-link-with target
+          set my-worker target
           ask target [
+            set my-job myself
             let employees [ current-employees ] of the-employer
             let conn decide-conn-number employees 20
             create-professional-links-with n-of conn other employees
@@ -544,11 +548,11 @@ to family-intervene
       ; at this point bad dad is out and we help the remaining with the whole package
       let family (turtle-set self family-link-neighbors)
       welfare-createjobs family with [
-        not any? my-job-links and age >= 16
+        my-job = nobody and age >= 16
         and not any? my-school-links
       ]
       soc-add-educational family with [
-        not any? my-job-links and age < 18
+        my-job = nobody and age < 18
       ]
       soc-add-psychological family
       soc-add-more-friends family
@@ -816,16 +820,16 @@ end
 to let-migrants-in
   ; calculate the difference between deaths and birth
   let to-replace max list 0 (num-persons - count all-persons)
-  let missing-jobs count jobs with [ not any? my-job-links ]
-  let num-to-add min (list to-replace missing-jobs)
+  let free-jobs jobs with [ my-worker = nobody ]
+  let num-to-add min (list to-replace count free-jobs)
   set number-migrants number-migrants + num-to-add
-  ask n-of num-to-add jobs with [ not any? my-job-links ] [
+  ask n-of num-to-add free-jobs [
     ; we do not care about education level and wealth of migrants, as those variables
     ; exist only in order to generate the job position.
     hatch-persons 1 [
       set my-job myself
-      create-job-link-with myself
-      let employees turtle-set [ current-employees ] of [ position-link-neighbors ] of my-job
+      ask my-job [ set my-worker myself ]
+      let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
       let conn decide-conn-number employees 20
       create-professional-links-with n-of conn other employees
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
@@ -885,9 +889,12 @@ to setup-employers-jobs
   while [ count jobs < jobs-target ] [
     let n manipulate-employment-rate (one-of job-counts)
     create-employers 1 [
+      set my-jobs nobody
       hatch-jobs n [
-        create-position-link-with myself
+        set my-employer myself
+        ask my-employer [ set my-jobs (turtle-set my-jobs myself) ]
         set job-level random-level-by-size n
+        set my-worker nobody
         set label self
       ]
       set label self
@@ -901,15 +908,15 @@ end
 
 to find-job ; person procedure
   output "Looking for jobs"
-  let the-job one-of jobs with [ not any? my-job-links and [ job-level ] of myself = job-level ]
+  let the-job one-of jobs with [ my-worker = nobody and [ job-level ] of myself = job-level ]
   if the-job != nobody [
     set my-job the-job
-    create-job-link-with the-job
+    ask the-job [ set my-worker myself ]
   ]
 end
 
 to-report current-employees ; employer reporter
-  report turtle-set [ job-link-neighbors ] of position-link-neighbors
+  report turtle-set [ my-worker ] of my-jobs
 end
 
 to-report pick-new-employee-from [ the-candidates ] ; job reporter
@@ -1156,7 +1163,7 @@ end
 to retire-persons
   ask persons with [ age >= retirement-age and not retired? ] [
     set retired? true
-    ask my-job-links [ die ]
+    if my-job != nobody [ ask my-job [ set my-worker nobody ] ]
     set my-job nobody
     ask my-professional-links [ die ]
     ; Figure out how to preserve socio-economic status (see issue #22)
@@ -1209,14 +1216,17 @@ to get-caught [ co-offenders ]
     set breed prisoners
     set shape "face sad"
     ifelse male?
-    [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list [ [ p ] -> last p ] ]
+    [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list   [ [ p ] -> last p ] ]
     [ set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [ [ p ] -> last p ] ]
     set sentence-countdown sentence-countdown * punishment-length
-    ask my-job-links [ die ]
+    if my-job != nobody [
+      ask my-job [ set my-worker nobody ]
+      set my-job nobody
+    ]
     ask my-school-attendance-links [ die ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
-    ; we keep the friendship links and the family links for the moment
+    ; we keep the friendship links and the family links
   ]
 end
 
@@ -1321,16 +1331,18 @@ end
 to-report oc-embeddedness ; person reporter
   if cached-oc-embeddedness = nobody [
     ; only calculate oc-embeddedness if we don't have a cached value
-    set cached-oc-embeddedness 0 ; start with an hypothesis of 0
-    let agents nw:turtles-in-radius oc-embeddedness-radius
-    let oc-members agents with [ oc-member? ]
-    if any? other oc-members [
-      update-meta-links agents
-      nw:with-context agents meta-links [
-        set cached-oc-embeddedness (find-oc-weight-distance oc-members / find-oc-weight-distance agents)
-;          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
-;          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
-;        )
+    nw:with-context all-persons person-links [
+      set cached-oc-embeddedness 0 ; start with an hypothesis of 0
+      let agents (turtle-set nw:turtles-in-radius oc-embeddedness-radius nw:turtles-in-reverse-radius oc-embeddedness-radius)
+      let oc-members agents with [ oc-member? ]
+      if any? other oc-members [
+        update-meta-links agents
+        nw:with-context agents meta-links [
+          set cached-oc-embeddedness (find-oc-weight-distance oc-members / find-oc-weight-distance agents)
+          ;          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
+          ;          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
+          ;        )
+        ]
       ]
     ]
   ]
@@ -1348,9 +1360,9 @@ to-report number-of-accomplices
 end
 
 to update-meta-links [ agents ]
-  nw:with-context agents links [ ; limit the context to the agents in the radius of interest
+  nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
     ask agents [
-      ask other nw:turtles-in-radius 1 [
+      ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
         create-meta-link-with myself [ ; if that link already exists, it won't be re-created
           let w 0
           if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
@@ -1362,6 +1374,9 @@ to update-meta-links [ agents ]
           if [ offspring-link-with other-end ] of myself    != nobody [ set w w + 1 ]
           if [ criminal-link-with other-end ] of myself     != nobody [
             set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
+          ]
+          if w  = 0 [
+            show [who] of myself show [breed] of links with [both-ends = [both-ends] of  myself]
           ]
           set dist 1 / w; the distance cost of the link is the inverse of its weight
         ]
@@ -1644,34 +1659,8 @@ to-report all-persons
   report (turtle-set persons prisoners)
 end
 
-to-report unemployed-while-working
-  report count persons with [ job-level != 1 and not any? my-job-links ]
-end
-
 to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
-end
-
-to show-criminal-network
-  ask meta-criminal-links [ die ]
-  let criminals all-persons with [ oc-member? ]
-  ask criminals [
-    set size crime-activity
-    ask other criminals [
-      if criminal-link-neighbor? myself [
-        let weight 0
-        if household-link-neighbor? myself [ set weight weight + 0.1 ]
-        if friendship-link-neighbor? myself [ set weight weight + 0.1 ]
-        if professional-link-neighbor? myself [ set weight weight + 0.1 ]
-        if weight > 0 [ create-meta-criminal-link-with myself [ set thickness weight ] ]
-      ]
-    ]
-  ]
-  ask criminals [ show-turtle ]
-  ask meta-criminal-links [ show-link ]
-  nw:with-context criminals meta-criminal-links [
-    layout-circle sort criminals 14
-  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -1727,7 +1716,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+650.0
 50
 1
 NIL
@@ -1887,7 +1876,7 @@ oc-embeddedness-radius
 oc-embeddedness-radius
 0
 5
-2.0
+1.0
 1
 1
 NIL
@@ -1984,17 +1973,6 @@ sum [ num-crimes-committed ] of persons
 17
 1
 11
-
-SWITCH
-265
-15
-387
-48
-view-crim?
-view-crim?
-1
-1
--1000
 
 SLIDER
 1097
@@ -2199,7 +2177,7 @@ intervention-end
 intervention-end
 0
 50
-36.0
+50.0
 1
 1
 NIL
@@ -2370,7 +2348,7 @@ MONITOR
 383
 582
 employed
-count persons with [ any? job-link-neighbors ]
+count persons with [ my-job != nobody ]
 17
 1
 11
@@ -2381,7 +2359,7 @@ MONITOR
 383
 632
 open positions
-count jobs with [ not any? my-job-links  ]
+count jobs with [ my-worker = nobody ]
 17
 1
 11
@@ -2755,7 +2733,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.4
+NetLogo 6.1.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
