@@ -4,8 +4,8 @@
     <experiment name="exp" repetitions="1" runMetricsEveryStep="true">
         <setup>setup</setup>
         <go>go</go>
-        <final>show "Time elapsed:"
-            show timer
+        <final>show (word "Time elapsed:" timer)
+        dump-networks
         </final>
         <!-- assuming 40 years  -->
         <timeLimit steps="480"/>
