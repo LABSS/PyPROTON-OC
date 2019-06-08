@@ -18,10 +18,6 @@ undirected-link-breed [professional-links professional-link] ; person <--> perso
 undirected-link-breed [school-links       school-link]       ; person <--> person
 undirected-link-breed [meta-links         meta-link]         ; person <--> person
 
-;undirected-link-breed [positions-links         position-link]          ; job <--> employer
-;undirected-link-breed [job-links               job-link]               ; person <--> job
-undirected-link-breed [school-attendance-links school-attendance-link] ; person <--> school
-
 persons-own [
   num-crimes-committed
   num-crimes-committed-this-tick
@@ -45,6 +41,7 @@ persons-own [
   migrant?
   age
   criminal-tendency
+  my-school
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -72,6 +69,7 @@ prisoners-own [
   migrant?
   age
   criminal-tendency
+  my-school
 ]
 
 jobs-own [
@@ -86,6 +84,7 @@ employers-own [
 
 schools-own [
   education-level
+  my-students
 ]
 
 criminal-links-own [
@@ -140,6 +139,7 @@ globals [
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
   degree-correction-for-bosses
+  updates-count
 ]
 
 to profile-setup
@@ -152,13 +152,16 @@ to profile-setup
 end
 
 to profile-go
+  set num-persons 1000
   profiler:reset         ; clear the data
   profiler:start         ; start profiling
   setup                  ; set up the model
-  repeat 20 [ go ]
+  repeat 40 [ go ]
   profiler:stop          ; stop profiling
   print profiler:report  ; view the results
   profiler:reset         ; clear the data
+  show timer
+  show updates-count
 end
 
 to setup
@@ -179,7 +182,7 @@ to setup
   setup-schools
   init-students
   setup-employers-jobs
-  ask persons with [ not any? my-school-attendance-links and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
+  ask persons with [ my-school != nobody and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
   setup-oc-groups
@@ -360,7 +363,7 @@ to go
     calculate-criminal-tendency
     graduate
     ask persons with [
-      not any? my-school-attendance-links and age >= 18 and age < retirement-age and my-job = nobody and
+      my-school != nobody and age >= 18 and age < retirement-age and my-job = nobody and
       not retired? and job-level > 1
     ] [
      find-job
@@ -815,6 +818,7 @@ to init-person-empty ; person command
   set male? one-of [ true false ]
   set migrant? false
   set age calculate-age
+  set my-school nobody
 end
 
 to let-migrants-in
@@ -986,6 +990,7 @@ to setup-schools
   foreach table:keys education-levels [ level ->
     create-schools item 3 table:get education-levels level [
       set education-level level
+      set my-students no-turtles
     ]
   ]
 end
@@ -1000,22 +1005,21 @@ to init-students
     ]
   ]
   ask schools [
-    let students school-attendance-link-neighbors
-    let conn decide-conn-number students 15
-    ask students [ create-school-links-with n-of conn other students ]
+    let conn decide-conn-number my-students 15
+    ask my-students [ create-school-links-with n-of conn other turtle-set [ my-students ] of myself ]
   ]
 end
 
 to enroll-to-school [ level ] ; person command
-    let potential-schools (turtle-set [
-      [ end2 ] of my-school-attendance-links
-    ] of household-link-neighbors) with [ education-level = level ]
-    ifelse any? potential-schools [
-      create-school-attendance-link-with one-of potential-schools
-    ] [
-      create-school-attendance-link-with one-of schools with [ education-level = level ]
-    ]
-    ;set education-level (level - 1)
+  let potential-schools (turtle-set [
+    my-school
+  ] of household-link-neighbors) with [ education-level = level ]
+  ifelse any? potential-schools [
+    set my-school one-of potential-schools
+  ] [
+    set my-school one-of schools with [ education-level = level ]
+  ]
+  ask my-school [ set my-students (turtle-set my-students myself) ]
 end
 
 to graduate
@@ -1027,8 +1031,8 @@ to graduate
   ask schools [
     let end-age item 1 table:get levels education-level
     let school-education-level education-level
-    ask school-attendance-link-neighbors with [ age = (end-age + 1)] [
-      ask link-with myself [ die ]
+    ask my-students with [ age = (end-age + 1)] [
+      leave-school
       set education-level school-education-level
       if table:has-key? education-levels (school-education-level + 1) and
       (school-education-level + 1 < max-education-level)
@@ -1037,6 +1041,12 @@ to graduate
       ]
     ]
   ]
+end
+
+to leave-school ; person command
+  let other-students other turtle-set [ my-students ] of my-school
+  ask my-school [ set my-students other-students ]
+  set my-school nobody
 end
 
 to-report link-color
@@ -1223,7 +1233,7 @@ to get-caught [ co-offenders ]
       ask my-job [ set my-worker nobody ]
       set my-job nobody
     ]
-    ask my-school-attendance-links [ die ]
+    if my-school != nobody [ leave-school ]
     ask my-professional-links [ die ]
     ask my-school-links [ die ]
     ; we keep the friendship links and the family links
@@ -1360,6 +1370,7 @@ to-report number-of-accomplices
 end
 
 to update-meta-links [ agents ]
+  set updates-count updates-count + 1
   nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
     ask agents [
       ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
@@ -1716,7 +1727,7 @@ num-persons
 num-persons
 100
 10000
-650.0
+550.0
 50
 1
 NIL
