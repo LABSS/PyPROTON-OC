@@ -139,7 +139,6 @@ globals [
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
   degree-correction-for-bosses
-  updates-count
 ]
 
 to profile-setup
@@ -149,25 +148,27 @@ to profile-setup
   profiler:stop          ; stop profiling
   print profiler:report  ; view the results
   profiler:reset         ; clear the data
+  show timer
 end
 
 to profile-go
   set num-persons 1000
   profiler:reset         ; clear the data
   profiler:start         ; start profiling
+  random-seed 12
   setup                  ; set up the model
   repeat 40 [ go ]
   profiler:stop          ; stop profiling
   print profiler:report  ; view the results
   profiler:reset         ; clear the data
   show timer
-  show updates-count
 end
 
 to setup
   clear-all
   choose-intervention-setting
   reset-ticks ; so age can be computed
+  reset-timer
   load-stats-tables
   set facilitator-fails 0
   set facilitator-crimes 0
@@ -377,6 +378,7 @@ to go
     return-kids
   ]
   wedding
+  reset-oc-embeddedness
   commit-crimes
   retire-persons
   make-baby
@@ -1124,7 +1126,6 @@ to-report facilitator-test [ co-offending-group ]
 end
 
 to commit-crimes
-  reset-oc-embeddedness
   let co-offender-groups []
   foreach table:keys c-range-by-age-and-sex [ cell ->
     let value last table:get c-range-by-age-and-sex cell
@@ -1370,26 +1371,25 @@ to-report number-of-accomplices
 end
 
 to update-meta-links [ agents ]
-  set updates-count updates-count + 1
   nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
     ask agents [
       ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
-        create-meta-link-with myself [ ; if that link already exists, it won't be re-created
-          let w 0
-          if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
-          if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
-          if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
-          if [ professional-link-with other-end ] of myself != nobody [ set w w + 1 ]
-          if [ partner-link-with other-end ] of myself      != nobody [ set w w + 1 ]
-          if [ sibling-link-with other-end ] of myself      != nobody [ set w w + 1 ]
-          if [ offspring-link-with other-end ] of myself    != nobody [ set w w + 1 ]
-          if [ criminal-link-with other-end ] of myself     != nobody [
-            set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
+        ; if a meta-link exists, we skip the calculation
+        if not meta-link-neighbor? myself     [
+          create-meta-link-with myself [ ; if that link already exists, it won't be re-created
+            let w 0
+            if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
+            if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
+            if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
+            if [ professional-link-with other-end ] of myself != nobody [ set w w + 1 ]
+            if [ partner-link-with other-end ] of myself      != nobody [ set w w + 1 ]
+            if [ sibling-link-with other-end ] of myself      != nobody [ set w w + 1 ]
+            if [ offspring-link-with other-end ] of myself    != nobody [ set w w + 1 ]
+            if [ criminal-link-with other-end ] of myself     != nobody [
+              set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
+            ]
+            set dist 1 / w; the distance cost of the link is the inverse of its weight
           ]
-          if w  = 0 [
-            show [who] of myself show [breed] of links with [both-ends = [both-ends] of  myself]
-          ]
-          set dist 1 / w; the distance cost of the link is the inverse of its weight
         ]
       ]
     ]
