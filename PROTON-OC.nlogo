@@ -1331,9 +1331,9 @@ to-report factors-c
         count family-link-neighbors  > 0.5)                                  [ 1.45 ] [ 1.0 ] ])
     (list "crim-neigh"   [ -> ifelse-value
       ( (any? friendship-link-neighbors or any? professional-link-neighbors) and
-        (count friendship-link-neighbors with [ num-crimes-committed > 0 ] +
-          count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
-        (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
+        (count (turtle-set friendship-link-neighbors with [ num-crimes-committed > 0 ]
+          professional-link-neighbors with [ num-crimes-committed > 0 ])) /
+        (count (turtle-set friendship-link-neighbors professional-link-neighbors)) > 0.5)
                                                                              [ 1.81 ] [ 1.0 ] ])
     (list "oc-member"   [ -> ifelse-value
       (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.50 ] [ 1.0 ] ])
