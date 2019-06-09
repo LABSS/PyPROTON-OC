@@ -1,0 +1,91 @@
+;;--------------------------------------------------------
+; household partner sibling offspring friendship criminal professional school
+
+
+to-report typed-links [ name ]
+  report links with [ contains? name ]
+end
+
+to-report contains? [ name ] ; link procedure
+  report kind mod 2 ^ (position name network-kinds + 1) = 1
+end
+
+to-report sibling-link-neighbor? [ someone ] ; person reporter
+  let connection link-with someone
+  report connection != no-link and [ contains? "sibling" ] of connection
+end
+
+; household or not?
+to-report family-link-neighbors
+  report (turtle-set link-neighbors with [ contains? "sibling" or contains? "parther" or contains? "offspring" ])
+end
+
+; household or not?
+to-report named-link-neighbors [ name ]
+  report link-neighbors with [ contains? name ])
+end
+
+; should we have criminal network here, or not? What about household links?
+to-report my-person-links
+  report (my-links with [ contains? "sibling" or contains? "parther" or contains? "offspring" or 
+    contains? "household" or contains? "friendship" or contains?  "professional" or contains? "school" ])
+end
+
+; should we have criminal network here, or not? What about household links?
+to-report person-links
+  report (links with [ contains? "sibling" or contains? "parther" or contains? "offspring" or 
+    contains? "household" or contains? "friendship" or contains?  "professional" or contains? "school" ])
+end
+
+to-report person-link-neighbors
+  report turtle-set [ other-end ] of my-person-links
+end
+
+to-report potential-friends
+  report turtle-set [ other-end ] of (my-links with [ not contains? "friendship" and (contains? "sibling" or contains? "parther" or contains? "offspring" or 
+    contains? "household" or contains? "professional" or contains? "school") ])
+end
+
+to-report offspring-link-neighbor? [ someone ] ; person reporter
+  let connection link-with someone
+  report member? someone offspring or member? soemone parents
+end
+
+to-report my-named-links [ name ]
+  report my-links with [ contains? name ]
+end
+
+to create-named-link-with [ name target ]
+  create-link-with target [
+    if not contains? kind [
+      set kind kind + 2 ^ (position name network-kinds + 1)
+    ]
+  ]
+end
+
+to create-named-links-with [ name targets ]
+  create-links-with targets [
+    if not contains? kind [
+      set kind kind + 2 ^ (position name network-kinds + 1)
+    ]
+  ]
+end
+
+to create-named-links-with-run [ name targets code ]
+  create-links-with targets [
+    if not contains? kind [
+      set kind kind + 2 ^ (position name network-kinds + 1)
+    ]
+    run code
+  ]
+end
+
+to die-named [ name ] ; link procedure
+  if contains? name [
+    set kind kind - 2 ^ (position name network-kinds + 1)
+  ]
+  if kind = 0 [ die ]
+end
+
+
+;;;--------------------------------------------------------
