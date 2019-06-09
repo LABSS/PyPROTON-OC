@@ -344,9 +344,9 @@ to go
   ]
   ask links [ hide-link ]
   make-people-die
-  foreach network-saving-list [ listname ->
-    output (word listname ": " count links with [ breed = runresult listname ])
-  ]
+;  foreach network-saving-list [ listname ->
+;    output (word listname ": " count links with [ breed = runresult listname ])
+;  ]
   output "------------------"
 
   tick
@@ -698,7 +698,7 @@ to setup-siblings
     let p [ t -> any? offspring and not link-neighbor? myself and abs age - [ age ] of myself < 5 ]
     let candidates up-to-n-of-other-with 50 p
     ; remove couples from candidates and their neighborhoods
-    let all-potential-siblings [ -> (turtle-set self candidates named-link-neighbors "siblings" [ named-link-neighbors "siblings" ] of candidates)]
+    let all-potential-siblings [ -> (turtle-set self candidates named-link-neighbors "sibling" [ named-link-neighbors "sibling" ] of candidates)]
     let check-all-siblings [ ->
       any? (runresult all-potential-siblings) with [
         any? (runresult all-potential-siblings) with [ partner = myself ] ]
@@ -1002,7 +1002,7 @@ end
 to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality [
-      let departed myself
+      let departed self
       if facilitator? [
         let new-facilitator one-of other persons with [ not facilitator? and age > 18 ]
         ask new-facilitator [ set facilitator? true ]
@@ -1340,8 +1340,7 @@ to update-meta-links [ agents ]
   nw:with-context agents links [ ; limit the context to the agents in the radius of interest
     ask agents [
       ask other nw:turtles-in-radius 1 [
-        ; if a meta-link exists, we skip the calculation
-        let the-link [ link-with other-end ] of myself
+        let the-link link-with myself
         let w [ num-co-offenses + num-of-networks ] of the-link
         ask the-link [ set dist 1 / w ]
       ]
@@ -1421,9 +1420,9 @@ to generate-households
             ]
             ask item 1 hh-members [ set partner item 0 hh-members ]
             let couple (turtle-set item 0 hh-members item 1 hh-members)
-            set offspring turtle-set but-first but-first hh-members
-            ask couple [ create-named-links-with "offspring" offspring ]
-            ask offspring [ create-named-links-with "sibling" other offspring ]
+            let the-offspring turtle-set but-first but-first hh-members
+            ask couple [ create-named-links-with "offspring" the-offspring set offspring the-offspring set parents couple ]
+            ask the-offspring [ create-named-links-with "sibling" other the-offspring ]
           ]
           set hh-members turtle-set hh-members
           ask hh-members [ create-named-links-with "household" other hh-members set wealth-level family-wealth-level ]
@@ -1593,7 +1592,7 @@ end
 
 to-report the-families
   let components no-turtles
-  nw:with-context persons links with [ contains? "households" ] [
+  nw:with-context persons links with [ contains? "household" ] [
     set components nw:weak-component-clusters
   ]
   report components

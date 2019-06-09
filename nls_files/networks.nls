@@ -7,28 +7,29 @@ to-report typed-links [ name ]
 end
 
 to-report contains? [ name ] ; link procedure
-  report kind mod 2 ^ (position name network-kinds + 1) = 1
+  if position name network-kinds = false [ show name ]
+  report floor kind / 2 ^ ((position name network-kinds) + 1) = 1
 end
 
 to-report sibling-link-neighbor? [ someone ] ; person reporter
   let connection link-with someone
-  report connection != no-links and [ contains? "sibling" ] of connection
+  report connection != nobody and [ contains? "sibling" ] of connection
 end
 
 ; household or not?
 to-report family-link-neighbors
-  report (turtle-set link-neighbors with [ contains? "sibling" or contains? "parther" or contains? "offspring" ])
+  report turtle-set [ other-end ] of my-links with [ contains? "sibling" or contains? "partner" or contains? "offspring" ]
 end
 
 ; should we have criminal network here, or not? What about household links?
 to-report my-person-links
-  report (my-links with [ contains? "sibling" or contains? "parther" or contains? "offspring" or 
+  report (my-links with [ contains? "sibling" or contains? "partner" or contains? "offspring" or 
     contains? "household" or contains? "friendship" or contains?  "professional" or contains? "school" ])
 end
 
 ; should we have criminal network here, or not? What about household links?
 to-report person-links
-  report (links with [ contains? "sibling" or contains? "parther" or contains? "offspring" or 
+  report (links with [ contains? "sibling" or contains? "partner" or contains? "offspring" or 
     contains? "household" or contains? "friendship" or contains?  "professional" or contains? "school" ])
 end
 
@@ -37,7 +38,7 @@ to-report person-link-neighbors
 end
 
 to-report potential-friends
-  report turtle-set [ other-end ] of (my-links with [ not contains? "friendship" and (contains? "sibling" or contains? "parther" or contains? "offspring" or 
+  report turtle-set [ other-end ] of (my-links with [ not contains? "friendship" and (contains? "sibling" or contains? "partner" or contains? "offspring" or 
     contains? "household" or contains? "professional" or contains? "school") ])
 end
 
@@ -72,7 +73,7 @@ end
 
 to create-named-link-with [ name target ]
   create-link-with target [
-    if not contains? kind [
+    if not contains? name [
       set kind kind + 2 ^ (position name network-kinds + 1)
     ]
   ]
@@ -80,7 +81,7 @@ end
 
 to create-named-links-with [ name targets ]
   create-links-with targets [
-    if not contains? kind [
+    if not contains? name [
       set kind kind + 2 ^ (position name network-kinds + 1)
     ]
   ]
@@ -88,7 +89,7 @@ end
 
 to create-named-links-with-run [ name targets code ]
   create-links-with targets [
-    if not contains? kind [
+    if not contains? name [
       set kind kind + 2 ^ (position name network-kinds + 1)
     ]
     run code
