@@ -1204,12 +1204,6 @@ to-report find-accomplices [ n ] ; person reporter
   report accomplices
 end
 
-to-report find-candidates-on-net ; person reporter
-  nw:with-context persons person-links [
-report nw:turtles-in-radius max-accomplice-radius
-    ]
-end
-
 to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
