@@ -88,6 +88,7 @@ links-own [
   kind ; household partner sibling offspring friendship criminal professional school
        ;     0/1      0/1     0/1     0/1       0/1        0/n       0/1        0/1
   num-co-offenses
+  co-off-flag
 ]
 
 globals [
@@ -166,7 +167,7 @@ to setup
   choose-intervention-setting
   reset-ticks ; so age can be computed
   reset-timer
-  set network-kinds [ "household" "partner" "sibling" "offspring" "friendship" "criminal" "professional" "school" ]
+  set network-kinds [ "household" "partner" "sibling" "offspring" "friendship" "professional" "school" "criminal" ] ; criminal must be last
   load-stats-tables
   set facilitator-fails 0
   set facilitator-crimes 0
@@ -602,10 +603,6 @@ end
 to put-self-in-table [ the-table the-key ] ; person command
   let the-list table:get-or-default the-table the-key []
   table:put the-table the-key lput self the-list
-end
-
-to reset-oc-embeddedness
-  ask persons [ set cached-oc-embeddedness nobody ]
 end
 
 to setup-default-shapes
@@ -1144,6 +1141,13 @@ to retire-persons
   ]
 end
 
+
+to-report number-of-accomplices
+  ; pick a group size from the num. co-offenders distribution
+  ; and substract one to get the number of accomplices
+  report (first rnd:weighted-one-of-list num-co-offenders-dist last) - 1
+end
+
 to-report find-accomplices [ n ] ; person reporter
   let d 1 ; start with a network distance of 1
   let accomplices []
@@ -1173,15 +1177,15 @@ report nw:turtles-in-radius max-accomplice-radius
 end
 
 to commit-crime [ co-offenders ] ; observer command
+  ask links [ set co-off-flag 0 ]
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
     set num-crimes-committed-this-tick num-crimes-committed-this-tick + 1
     set crime-activity 3
-    create-named-links-with-run "criminal" other co-offenders
+    create-named-links-with "criminal" other co-offenders
+    ask my-named-links "criminal" [ set co-off-flag co-off-flag + 1 ]
   ]
-  nw:with-context co-offenders criminal-links [ ; is this increasing all criminal links by chance??
-    ask last nw:get-context [  ]
-  ]
+  ask links with [ co-off-flag = 2 ] [ set num-co-offenses num-co-offenses + 1 ]
 end
 
 to get-caught [ co-offenders ]
@@ -1198,8 +1202,8 @@ to get-caught [ co-offenders ]
       set my-job nobody
     ]
     if my-school != nobody [ leave-school ]
-    ask my-professional-links [ die ]
-    ask my-school-links [ die ]
+    ask my-named-links "professional" [ die-named "professional" ]
+    ask my-named-links "school" [ die-named "school" ]
     ; we keep the friendship links and the family links
   ]
 end
@@ -1270,8 +1274,8 @@ to-report factors-social-proximity  ; person reporter.
     (list "gender"     1.0       [ -> ifelse-value (male? = [ male? ] of ego) [ 1 ][ 0 ] ])
     (list "wealth"     1.0       [ -> ifelse-value (wealth-level = [ wealth-level ] of ego) [ 1 ][ 0 ] ])
     (list "education"  1.0       [ -> ifelse-value (education-level = [ education-level ] of ego) [ 1 ][ 0 ] ])
-    (list "closure"    1.0       [ -> ifelse-value (any? (other [ friendship-link-neighbors ] of alter) with
-                                      [ friendship-link-neighbor? ego ]) [ 1 ][ 0 ] ])
+    (list "closure"    1.0       [ -> ifelse-value (any? (other [ named-link-neighbors "friendship" ] of alter) with
+                                      [ named-link-neighbor? "friendship" ego ]) [ 1 ][ 0 ] ])
  )
 end
 
@@ -1291,15 +1295,20 @@ to-report factors-c
     (list "crim-fam"     [ -> ifelse-value
       (any? family-link-neighbors and count family-link-neighbors with [ num-crimes-committed > 0 ] /
         count family-link-neighbors  > 0.5)                                  [ 1.45 ] [ 1.0 ] ])
-    (list "crim-neigh"   [ -> ifelse-value
-      ( (any? friendship-link-neighbors or any? professional-link-neighbors) and
-        (count friendship-link-neighbors with [ num-crimes-committed > 0 ] +
-          count professional-link-neighbors with [ num-crimes-committed > 0 ]) /
-        (count friendship-link-neighbors + count professional-link-neighbors) > 0.5)
+    (list "crim-neigh"   [ ->
+      ifelse-value
+      ( (any? potential-accomplices) and
+        ((count potential-accomplices with [ num-crimes-committed > 0 ]) /
+        (count potential-accomplices)) > 0.5)
                                                                              [ 1.81 ] [ 1.0 ] ])
     (list "oc-member"   [ -> ifelse-value
       (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.50 ] [ 1.0 ] ])
   )
+end
+
+
+to reset-oc-embeddedness
+  ask persons [ set cached-oc-embeddedness nobody ]
 end
 
 to-report oc-embeddedness ; person reporter
@@ -1311,7 +1320,7 @@ to-report oc-embeddedness ; person reporter
       let oc-members agents with [ oc-member? ]
       if any? other oc-members [
         update-meta-links agents
-        nw:with-context agents meta-links [
+        nw:with-context agents links [
           set cached-oc-embeddedness (find-oc-weight-distance oc-members / find-oc-weight-distance agents)
           ;          sum [ 1 / nw:weighted-distance-to myself dist ] of other oc-members /
           ;          sum [ 1 / nw:weighted-distance-to myself dist ] of other agents
@@ -1327,33 +1336,14 @@ to-report find-oc-weight-distance [ people ]
   report sum [ 1 / nw:weighted-distance-to myself dist ] of other people
 end
 
-to-report number-of-accomplices
-  ; pick a group size from the num. co-offenders distribution
-  ; and substract one to get the number of accomplices
-  report (first rnd:weighted-one-of-list num-co-offenders-dist last) - 1
-end
-
 to update-meta-links [ agents ]
-  nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
+  nw:with-context agents links [ ; limit the context to the agents in the radius of interest
     ask agents [
-      ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
+      ask other nw:turtles-in-radius 1 [
         ; if a meta-link exists, we skip the calculation
-        if not meta-link-neighbor? myself     [
-          create-meta-link-with myself [ ; if that link already exists, it won't be re-created
-            let w 0
-            if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
-            if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
-            if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
-            if [ professional-link-with other-end ] of myself != nobody [ set w w + 1 ]
-            if [ partner-link-with other-end ] of myself      != nobody [ set w w + 1 ]
-            if [ sibling-link-with other-end ] of myself      != nobody [ set w w + 1 ]
-            if [ offspring-link-with other-end ] of myself    != nobody [ set w w + 1 ]
-            if [ criminal-link-with other-end ] of myself     != nobody [
-              set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
-            ]
-            set dist 1 / w; the distance cost of the link is the inverse of its weight
-          ]
-        ]
+        let the-link [ link-with other-end ] of myself
+        let w [ num-co-offenses + num-of-networks ] of the-link
+        ask the-link [ set dist 1 / w ]
       ]
     ]
   ]
@@ -1425,17 +1415,18 @@ to generate-households
           set success true
           let family-wealth-level [ wealth-level ] of item 0 hh-members
           if hh-type = "couple" [ ; if it's a couple, partner up the first two members and set the others as offspring
-            ask item 0 hh-members [ set partner item 1 hh-members
-              create-partner-link-with item 1 hh-members
+            ask item 0 hh-members [
+              set partner item 1 hh-members
+              create-named-link-with "partner" item 1 hh-members
             ]
             ask item 1 hh-members [ set partner item 0 hh-members ]
             let couple (turtle-set item 0 hh-members item 1 hh-members)
-            let offspring turtle-set but-first but-first hh-members
-            ask couple [ create-offspring-links-to offspring ]
-            ask offspring [ create-sibling-links-with other offspring ]
+            set offspring turtle-set but-first but-first hh-members
+            ask couple [ create-named-links-with "offspring" offspring ]
+            ask offspring [ create-named-links-with "sibling" other offspring ]
           ]
           set hh-members turtle-set hh-members
-          ask hh-members [ create-household-links-with other hh-members set wealth-level family-wealth-level ]
+          ask hh-members [ create-named-links-with "household" other hh-members set wealth-level family-wealth-level ]
         ] [
           ; in case of failure, we need to put the selected members back in the population
           foreach hh-members [ m -> put-in-population-pool m population ]
@@ -1453,7 +1444,7 @@ to generate-households
     let hh-members turtle-set sublist population 0 hh-size       ; grab the first persons in the list,
     set population sublist population hh-size length population  ; remove them from the population
     let family-wealth-level [ wealth-level ] of max-one-of hh-members [ age ]
-    ask hh-members [ create-household-links-with other hh-members
+    ask hh-members [ create-named-links-with "household" other hh-members
       set wealth-level family-wealth-level ]                     ; and link them up.
   ]
 end
@@ -1602,7 +1593,7 @@ end
 
 to-report the-families
   let components no-turtles
-  nw:with-context persons household-links [
+  nw:with-context persons links with [ contains? "households" ] [
     set components nw:weak-component-clusters
   ]
   report components
@@ -1690,7 +1681,7 @@ num-persons
 num-persons
 100
 10000
-0.0
+550.0
 50
 1
 NIL
@@ -1713,7 +1704,7 @@ INPUTBOX
 1340
 73
 data-folder
-0
+inputs/palermo/data/
 1
 0
 String
@@ -1763,7 +1754,7 @@ INPUTBOX
 1339
 138
 ticks-per-year
-0.0
+12.0
 1
 0
 Number
@@ -1835,7 +1826,7 @@ max-accomplice-radius
 max-accomplice-radius
 0
 5
-0.0
+2.0
 1
 1
 NIL
@@ -1850,7 +1841,7 @@ oc-embeddedness-radius
 oc-embeddedness-radius
 0
 5
-0.0
+2.0
 1
 1
 NIL
@@ -1865,7 +1856,7 @@ retirement-age
 retirement-age
 0
 100
-0.0
+65.0
 1
 1
 years old
@@ -1880,7 +1871,7 @@ probability-of-getting-caught
 probability-of-getting-caught
 0
 1
-0.0
+0.05
 0.05
 1
 NIL
@@ -1957,7 +1948,7 @@ nat-propensity-m
 nat-propensity-m
 0
 10
-0.0
+1.0
 0.1
 1
 NIL
@@ -1972,7 +1963,7 @@ nat-propensity-sigma
 nat-propensity-sigma
 0
 10
-0.0
+0.25
 0.05
 1
 NIL
@@ -1987,7 +1978,7 @@ nat-propensity-threshold
 nat-propensity-threshold
 0
 2
-0.0
+1.0
 0.1
 1
 sd
@@ -2002,7 +1993,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-0.0
+20.0
 1
 1
 NIL
@@ -2017,7 +2008,7 @@ num-oc-families
 num-oc-families
 1
 50
-0.0
+8.0
 1
 1
 NIL
@@ -2084,7 +2075,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-0.0
+10.0
 1
 1
 NIL
@@ -2099,7 +2090,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-0.0
+1.0
 1
 1
 NIL
@@ -2136,7 +2127,7 @@ intervention-start
 intervention-start
 0
 100
-0.0
+13.0
 1
 1
 NIL
@@ -2151,7 +2142,7 @@ intervention-end
 intervention-end
 0
 50
-0.0
+36.0
 1
 1
 NIL
@@ -2166,7 +2157,7 @@ percentage-of-facilitators
 percentage-of-facilitators
 0
 0.1
-0.0
+0.005
 0.001
 1
 NIL
@@ -2181,7 +2172,7 @@ threshold-use-facilitators
 threshold-use-facilitators
 0
 100
-0.0
+4.0
 1
 1
 NIL
@@ -2240,7 +2231,7 @@ criminal-rate
 criminal-rate
 0
 3
-0.0
+1.0
 0.1
 1
 NIL
@@ -2255,7 +2246,7 @@ employment-rate
 employment-rate
 0
 2
-0.0
+1.0
 0.1
 1
 NIL
@@ -2270,7 +2261,7 @@ education-rate
 education-rate
 0
 2
-0.0
+1.0
 0.1
 1
 NIL
@@ -2285,7 +2276,7 @@ law-enforcement-rate
 law-enforcement-rate
 0.5
 2
-0.0
+1.0
 0.5
 1
 NIL
@@ -2300,7 +2291,7 @@ punishment-length
 punishment-length
 0.5
 2
-0.0
+1.0
 0.5
 1
 NIL

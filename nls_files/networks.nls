@@ -12,17 +12,12 @@ end
 
 to-report sibling-link-neighbor? [ someone ] ; person reporter
   let connection link-with someone
-  report connection != no-link and [ contains? "sibling" ] of connection
+  report connection != no-links and [ contains? "sibling" ] of connection
 end
 
 ; household or not?
 to-report family-link-neighbors
   report (turtle-set link-neighbors with [ contains? "sibling" or contains? "parther" or contains? "offspring" ])
-end
-
-; household or not?
-to-report named-link-neighbors [ name ]
-  report link-neighbors with [ contains? name ])
 end
 
 ; should we have criminal network here, or not? What about household links?
@@ -46,13 +41,33 @@ to-report potential-friends
     contains? "household" or contains? "professional" or contains? "school") ])
 end
 
+to-report num-of-networks ; link reporter: excluding criminal ones
+  let num 0
+  foreach  (range 1 (length network-kinds)) [ i -> 
+    if kind mod (2 ^ i) = 0 [ set num num + 1 ]
+  ]
+  report num
+end 
+
+to-report potential-accomplices
+  report turtle-set [ other-end ] of (my-links with [ contains? "friendship" or contains? "professional" ])
+end
+
 to-report offspring-link-neighbor? [ someone ] ; person reporter
   let connection link-with someone
-  report member? someone offspring or member? soemone parents
+  report member? someone offspring or member? someone parents
 end
 
 to-report my-named-links [ name ]
   report my-links with [ contains? name ]
+end
+
+to-report named-link-neighbor? [ name ego ]
+  report member? ego named-link-neighbors name
+end
+
+to-report named-link-neighbors [ name ]
+  report turtle-set [ other-end ] of my-links with [ contains? name ]
 end
 
 to create-named-link-with [ name target ]
