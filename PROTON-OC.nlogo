@@ -89,6 +89,7 @@ schools-own [
 
 criminal-links-own [
   num-co-offenses
+  co-off-flag
 ]
 
 meta-links-own [
@@ -1216,9 +1217,9 @@ to commit-crime [ co-offenders ] ; observer command
     set crime-activity 3
     create-criminal-links-with other co-offenders
   ]
-  nw:with-context co-offenders criminal-links [
-    ask last nw:get-context [ set num-co-offenses num-co-offenses + 1 ]
-  ]
+  ask criminal-links [ set co-off-flag 0 ]
+  ask co-offenders [ ask my-criminal-links [ set co-off-flag co-off-flag + 1 ] ]
+  ask criminal-links with [ co-off-flag = 2 ] [ set num-co-offenses num-co-offenses + 1 ]
 end
 
 to get-caught [ co-offenders ]
