@@ -50,8 +50,8 @@
         <metric>count persons with [ migrant? ]</metric>
         <metric>number-deceased</metric>
         <metric>sum [ num-crimes-committed ] of persons</metric>
-        <metric>count persons with [ any? job-link-neighbors ]</metric>
-        <metric>count jobs with [ not any? my-job-links  ]</metric>
+        <metric>count persons with [ my-job != nobody ]</metric>
+        <metric>count jobs with [ my-worker != nobody  ]</metric>
         <metric>crime-size-fails</metric>
         <metric>count persons with [facilitator?]</metric>       
         <metric>facilitator-fails</metric>        
