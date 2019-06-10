@@ -3,12 +3,10 @@
 <experiments>
     <experiment name="exp" repetitions="1" runMetricsEveryStep="true">
         <setup>setup</setup>
-        <go>go</go>
-        <final>show "Time elapsed:"
-            show timer
+        <go>go-profile</go>
+        <final>show (word "Time elapsed:" timer)
         </final>
-        <!-- assuming 40 years  -->
-        <timeLimit steps="480"/>
+        <timeLimit steps="1"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
@@ -71,13 +69,10 @@
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
-             <value value="&quot;preventive&quot;"/>
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
             <value value="20"/>
-            <value value="25"/>
-            <value value="30"/>
         </enumeratedValueSet>
         <!-- PALERMO SETUP -->
         <enumeratedValueSet variable="data-folder">
@@ -85,29 +80,23 @@
         </enumeratedValueSet>
         <!-- 2. Criminal rate -->
         <enumeratedValueSet variable="criminal-rate">
-            <value value="0.5"/>
             <value value="1.0"/>
-            <value value="2.0"/>
         </enumeratedValueSet>
         <!-- 3a. Employment rate and education rate must vary together -->
         <enumeratedValueSet variable="employment-rate">
-            <value value="1.5"/>
+            <value value="1"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
-            <value value="1.5"/>
+            <value value="1"/>
         </enumeratedValueSet>
         <!-- 4. Law enforcement intervention rate -->
         <enumeratedValueSet variable="law-enforcement-rate">
-            <value value="0.5"/>
             <value value="1.0"/>
-            <value value="1.5"/>
         </enumeratedValueSet>
         <!-- 5. Punishment length -->
         <enumeratedValueSet variable="punishment-length">
-            <value value="0.5"/>
             <value value="1.0"/>
-            <value value="1.5"/>
         </enumeratedValueSet>
 <!-- FIXED parameters     -->
         <enumeratedValueSet variable="num-oc-families">
