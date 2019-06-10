@@ -48,8 +48,6 @@
         <metric>count persons with [ migrant? ]</metric>
         <metric>number-deceased</metric>
         <metric>sum [ num-crimes-committed ] of persons</metric>
-        <metric>count persons with [ any? job-link-neighbors ]</metric>
-        <metric>count jobs with [ not any? my-job-links  ]</metric>
         <metric>crime-size-fails</metric>
         <metric>count persons with [facilitator?]</metric>       
         <metric>facilitator-fails</metric>        
@@ -63,8 +61,6 @@
         <metric>count professional-links</metric>
         <metric>count school-links</metric>
         <metric>count meta-links</metric>
-        <metric>count school-attendance-links</metric>
-        <metric>count job-links</metric>
         <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
