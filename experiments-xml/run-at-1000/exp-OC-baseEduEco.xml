@@ -130,9 +130,6 @@
         <enumeratedValueSet variable="social-support">
           <value value="&quot;none&quot;"/>
         </enumeratedValueSet>
-        <enumeratedValueSet variable="view-crim?">
-          <value value="false"/>
-        </enumeratedValueSet>
         <enumeratedValueSet variable="intervention-end">
           <value value="36"/>
         </enumeratedValueSet>
