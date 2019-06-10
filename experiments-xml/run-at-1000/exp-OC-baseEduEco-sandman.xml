@@ -72,11 +72,12 @@
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
             <value value="&quot;preventive&quot;"/>
-            <value value="&quot;&quot;"/>
+            <value value="&quot;disruptive&quot;"/>
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
             <value value="5"/>
+            <value value="10"/>
         </enumeratedValueSet>
         <!-- PALERMO SETUP -->
         <enumeratedValueSet variable="data-folder">
