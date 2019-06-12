@@ -1133,7 +1133,7 @@ to commit-crimes
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value  * count people-in-cell * criminal-rate
+    let n-of-crimes last value  * count people-in-cell * criminal-rate / ticks-per-year
     repeat round n-of-crimes [
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
