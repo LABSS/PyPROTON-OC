@@ -45,7 +45,7 @@ class OCInterventionTest extends OCModelSuite {
       count [ family-link-neighbors ] of (one-of persons with [ age = 16  and propensity = 0])
     """) shouldBe 11
     ws.rpt("""
-     count [offspring-link-neighbors with [my-job != nobody]] of (one-of persons with [ age = 0  and propensity = 0]) 
+     count [ sibling-link-neighbors with [ my-job != nobody ] ] of (one-of persons with [ age = 0  and propensity = 0 ]) 
      """) shouldBe 8
     ws.rpt("""
       sum [ max-education-level ] of (one-of [ family-link-neighbors ] of (persons with [ age = 0  and propensity = 0]))

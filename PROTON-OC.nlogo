@@ -1368,7 +1368,6 @@ end
 to update-meta-links [ agents ]
   nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
     ask agents [
-      show (word who other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1))
       ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
         ; if a meta-link exists, we skip the calculation
         if not meta-link-neighbor? myself     [
