@@ -22,7 +22,7 @@ class OCCrimeStatsTest extends OCModelSuite {
             ]) and (sum [ num-crimes-committed ] of all-persons with [
               age > last cell and age <= first last table:get c-range-by-age-and-sex cell and male? = first cell
             ] > 0)) [
-              abs last last table:get c-range-by-age-and-sex cell * ticks -
+              abs last last table:get c-range-by-age-and-sex cell * ticks / ticks-per-year -
               (mean [ num-crimes-committed ] of all-persons with [
               age > last cell and age <= first last table:get c-range-by-age-and-sex cell and male? = first cell
             ] ) < 2 * standard-deviation [ num-crimes-committed ] of all-persons with [

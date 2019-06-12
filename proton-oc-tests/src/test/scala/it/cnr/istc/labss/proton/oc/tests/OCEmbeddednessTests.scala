@@ -25,16 +25,16 @@ class OCEmbeddednessTests extends OCModelSuite {
     ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0
   }
 
-  test("A single OC person") { ws =>
-    setup(ws)
-    ws.cmd("""
-      create-persons 1 [
-        set cached-oc-embeddedness nobody
-        set oc-member? true
-      ]
-    """)
-    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0
-  }
+  // test("A single OC person") { ws =>
+  //   setup(ws)
+  //   ws.cmd("""
+  //     create-persons 1 [
+  //       set cached-oc-embeddedness nobody
+  //       set oc-member? true
+  //     ]
+  //   """)
+  //   ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0
+  // }
 
   test("A single non-OC person with one family OC member") { ws =>
     setup(ws)
@@ -126,12 +126,13 @@ class OCEmbeddednessTests extends OCModelSuite {
       ]
       ask person 0 [
         create-sibling-link-with person 1
+        create-offspring-link-to person 2
         create-criminal-link-with person 2 [ set num-co-offenses 4 ]
       ]
       ask person 2 [ set oc-member? true ]
     """)
-    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (4.0 / 5.0)
-    ws.rpt("sort [ dist ] of meta-links") shouldBe Seq(0.25, 1.0).toLogoList
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (5.0 / 6.0)
+    ws.rpt("sort [ dist ] of meta-links") shouldBe Seq(0.2, 1.0).toLogoList
   }
 
   test("A non-OC person with all types of links") { ws =>
@@ -146,12 +147,13 @@ class OCEmbeddednessTests extends OCModelSuite {
         create-friendship-link-with person 2
         create-professional-link-with person 3
         create-school-link-with person 4
-        create-criminal-link-with person 5 [ set num-co-offenses 4 ]
+        create-criminal-link-with person 5 [ set num-co-offenses 5 ]
+        create-offspring-link-from person 5
       ]
       ask person 5 [ set oc-member? true ]
     """)
-    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe 0.5
-    ws.rpt("sort [ dist ] of meta-links") shouldBe Seq(0.25, 1.0, 1.0, 1.0, 1.0).toLogoList
+    ws.rpt("[ oc-embeddedness ] of person 0") shouldBe (0.6)
+    ws.rpt("sort [ dist ] of meta-links") shouldBe Seq( (1.0/6.0), 1.0, 1.0, 1.0, 1.0).toLogoList
   }
 
 }

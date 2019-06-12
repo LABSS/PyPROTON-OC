@@ -158,7 +158,7 @@ to profile-go
   profiler:start         ; start profiling
   random-seed 12
   setup                  ; set up the model
-  repeat 40 [ go ]
+  repeat 40 [ go show ticks]
   profiler:stop          ; stop profiling
   print profiler:report  ; view the results
   profiler:reset         ; clear the data
@@ -184,7 +184,7 @@ to setup
   setup-schools
   init-students
   setup-employers-jobs
-  ask persons with [ my-school != nobody and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
+  ask persons with [ my-school = nobody and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
   setup-oc-groups
@@ -365,7 +365,7 @@ to go
     calculate-criminal-tendency
     graduate
     ask persons with [
-      my-school != nobody and age >= 18 and age < retirement-age and my-job = nobody and
+      my-school = nobody and age >= 18 and age < retirement-age and my-job = nobody and
       not retired? and job-level > 1
     ] [
      find-job
@@ -1339,9 +1339,9 @@ to-report oc-embeddedness ; person reporter
     ; only calculate oc-embeddedness if we don't have a cached value
     nw:with-context all-persons person-links [
       set cached-oc-embeddedness 0 ; start with an hypothesis of 0
-      let agents (turtle-set nw:turtles-in-radius oc-embeddedness-radius nw:turtles-in-reverse-radius oc-embeddedness-radius)
+      let agents (turtle-set nw:turtles-in-radius oc-embeddedness-radius nw:turtles-in-reverse-radius oc-embeddedness-radius) ; this needs to include the caller
       let oc-members agents with [ oc-member? ]
-      if any? other oc-members [
+      if any? oc-members [
         update-meta-links agents
         nw:with-context agents meta-links [
           set cached-oc-embeddedness (find-oc-weight-distance oc-members / find-oc-weight-distance agents)
@@ -1368,6 +1368,7 @@ end
 to update-meta-links [ agents ]
   nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
     ask agents [
+      show (word who other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1))
       ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
         ; if a meta-link exists, we skip the calculation
         if not meta-link-neighbor? myself     [
@@ -1882,7 +1883,7 @@ oc-embeddedness-radius
 oc-embeddedness-radius
 0
 5
-1.0
+2.0
 1
 1
 NIL
@@ -2183,7 +2184,7 @@ intervention-end
 intervention-end
 0
 50
-50.0
+36.0
 1
 1
 NIL

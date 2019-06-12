@@ -45,8 +45,8 @@ class OCInterventionTest extends OCModelSuite {
       count [ family-link-neighbors ] of (one-of persons with [ age = 16  and propensity = 0])
     """) shouldBe 11
     ws.rpt("""
-      sum [ count job-link-neighbors ] of (one-of [ family-link-neighbors ] of (persons with [ age = 0  and propensity = 0]))
-    """) shouldBe 8
+     count [offspring-link-neighbors with [my-job != nobody]] of (one-of persons with [ age = 0  and propensity = 0]) 
+     """) shouldBe 8
     ws.rpt("""
       sum [ max-education-level ] of (one-of [ family-link-neighbors ] of (persons with [ age = 0  and propensity = 0]))
     """) shouldBe 6
@@ -70,7 +70,7 @@ test("Educational intervention works.") { ws =>
     )
     var targets = """
       mean [ max-education-level ] 
-      of all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
+      of all-persons with [ age <= 18 and age >= 12 and my-school != nobody ]
     """
     var before = ws.rpt(targets).asInstanceOf[Number].floatValue    
     ws.cmd("repeat 10 [ socialization-intervene ]")
@@ -80,7 +80,7 @@ test("Educational intervention works.") { ws =>
     // second test
     ws.cmd("""set social-support "psychological"""")
     targets = """sum [ count my-friendship-links ] of
-        all-persons with [ age <= 18 and age >= 12 and any? school-link-neighbors ]
+        all-persons with [ age <= 18 and age >= 12 and my-school != nobody ]
     """
     before = ws.rpt(targets).asInstanceOf[Number].floatValue    
     ws.cmd("repeat 10 [ socialization-intervene ]")
