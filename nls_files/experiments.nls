@@ -20,25 +20,31 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  report make-histo [ -> criminal-tendency ] 7
+  report make-histo [ -> criminal-tendency ] 7 0 1
 end
 
-to-report make-histo [ citizen-reporter bins ]
+to-report make-histo [ citizen-reporter bins min-v max-v ]
   let values [ runresult citizen-reporter ] of all-persons
-  let min-v min values 
-  let max-v max values
   let counts n-values bins [ 0 ]
-  if min-v = max-v [
-    report replace-item 0 counts length values
-  ]
+  assert [ -> min-v < max-v ]
   let thresholds (sentence (range min-v max-v ((max-v - min-v) / bins)) max-v) 
   let i 0 
   foreach values [ v ->
-    set i 0 
+    assert [ -> v >= first thresholds and v <= last thresholds ]
+    set i 0
     while [ v > item (i + 1) thresholds ] [ set i i + 1 ]
     set counts replace-item i counts (item i counts + 1)
   ]
   report (map [ [ a b ] -> (list a  b) ] but-last thresholds counts)
+end
+
+to-report make-discrete-histo [ citizen-reporter low high ]
+  let values table:to-list table:counts runresult citizen-reporter
+  let counts n-values (high - low + 1) [ i -> list (i + low) 0 ]
+  foreach values [ v ->
+    set counts replace-item ((first v) - low) counts (list first v last v) 
+  ]
+  report counts
 end
 
 to-report o5a
@@ -48,7 +54,7 @@ end
 
 to-report o6
   ; Distribution of R (which is the individual embededdness into OC-prone local networks)
-  report make-histo [ -> oc-embeddedness ] 7
+  report make-histo [ -> oc-embeddedness ] 7 0 1
 end
 
 to-report o6a
@@ -58,62 +64,63 @@ end
 
 to-report o7a
   ; Distribution of socio-demographic variables on new recruited individuals
-  report table:to-list table:counts [ education-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] -1 4
 end
 
 to-report o7b
   ; Distribution of socio-demographic variables on new recruited individuals
-  report table:to-list table:counts [ wealth-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+report make-discrete-histo [ -> [ wealth-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 1 5
+  
 end
 
 to-report o7c
   ; Distribution of socio-demographic variables on new recruited individuals
-  report table:to-list table:counts [ job-level ] of all-persons with [ new-recruit = (ticks - 1) ]
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 1 4
 end
 
 to-report o8a
   ; Distribution of socio-demographic variables of OC members
-  report table:to-list table:counts[ education-level ] of all-persons with [ oc-member? ]
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ oc-member? ] ] -1 4
 end
 
 to-report o8b
   ; Distribution of socio-demographic variables of OC members
-  report table:to-list table:counts[ wealth-level ] of all-persons with [ oc-member? ]
+  report make-discrete-histo [ -> [ wealth-level ] of all-persons with [ oc-member? ] ] 1 5
 end
 
 to-report o8c
   ; Distribution of socio-demographic variables of OC members
-  report table:to-list table:counts[ job-level ] of all-persons with [ oc-member? ]
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ oc-member? ] ] 1 4
 end
 
 to-report o9a
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report table:to-list table:counts [ education-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ]
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ] ] -1 4
 end
 
 to-report o9b
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report table:to-list table:counts[ wealth-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ]
+  report make-discrete-histo [ -> [ wealth-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ] ] 1 5
 end
 
 to-report o9c
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report table:to-list table:counts[ job-level ] of all-persons with [ not oc-member?  and num-crimes-committed > 0 ]
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ not oc-member?  and num-crimes-committed > 0 ] ] 1 4
 end
 
 to-report o10a
   ; Distribution of socio-demographic variables of the general population
-  report table:to-list table:counts[ education-level ] of all-persons
+  report make-discrete-histo [ -> [ education-level ] of all-persons ] -1 4
 end
 
 to-report o10b
   ; Distribution of socio-demographic variables of the general population
-  report table:to-list table:counts [ wealth-level ] of all-persons
+  report make-discrete-histo [ -> [ wealth-level ] of all-persons ] 1 5
 end
 
 to-report o10c
   ; Distribution of socio-demographic variables of the general population
-  report table:to-list table:counts [ job-level ] of all-persons
+  report make-discrete-histo [ -> [ job-level ] of all-persons ] 1 4
 end
 
 to-report o11
@@ -125,4 +132,3 @@ to-report o12
   ; Number of law enforcement interventions per time unit
   report number-law-interventions-this-tick
 end
-
