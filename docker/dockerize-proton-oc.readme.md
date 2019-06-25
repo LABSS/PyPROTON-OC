@@ -57,7 +57,7 @@ docker ps --filter "status=exited" | grep 'weeks ago' | awk '{print $1}' | xargs
 
 # push the container on the online repository
 ```
-docker push labss/protont
+docker push labss/oc
 ```
 # share results (in the directory to share; turn off other servers on 80, like R)
 ```

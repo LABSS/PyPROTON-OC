@@ -15,19 +15,21 @@ class OCSchoolTest extends OCModelSuite {
       setup
       """
     )
-    ws.rpt("not any? persons with [ any? school-attendance-link-neighbors and any? job-link-neighbors ]") shouldBe true 
-    ws.rpt("all? persons [ not any? school-attendance-link-neighbors or education-level = ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ] ") shouldBe true
-    ws.rpt("all? all-persons [ not any? school-attendance-link-neighbors or ([ education-level ] of one-of school-attendance-link-neighbors = possible-school-level and education-level = possible-school-level - 1) ]") shouldBe true
+    ws.rpt("not any? persons with [ my-school != nobody and my-job != nobody ]") shouldBe true 
+    ws.rpt("all? persons [ my-school = nobody or education-level = ([ education-level ] of my-school) - 1 ] ") shouldBe true
+    ws.rpt("""
+      all? all-persons [ my-school = nobody or ([ education-level ] of my-school = possible-school-level and education-level = possible-school-level - 1) ]
+      """) shouldBe true
     println("Initial test done, running for three years:")
     var fid = 0
     for (fid <- 1 to 36) {
         //ws.cmd("repeat 3 * ticks-per-year [ go ]")
       println(fid)
       ws.cmd("go")
-      ws.rpt("not any? persons with [ any? school-attendance-link-neighbors and any? job-link-neighbors ]") shouldBe true 
-      ws.rpt("all? persons [ not any? school-attendance-link-neighbors or education-level = ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ] ") shouldBe true 
-      ws.rpt("""all? persons [ 
-        not any? school-attendance-link-neighbors or 
+    ws.rpt("not any? persons with [ my-school != nobody and my-job != nobody ]") shouldBe true 
+    ws.rpt("all? persons [ my-school = nobody or education-level = ([ education-level ] of my-school) - 1 ] ") shouldBe true
+    ws.rpt("""all? persons [ 
+        my-school = nobody or 
         education-level = (possible-school-level - 1) or 
         (birth-tick mod ticks-per-year = 0 and
           (age > 25 or 

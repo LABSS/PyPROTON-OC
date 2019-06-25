@@ -1,13 +1,10 @@
-network-saving-interval,24
+network-saving-interval,0
 household-links,yes
 friendship-links,yes
 criminal-links,yes
 professional-links,yes
 school-links,yes
 meta-links,yes
-positions-links,yes
-job-links,yes
-school-attendance-links,yes
 sibling-links,yes
 offspring-links,yes
 partner-links,yes
