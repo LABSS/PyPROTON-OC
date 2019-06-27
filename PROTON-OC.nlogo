@@ -242,8 +242,9 @@ to load-stats-tables
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
   ; further sources:
   ; schools.csv table goes into education-levels
-  set number-weddings-mean 18
-  set number-weddings-sd 3
+  let marr item 0 but-first csv:from-file "inputs/general/data/marriages_stats.csv"
+  set number-weddings-mean item 0 marr
+  set number-weddings-sd item 1 marr
 end
 
 to wedding
