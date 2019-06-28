@@ -99,6 +99,7 @@ meta-links-own [
 
 globals [
   ; operation
+  initial-random-seed
   network-saving-interval      ; every how many we save networks structure
   network-saving-list          ; the networks that should be saved
   model-saving-interval        ; every how many we save model structure
@@ -170,6 +171,8 @@ to setup
   choose-intervention-setting
   reset-ticks ; so age can be computed
   reset-timer
+  set initial-random-seed random 4294967295 - 2147483648
+  random-seed initial-random-seed
   load-stats-tables
   set facilitator-fails 0
   set facilitator-crimes 0
