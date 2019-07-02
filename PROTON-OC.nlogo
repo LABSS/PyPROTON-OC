@@ -173,7 +173,6 @@ to setup
   load-stats-tables
   set facilitator-fails 0
   set facilitator-crimes 0
-  nw:set-context persons links
   ask patches [ set pcolor white ]
   setup-default-shapes
   setup-education-levels
@@ -1100,7 +1099,7 @@ to-report find-facilitator [ co-offending-group ]
       let pool nobody
       ask one-of co-offending-group [
         nw:with-context persons person-links [
-          set pool (nw:turtles-in-radius max-accomplice-radius)
+          set pool (turtle-set nw:turtles-in-radius max-accomplice-radius nw:turtles-in-reverse-radius max-accomplice-radius)
           set pool other pool with [ facilitator? ]
         ]
         if any? pool [ set the-facilitator one-of pool ]
@@ -1189,7 +1188,7 @@ to-report find-accomplices [ n ] ; person reporter
     while [ length accomplices < n and d < max-accomplice-radius ] [
       let candidates sort-on [
         candidate-weight
-      ] (nw:turtles-in-radius d) with [ nw:distance-to myself = d ]
+      ] (turtle-set nw:turtles-in-radius d nw:turtles-in-reverse-radius d) with [ nw:distance-to myself = d ]
       while [ length accomplices < n and not empty? candidates ] [
         let candidate first candidates
         set candidates but-first candidates
@@ -1341,7 +1340,7 @@ to-report oc-embeddedness ; person reporter
       set cached-oc-embeddedness 0 ; start with an hypothesis of 0
       let agents (turtle-set nw:turtles-in-radius oc-embeddedness-radius nw:turtles-in-reverse-radius oc-embeddedness-radius) ; this needs to include the caller
       let oc-members agents with [ oc-member? ]
-      if any? oc-members [
+      if any? other oc-members [
         update-meta-links agents
         nw:with-context agents meta-links [
           set cached-oc-embeddedness (find-oc-weight-distance oc-members / find-oc-weight-distance agents)
@@ -1369,22 +1368,22 @@ to update-meta-links [ agents ]
   nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
     ask agents [
       ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
-        ; if a meta-link exists, we skip the calculation
-        if not meta-link-neighbor? myself     [
-          create-meta-link-with myself [ ; if that link already exists, it won't be re-created
-            let w 0
-            if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
-            if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
-            if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
-            if [ professional-link-with other-end ] of myself != nobody [ set w w + 1 ]
-            if [ partner-link-with other-end ] of myself      != nobody [ set w w + 1 ]
-            if [ sibling-link-with other-end ] of myself      != nobody [ set w w + 1 ]
-            if [ offspring-link-with other-end ] of myself    != nobody [ set w w + 1 ]
-            if [ criminal-link-with other-end ] of myself     != nobody [
-              set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
-            ]
-            set dist 1 / w; the distance cost of the link is the inverse of its weight
+        create-meta-link-with myself [ ; if that link already exists, it won't be re-created
+          let w 0
+          if [ household-link-with other-end ] of myself    != nobody [ set w w + 1 ]
+          if [ friendship-link-with other-end ] of myself   != nobody [ set w w + 1 ]
+          if [ school-link-with other-end ] of myself       != nobody [ set w w + 1 ]
+          if [ professional-link-with other-end ] of myself != nobody [ set w w + 1 ]
+          if [ partner-link-with other-end ] of myself      != nobody [ set w w + 1 ]
+          if [ sibling-link-with other-end ] of myself      != nobody [ set w w + 1 ]
+          if [ offspring-link-with other-end ] of myself    != nobody [ set w w + 1 ]
+          if [ criminal-link-with other-end ] of myself     != nobody [
+            set w w + [ num-co-offenses ] of [ criminal-link-with other-end ] of myself
           ]
+          if w  = 0 [
+            show [who] of myself show [breed] of links with [both-ends = [both-ends] of  myself]
+          ]
+          set dist 1 / w; the distance cost of the link is the inverse of its weight
         ]
       ]
     ]
@@ -1930,10 +1929,10 @@ count prisoners
 11
 
 PLOT
-10
-645
-385
-800
+15
+690
+390
+845
 Age distribution
 age
 count
@@ -2377,6 +2376,17 @@ MONITOR
 130
 people
 count all-persons
+17
+1
+11
+
+MONITOR
+270
+635
+385
+680
+NIL
+number-weddings
 17
 1
 11
