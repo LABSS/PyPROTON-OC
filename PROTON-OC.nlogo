@@ -248,7 +248,7 @@ to load-stats-tables
 end
 
 to wedding
-  let updated-weddings-mean (number-weddings-mean * all-persons / 1000) / 12
+  let updated-weddings-mean (number-weddings-mean * count all-persons / 1000) / 12
   let num-wedding-this-month random-poisson updated-weddings-mean
   if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ]
   let maritable persons with [ age > 25 and age < 55 and partner = nobody ]
