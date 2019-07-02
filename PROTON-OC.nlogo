@@ -248,10 +248,9 @@ to load-stats-tables
 end
 
 to wedding
-  let updated-weddings-mean (number-weddings-mean * num-persons / 1000) / 12
+  let updated-weddings-mean (number-weddings-mean * all-persons / 1000) / 12
   let num-wedding-this-month random-poisson updated-weddings-mean
   if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ]
-  print (word num-wedding-this-month)
   let maritable persons with [ age > 25 and age < 55 and partner = nobody ]
   let ego one-of maritable
   while [ num-wedding-this-month > 0 and any? maritable ] [
@@ -1726,7 +1725,7 @@ num-persons
 num-persons
 100
 10000
-2000.0
+550.0
 50
 1
 NIL
@@ -2743,7 +2742,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.0
+NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
