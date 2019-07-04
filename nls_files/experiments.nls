@@ -132,3 +132,13 @@ to-report o12
   ; Number of law enforcement interventions per time unit
   report number-law-interventions-this-tick
 end
+
+to-report o15 
+  ;number of persons addressed by a preventive interventions
+  report number-protected-recruited-this-tick
+end
+
+to-report o16
+  ;number of OC person offsprings recruited this turn
+  report number-offspring-recruited-this-tick
+end

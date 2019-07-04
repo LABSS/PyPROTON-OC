@@ -41,6 +41,7 @@ persons-own [
   age
   criminal-tendency
   my-school
+  target-of-intervention
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -68,6 +69,7 @@ prisoners-own [
   age
   criminal-tendency
   my-school
+  target-of-intervention
 ]
 
 jobs-own [
@@ -138,6 +140,8 @@ globals [
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
   degree-correction-for-bosses
+  number-protected-recruited-this-tick
+  number-offspring-recruited-this-tick
 ]
 
 to profile-setup
@@ -1147,7 +1151,16 @@ to commit-crimes
     any? co-offenders with [ oc-member? ]
   ] co-offender-groups
   foreach oc-co-offender-groups [ co-offenders ->
-    ask co-offenders [ set new-recruit ticks set oc-member? true ]
+      ask co-offenders with [ not oc-member? ] [
+      set new-recruit ticks
+      set oc-member? true
+      if any? in-offspring-link-neighbors with [ male? and oc-member? ] [
+        set number-offspring-recruited-this-tick number-offspring-recruited-this-tick + 1
+      ]
+      if target-of-intervention [
+        set number-protected-recruited-this-tick number-protected-recruited-this-tick + 1
+      ]
+    ]
   ]
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
