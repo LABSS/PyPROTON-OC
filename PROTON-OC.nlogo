@@ -1137,7 +1137,7 @@ to commit-crimes
         let accomplices find-accomplices number-of-accomplices
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
         ; check for big crimes started from a normal guy
-        if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+        if length accomplices + 1 > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
           set big-crime-from-small-fish big-crime-from-small-fish +  1
         ]
       ]
