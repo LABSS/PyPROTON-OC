@@ -1915,7 +1915,7 @@ probability-of-getting-caught
 probability-of-getting-caught
 0
 1
-0.1
+0.05
 0.05
 1
 NIL
@@ -2290,7 +2290,7 @@ employment-rate
 employment-rate
 0
 2
-1.2
+1.0
 0.1
 1
 NIL
