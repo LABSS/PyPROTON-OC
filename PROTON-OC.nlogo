@@ -36,7 +36,6 @@ persons-own [
   number-of-children
   facilitator?
   hobby
-  crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
   age
@@ -64,7 +63,6 @@ prisoners-own [
   number-of-children
   facilitator?
   hobby
-  crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
   age
@@ -356,9 +354,6 @@ to go
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
-  ]
-  ask all-persons with [ crime-activity > 1 ] [
-     set crime-activity crime-activity - 1
   ]
   if ((ticks mod ticks-per-year) = 0) [
     calculate-criminal-tendency
@@ -1207,7 +1202,6 @@ to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
     set num-crimes-committed-this-tick num-crimes-committed-this-tick + 1
-    set crime-activity 3
     create-criminal-links-with other co-offenders
   ]
   ask criminal-links [ set co-off-flag 0 ]
