@@ -141,6 +141,11 @@ to-report o13
   ] but-last range length age-bins 
 end
 
+to-report o14
+  ;co-offenses per turn. A vector of co-offenses the side of the index, starting with zero.
+  report co-offender-group-histo 
+end
+
 to-report o15 
   ;number of persons addressed by a preventive interventions
   report number-protected-recruited-this-tick

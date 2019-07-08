@@ -142,6 +142,7 @@ globals [
   degree-correction-for-bosses
   number-protected-recruited-this-tick
   number-offspring-recruited-this-tick
+  co-offender-group-histo
 ]
 
 to profile-setup
@@ -1147,6 +1148,7 @@ to commit-crimes
     facilitator-test co-offenders
   ] co-offender-groups
   foreach co-offender-groups commit-crime
+  set co-offender-group-histo make-co-offending-histo co-offender-groups
   let oc-co-offender-groups filter [ co-offenders ->
     any? co-offenders with [ oc-member? ]
   ] co-offender-groups
@@ -1165,6 +1167,16 @@ to commit-crimes
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
+end
+
+to-report make-co-offending-histo [ co-offender-groups ]
+  let max-size max map count co-offender-groups + 1
+  let counts n-values max-size [ 0 ]
+  let i 0
+  foreach co-offender-groups [ g ->
+    set counts replace-item count g counts (item count g counts + 1)
+  ]
+  report  counts
 end
 
 to-report arrest-probability-with-intervention [ group ]
