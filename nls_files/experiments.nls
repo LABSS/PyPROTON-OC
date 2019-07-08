@@ -147,11 +147,11 @@ to-report o14
 end
 
 to-report o15 
-  ;number of persons addressed by a preventive interventions
+  ;number of persons addressed by a preventive interventions recruited this tick
   report number-protected-recruited-this-tick
 end
 
 to-report o16
-  ;number of OC person offsprings recruited this turn
+  ;number of OC person offsprings recruited this tick
   report number-offspring-recruited-this-tick
 end

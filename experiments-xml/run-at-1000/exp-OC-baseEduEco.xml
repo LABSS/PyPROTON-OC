@@ -8,7 +8,7 @@
         dump-networks
         </final>
         <!-- assuming 40 years  -->
-        <timeLimit steps="480"/>
+        <timeLimit steps="4"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
@@ -44,6 +44,15 @@
         <!-- 12. Number of law enforcement interventions per time unit -->
         <metric>o12</metric>
         <!-- Other reporters for debug and check -->
+        <metric>o12</metric>
+        <!-- 13. age structure of offenses -->
+        <metric>o13</metric>
+        <!-- 14. co-offenses per turn. A vector of co-offenses the side of the index, starting with zero. -->
+        <metric>o14</metric>
+        <!-- 15. number of persons addressed by a preventive interventions recruited this tick-->
+        <metric>o15</metric>
+        <!-- 16. number of OC person offsprings recruited this tick -->
+        <metric>o16</metric>
         <metric>count persons</metric>
         <metric>count links</metric>
         <metric>count prisoners</metric>
