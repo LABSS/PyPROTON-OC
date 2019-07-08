@@ -133,6 +133,14 @@ to-report o12
   report number-law-interventions-this-tick
 end
 
+to-report o13
+  ;age structure of offenses
+  let age-bins [ 0 13 17 24 34 44 54 64 200 ] ; same as in file crime_rate_by_gender_and_age_range
+  report  map [ i -> 
+    sum [ num-crimes-committed-this-tick ] of persons with [ age > item i age-bins and age <= item (i + 1) age-bins ] 
+  ] but-last range length age-bins 
+end
+
 to-report o15 
   ;number of persons addressed by a preventive interventions
   report number-protected-recruited-this-tick
