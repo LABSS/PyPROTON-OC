@@ -1149,7 +1149,9 @@ to commit-crimes
     facilitator-test co-offenders
   ] co-offender-groups
   foreach co-offender-groups commit-crime
-  set co-offender-group-histo make-co-offending-histo co-offender-groups
+  if not empty? co-offender-groups [
+    set co-offender-group-histo make-co-offending-histo co-offender-groups
+  ]
   let oc-co-offender-groups filter [ co-offenders ->
     any? co-offenders with [ oc-member? ]
   ] co-offender-groups
@@ -1177,7 +1179,7 @@ to-report make-co-offending-histo [ co-offender-groups ]
   foreach co-offender-groups [ g ->
     set counts replace-item count g counts (item count g counts + 1)
   ]
-  report  counts
+  report counts
 end
 
 to-report arrest-probability-with-intervention [ group ]
@@ -2410,6 +2412,42 @@ number-weddings
 17
 1
 11
+
+PLOT
+19
+864
+220
+1014
+c
+NIL
+NIL
+0.0
+20.0
+-0.1
+0.1
+true
+false
+"" ""
+PENS
+"c-pen" 1.0 0 -16777216 true "" "plot  mean [ criminal-tendency ] of all-persons"
+
+PLOT
+260
+869
+461
+1019
+education
+NIL
+NIL
+0.0
+3.0
+2.0
+3.0
+true
+false
+"" ""
+PENS
+"edu-pen" 1.0 0 -16777216 true "" "plot mean [ education-level ] of all-persons"
 
 @#$#@#$#@
 ## WHAT IS IT?
