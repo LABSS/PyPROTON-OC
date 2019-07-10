@@ -1271,9 +1271,10 @@ to calculate-criminal-tendency
       let c item 1 item 0 table:get c-range-by-age-and-sex genderage
       ; put only the individual part into personal values
       ask subpop [
-        set criminal-tendency 0
+        set criminal-tendency c
         foreach  factors-c [ x ->
           set criminal-tendency criminal-tendency * (runresult item 1 x)
+          ;show criminal-tendency
         ]
       ]
       ; then derive the correction from the average of
@@ -1298,7 +1299,8 @@ to calc-degree-correction-for-bosses
       set to-sum lput (n / (n + 1) ^ 2) to-sum
     ]
     let p-mean mean [ probability-of-getting-caught ] of gang
-    set degree-correction-for-bosses p-mean / mean to-sum
+    ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
+    set degree-correction-for-bosses ifelse-value (mean to-sum = 0) [ 1 ] [ p-mean / mean to-sum ]
   ]
 end
 
