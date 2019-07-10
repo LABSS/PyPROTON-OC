@@ -105,7 +105,6 @@ globals [
   breed-colors           ; a table from breeds to turtle colors
   num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
-  epsilon_c                    ; table holding the correction factor for c calculation.
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
@@ -354,8 +353,8 @@ to go
   ; intervention clock
   if intervention-on? [
     if family-intervention != "none"   [ family-intervene        ]
-    if social-support    != "none"     [ socialization-intervene ]
-    if welfare-support   != "none"     [ welfare-intervene       ]
+    if social-support      != "none"   [ socialization-intervene ]
+    if welfare-support     != "none"   [ welfare-intervene       ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
@@ -1262,27 +1261,24 @@ to-report candidate-weight ; person reporter
   report -1 * (social-proximity-with myself + r)
 end
 
-; this updates the epsilon_c value that corrects the effect sizes
 to calculate-criminal-tendency
-  set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
   foreach table:keys c-range-by-age-and-sex [ genderage ->
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
     if any? subpop [
       let c item 1 item 0 table:get c-range-by-age-and-sex genderage
-      ; put only the individual part into personal values
+      ; c is the cell value. Now we calcolate criminal-tendency with the factors.
       ask subpop [
         set criminal-tendency c
         foreach  factors-c [ x ->
           set criminal-tendency criminal-tendency * (runresult item 1 x)
-          ;show criminal-tendency
         ]
       ]
-      ; then derive the correction from the average of
-      let epsilon mean [ criminal-tendency ] of subpop
+      ; then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
+      let epsilon c - mean [ criminal-tendency ] of subpop
       ask subpop [
-        set criminal-tendency criminal-tendency + c - epsilon
+        set criminal-tendency criminal-tendency + epsilon
       ]
-      assert [ -> mean [ criminal-tendency ] of subpop - c < 0.01 * c ]
+      assert [ -> abs (mean [ criminal-tendency ] of subpop - c) < 0.01 * c ]
     ]
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
