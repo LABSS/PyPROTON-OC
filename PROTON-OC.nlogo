@@ -36,12 +36,12 @@ persons-own [
   number-of-children
   facilitator?
   hobby
-  crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
   age
   criminal-tendency
   my-school
+  target-of-intervention
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -64,12 +64,12 @@ prisoners-own [
   number-of-children
   facilitator?
   hobby
-  crime-activity  ; used for making criminals turtles bigger when drawn
   new-recruit
   migrant?
   age
   criminal-tendency
   my-school
+  target-of-intervention
 ]
 
 jobs-own [
@@ -106,7 +106,6 @@ globals [
   breed-colors           ; a table from breeds to turtle colors
   num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
-  epsilon_c                    ; table holding the correction factor for c calculation.
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
   fertility-table        ; a list of fertility rates
@@ -141,6 +140,9 @@ globals [
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
   degree-correction-for-bosses
+  number-protected-recruited-this-tick
+  number-offspring-recruited-this-tick
+  co-offender-group-histo
 ]
 
 to profile-setup
@@ -357,14 +359,11 @@ to go
   ; intervention clock
   if intervention-on? [
     if family-intervention != "none"   [ family-intervene        ]
-    if social-support    != "none"     [ socialization-intervene ]
-    if welfare-support   != "none"     [ welfare-intervene       ]
+    if social-support      != "none"   [ socialization-intervene ]
+    if welfare-support     != "none"   [ welfare-intervene       ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
-  ]
-  ask all-persons with [ crime-activity > 1 ] [
-     set crime-activity crime-activity - 1
   ]
   if ((ticks mod ticks-per-year) = 0) [
     calculate-criminal-tendency
@@ -827,6 +826,7 @@ to init-person-empty ; person command
   set migrant? false
   set age calculate-age
   set my-school nobody
+  set target-of-intervention false
 end
 
 to let-migrants-in
@@ -1144,7 +1144,7 @@ to commit-crimes
         let accomplices find-accomplices number-of-accomplices
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
         ; check for big crimes started from a normal guy
-        if length accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+        if length accomplices + 1 > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
           set big-crime-from-small-fish big-crime-from-small-fish +  1
         ]
       ]
@@ -1154,15 +1154,37 @@ to commit-crimes
     facilitator-test co-offenders
   ] co-offender-groups
   foreach co-offender-groups commit-crime
+  if not empty? co-offender-groups [
+    set co-offender-group-histo make-co-offending-histo co-offender-groups
+  ]
   let oc-co-offender-groups filter [ co-offenders ->
     any? co-offenders with [ oc-member? ]
   ] co-offender-groups
   foreach oc-co-offender-groups [ co-offenders ->
-    ask co-offenders [ set new-recruit ticks set oc-member? true ]
+      ask co-offenders with [ not oc-member? ] [
+      set new-recruit ticks
+      set oc-member? true
+      if any? in-offspring-link-neighbors with [ male? and oc-member? ] [
+        set number-offspring-recruited-this-tick number-offspring-recruited-this-tick + 1
+      ]
+      if target-of-intervention [
+        set number-protected-recruited-this-tick number-protected-recruited-this-tick + 1
+      ]
+    ]
   ]
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
+end
+
+to-report make-co-offending-histo [ co-offender-groups ]
+  let max-size max map count co-offender-groups + 1
+  let counts n-values max-size [ 0 ]
+  let i 0
+  foreach co-offender-groups [ g ->
+    set counts replace-item count g counts (item count g counts + 1)
+  ]
+  report counts
 end
 
 to-report arrest-probability-with-intervention [ group ]
@@ -1213,7 +1235,6 @@ to commit-crime [ co-offenders ] ; observer command
   ask co-offenders [
     set num-crimes-committed num-crimes-committed + 1
     set num-crimes-committed-this-tick num-crimes-committed-this-tick + 1
-    set crime-activity 3
     create-criminal-links-with other co-offenders
   ]
   ask criminal-links [ set co-off-flag 0 ]
@@ -1246,26 +1267,24 @@ to-report candidate-weight ; person reporter
   report -1 * (social-proximity-with myself + r)
 end
 
-; this updates the epsilon_c value that corrects the effect sizes
 to calculate-criminal-tendency
-  set epsilon_c table:from-list map [ x -> list x 0 ] table:keys c-by-age-and-sex
   foreach table:keys c-range-by-age-and-sex [ genderage ->
     let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
     if any? subpop [
       let c item 1 item 0 table:get c-range-by-age-and-sex genderage
-      ; put only the individual part into personal values
+      ; c is the cell value. Now we calcolate criminal-tendency with the factors.
       ask subpop [
-        set criminal-tendency 0
+        set criminal-tendency c
         foreach  factors-c [ x ->
           set criminal-tendency criminal-tendency * (runresult item 1 x)
         ]
       ]
-      ; then derive the correction from the average of
-      let epsilon mean [ criminal-tendency ] of subpop
+      ; then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
+      let epsilon c - mean [ criminal-tendency ] of subpop
       ask subpop [
-        set criminal-tendency criminal-tendency + c - epsilon
+        set criminal-tendency criminal-tendency + epsilon
       ]
-      assert [ -> mean [ criminal-tendency ] of subpop - c < 0.01 * c ]
+      assert [ -> abs (mean [ criminal-tendency ] of subpop - c) < 0.01 * c ]
     ]
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
@@ -1282,7 +1301,8 @@ to calc-degree-correction-for-bosses
       set to-sum lput (n / (n + 1) ^ 2) to-sum
     ]
     let p-mean mean [ probability-of-getting-caught ] of gang
-    set degree-correction-for-bosses p-mean / mean to-sum
+    ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
+    set degree-correction-for-bosses ifelse-value (mean to-sum = 0) [ 1 ] [ p-mean / mean to-sum ]
   ]
 end
 
@@ -2396,6 +2416,42 @@ number-weddings
 17
 1
 11
+
+PLOT
+19
+864
+220
+1014
+c
+NIL
+NIL
+0.0
+20.0
+-0.1
+0.1
+true
+false
+"" ""
+PENS
+"c-pen" 1.0 0 -16777216 true "" "plot  mean [ criminal-tendency ] of all-persons"
+
+PLOT
+260
+869
+461
+1019
+education
+NIL
+NIL
+0.0
+3.0
+2.0
+3.0
+true
+false
+"" ""
+PENS
+"edu-pen" 1.0 0 -16777216 true "" "plot mean [ education-level ] of all-persons"
 
 @#$#@#$#@
 ## WHAT IS IT?
