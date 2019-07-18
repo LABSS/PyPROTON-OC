@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <experiments>
-    <experiment name="exp" repetitions="1" runMetricsEveryStep="true">
+    <experiment name="r0.1" repetitions="1" runMetricsEveryStep="true">
         <setup>setup</setup>
-        <go>profile-go</go>
+        <go>go</go>
         <final>show (word "Time elapsed:" timer)
+        dump-networks
         </final>
-        <timeLimit steps="1"/>
+        <!-- assuming 40 years  -->
+        <timeLimit steps="4"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
@@ -41,6 +43,8 @@
         <metric>o11</metric>
         <!-- 12. Number of law enforcement interventions per time unit -->
         <metric>o12</metric>
+        <!-- Other reporters for debug and check -->
+        <metric>o12</metric>
         <!-- 13. age structure of offenses -->
         <metric>o13</metric>
         <!-- 14. co-offenses per turn. A vector of co-offenses the side of the index, starting with zero. -->
@@ -73,13 +77,18 @@
         <metric>sum [ count my-students ] of schools</metric>
         <metric>count jobs</metric>
         <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
+        <metric>count all-persons with [ my-job = nobody and age &gt; 18 and age &lt;= 65 ] / count all-persons with [age &gt; 18 and age &lt;= 65 ]</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
+            <value value="&quot;preventive&quot;"/>
+            <value value="&quot;disruptive&quot;"/>
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
-            <value value="20"/>
+            <value value="15"/>
+            <value value="30"/>
+            <value value="45"/>
         </enumeratedValueSet>
         <!-- PALERMO SETUP -->
         <enumeratedValueSet variable="data-folder">
@@ -87,7 +96,9 @@
         </enumeratedValueSet>
         <!-- 2. Criminal rate -->
         <enumeratedValueSet variable="criminal-rate">
+            <value value="0.5"/>
             <value value="1.0"/>
+            <value value="1.5"/>
         </enumeratedValueSet>
         <!-- 3a. Employment rate and education rate must vary together -->
         <enumeratedValueSet variable="employment-rate">
@@ -99,11 +110,15 @@
         </enumeratedValueSet>
         <!-- 4. Law enforcement intervention rate -->
         <enumeratedValueSet variable="law-enforcement-rate">
+            <value value="0.5"/>
             <value value="1.0"/>
+            <value value="1.5"/>
         </enumeratedValueSet>
         <!-- 5. Punishment length -->
         <enumeratedValueSet variable="punishment-length">
+            <value value="0.5"/>
             <value value="1.0"/>
+            <value value="1.5"/>
         </enumeratedValueSet>
 <!-- FIXED parameters     -->
         <enumeratedValueSet variable="num-oc-families">
@@ -113,19 +128,19 @@
           <value value="1000"/>
         </enumeratedValueSet>    
         <enumeratedValueSet variable="welfare-support">
-          <value value="&quot;none&quot;"/>
+          <value value="&quot;none&quot;"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
         <enumeratedValueSet variable="output?">
           <value value="false"/>
         </enumeratedValueSet>
         <enumeratedValueSet variable="intervention-start">
-          <value value="13"/>
+          <value value="13"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
         <enumeratedValueSet variable="social-support">
-          <value value="&quot;none&quot;"/>
+          <value value="&quot;none&quot;"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
         <enumeratedValueSet variable="intervention-end">
-          <value value="36"/>
+          <value value="36"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
         <enumeratedValueSet variable="nat-propensity-threshold">
           <value value="1"/>
@@ -146,7 +161,7 @@
           <value value="0.25"/>
         </enumeratedValueSet>
         <enumeratedValueSet variable="targets-addressed-percent">
-          <value value="10"/>
+          <value value="10"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
         <enumeratedValueSet variable="probability-of-getting-caught">
           <value value="0.05"/>
@@ -158,19 +173,19 @@
           <value value="false"/>
         </enumeratedValueSet>
         <enumeratedValueSet variable="family-intervention">
-          <value value="&quot;none&quot;"/>
+          <value value="&quot;none&quot;"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
         <enumeratedValueSet variable="max-accomplice-radius">
           <value value="2"/>
         </enumeratedValueSet>
         <enumeratedValueSet variable="ticks-between-intervention">
-          <value value="1"/>
+          <value value="1"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
         <enumeratedValueSet variable="retirement-age">
           <value value="65"/>
         </enumeratedValueSet> 
         <enumeratedValueSet variable="OC-boss-repression?">
-          <value value="false"/>
+          <value value="false"/> <!-- overriden by intervention -->
         </enumeratedValueSet> 
     </experiment>
 </experiments>

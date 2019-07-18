@@ -716,7 +716,7 @@ to choose-intervention-setting
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 9999
   ]
   if intervention = "preventive" [
     set family-intervention "remove-if-caught-and-OC-member"
@@ -726,7 +726,7 @@ to choose-intervention-setting
     set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 9999
   ]
   if intervention = "disruptive" [
     set family-intervention "none"
@@ -736,7 +736,7 @@ to choose-intervention-setting
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 9999
   ]
 end
 
@@ -2223,7 +2223,7 @@ percentage-of-facilitators
 percentage-of-facilitators
 0
 0.1
-0.005
+0.009
 0.001
 1
 NIL
