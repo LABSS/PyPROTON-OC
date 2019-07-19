@@ -635,7 +635,7 @@ to setup-oc-groups
     age > 18 and not oc-member? and any? household-link-neighbors with [ oc-member? ]
   ]
   ; fill up the families as much as possible
-  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (scaled-num-oc-families - scaled-num-oc-persons))
+  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (scaled-num-oc-persons - scaled-num-oc-families))
   suitable-candidates-in-families [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ] [
@@ -1750,7 +1750,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+1000.0
 50
 1
 NIL
