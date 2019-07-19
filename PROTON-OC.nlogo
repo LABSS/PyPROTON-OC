@@ -121,6 +121,7 @@ globals [
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
+  arrest-rate
   jobs_by_company_size
   education-levels  ; table from education level to data
   c-by-age-and-sex
@@ -191,6 +192,7 @@ to setup
   ask persons with [ my-school = nobody and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
+  calculate-arrest-rate
   setup-oc-groups
   setup-facilitators
   reset-oc-embeddedness
@@ -410,6 +412,11 @@ to-report intervention-on?
   report ticks mod ticks-between-intervention = 0 and
      ticks >= intervention-start and
      ticks <  intervention-end
+end
+
+to calculate-arrest-rate
+  ; this gives the probability of arrest, propotionally to:       population       number of expected crimes in the first year
+  set arrest-rate number-arrests-per-year / ticks-per-year / 10000 * num-persons / 60
 end
 
 to dump-networks
@@ -1192,8 +1199,8 @@ end
 
 to-report arrest-probability-with-intervention [ group ]
   if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ])
-  [ report OC-repression-prob group * law-enforcement-rate ]
-  [ report probability-of-getting-caught * law-enforcement-rate ]
+  [ report OC-repression-prob group ]
+  [ report arrest-rate ]
 end
 
 to-report OC-repression-prob [ a-group ]
@@ -1246,8 +1253,8 @@ to commit-crime [ co-offenders ] ; observer command
 end
 
 to get-caught [ co-offenders ]
-  set number-law-interventions-this-tick number-law-interventions-this-tick + 1
   ask co-offenders [
+    set number-law-interventions-this-tick number-law-interventions-this-tick + 1
     set breed prisoners
     set shape "face sad"
     ifelse male?
@@ -1303,9 +1310,8 @@ to calc-degree-correction-for-bosses
       let n count person-link-neighbors with [ oc-member? ]
       set to-sum lput (n / (n + 1) ^ 2) to-sum
     ]
-    let p-mean mean [ probability-of-getting-caught ] of gang
     ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
-    set degree-correction-for-bosses ifelse-value (mean to-sum = 0) [ 1 ] [ p-mean / mean to-sum ]
+    set degree-correction-for-bosses ifelse-value (mean to-sum = 0) [ 1 ] [ arrest-rate / mean to-sum ]
   ]
 end
 
@@ -1750,7 +1756,7 @@ num-persons
 num-persons
 100
 10000
-1000.0
+500.0
 50
 1
 NIL
@@ -1936,12 +1942,12 @@ SLIDER
 264
 1342
 297
-probability-of-getting-caught
-probability-of-getting-caught
+number-arrests-per-year
+number-arrests-per-year
 0
+60
+31.0
 1
-0.05
-0.05
 1
 NIL
 HORIZONTAL
@@ -2211,7 +2217,7 @@ intervention-end
 intervention-end
 0
 50
-36.0
+50.0
 1
 1
 NIL
@@ -2338,21 +2344,6 @@ HORIZONTAL
 
 SLIDER
 865
-805
-1037
-838
-law-enforcement-rate
-law-enforcement-rate
-0.5
-2
-1.0
-0.5
-1
-NIL
-HORIZONTAL
-
-SLIDER
-865
 840
 1037
 873
@@ -2426,8 +2417,8 @@ PLOT
 220
 1014
 c
-NIL
-NIL
+tick
+mean c
 0.0
 20.0
 -0.1
@@ -2444,8 +2435,8 @@ PLOT
 461
 1019
 education
-NIL
-NIL
+tick
+mean education
 0.0
 3.0
 2.0
