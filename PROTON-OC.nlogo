@@ -623,7 +623,10 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
-  ask rnd:weighted-n-of num-oc-families persons [
+  ; OC members are scaled down if we don't have 10K agents
+  let scaled-num-oc-families ceiling num-oc-families * num-persons / 10000
+  let scaled-num-oc-persons  ceiling num-oc-persons  * num-persons / 10000
+  ask rnd:weighted-n-of scaled-num-oc-families persons [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ] [
     set oc-member? true
@@ -632,14 +635,14 @@ to setup-oc-groups
     age > 18 and not oc-member? and any? household-link-neighbors with [ oc-member? ]
   ]
   ; fill up the families as much as possible
-  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (num-oc-persons - num-oc-families))
+  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (scaled-num-oc-families - scaled-num-oc-persons))
   suitable-candidates-in-families [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ] [
     set oc-member? true
   ]
   ; take some more if needed (note that this modifies the count of families)
-  ask rnd:weighted-n-of (num-oc-persons - count persons with [ oc-member? ])
+  ask rnd:weighted-n-of (scaled-num-oc-persons - count persons with [ oc-member? ])
   persons with [ not oc-member? ] [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [ set oc-member? true ]
   ask persons with [ oc-member? ] [
