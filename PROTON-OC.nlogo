@@ -331,7 +331,7 @@ to-report my-person-links
     my-partner-links
     my-household-links
     my-friendship-links
-    ;my-criminal-links
+    my-criminal-links
     my-professional-links
     my-school-links)
 end
@@ -343,7 +343,7 @@ to-report person-link-neighbors
     partner-link-neighbors
     household-link-neighbors
     friendship-link-neighbors
-    ;criminal-link-neighbors
+    criminal-link-neighbors
     professional-link-neighbors
     school-link-neighbors)
 end
@@ -355,7 +355,7 @@ to-report person-links
     partner-links
     household-links
     friendship-links
-    ;criminal-links
+    criminal-links
     professional-links
     school-links)
 end
