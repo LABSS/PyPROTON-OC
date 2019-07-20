@@ -164,9 +164,6 @@
         <enumeratedValueSet variable="targets-addressed-percent">
           <value value="10"/> <!-- overriden by intervention -->
         </enumeratedValueSet>
-        <enumeratedValueSet variable="probability-of-getting-caught">
-          <value value="0.05"/>
-        </enumeratedValueSet>
         <enumeratedValueSet variable="nat-propensity-m">
           <value value="1"/>
         </enumeratedValueSet>
