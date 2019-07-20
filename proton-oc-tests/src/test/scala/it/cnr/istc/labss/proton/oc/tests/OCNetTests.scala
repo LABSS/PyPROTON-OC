@@ -20,7 +20,7 @@ class OCNetTests extends OCModelSuite {
       ws.rpt("""
         all? all-persons [ count other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) = count person-link-neighbors ]
         """) shouldBe true
-      ws.rpt("ifelse-value (ticks mod ticks-per-year = 0) [ sum [ probability-of-getting-caught ] of persons with [ oc-member? ] - sum [ (OC-repression-prob turtle-set self) ] of persons with [ oc-member? ] < 1E-5 ] [ true ]") shouldBe true
+      ws.rpt("ifelse-value (ticks mod ticks-per-year = 0) [ sum [ arrest-rate ] of persons with [ oc-member? ] - sum [ (OC-repression-prob turtle-set self) ] of persons with [ oc-member? ] < 1E-5 ] [ true ]") shouldBe true
     }
   }
 }

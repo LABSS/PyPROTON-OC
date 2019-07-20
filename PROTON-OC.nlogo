@@ -170,6 +170,31 @@ to profile-go
   show timer
 end
 
+to fix-unemployment [ target-level-un ]
+  ; key is list education-level male?
+  let current-unemployment count all-persons with [ job-level = 1 and age > 18 and age <= 65 ] / count all-persons with [age > 18 and age <= 65 ]
+  let correction (target-level-un / current-unemployment
+    foreach table:keys work_status_by_edu_lvl [ key ->
+      let un item 1 item 0 table:get work_status_by_edu_lvl key
+      let oc item 1 item 1 table:get work_status_by_edu_lvl key
+      ; we push some people to work at level 2 to reduce unemployment
+      let new-un un * correction
+      set oc oc + (un - new-un)
+      let orig table:get  work_status_by_edu_lvl key
+      table:put work_status_by_edu_lvl key (list (list 1 new-un) (list 2 oc ) item 2 orig item 3 orig)
+    ]
+    ; this repeats the procedure already ran in init-person, updating the values to the new situation
+    ask persons [
+      ifelse age > 16 [
+        set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+        set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+      ] [
+        set job-level 1
+        set wealth-level 1 ; this will be updated by family membership
+      ]
+    ]
+end
+
 to setup
   clear-all
   choose-intervention-setting
@@ -185,6 +210,7 @@ to setup
   setup-education-levels
   init-breed-colors
   setup-persons-and-friendship
+  if unemployment-tuning [ fix-unemployment unemployment-target ]
   generate-households
   setup-siblings
   setup-schools
@@ -901,16 +927,12 @@ to-report calculate-age
   report floor ((ticks - birth-tick) / ticks-per-year)
 end
 
-to-report manipulate-employment-rate [ a-number ]
-  report int (round (a-number * employment-rate))
-end
-
 to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence read-csv "employer_sizes"
-  let jobs-target manipulate-employment-rate (count persons with [ job-level != 1 ])
+  let jobs-target (count persons with [ job-level != 1 ])
   while [ count jobs < jobs-target ] [
-    let n manipulate-employment-rate (one-of job-counts)
+    let n (one-of job-counts)
     create-employers 1 [
       set my-jobs nobody
       hatch-jobs n [
@@ -1758,7 +1780,7 @@ num-persons
 num-persons
 100
 10000
-500.0
+1000.0
 50
 1
 NIL
@@ -2317,14 +2339,14 @@ HORIZONTAL
 SLIDER
 865
 735
-1037
+1047
 768
-employment-rate
-employment-rate
+unemployment-target
+unemployment-target
 0
-2
-1.0
-0.1
+1
+0.45
+0.01
 1
 NIL
 HORIZONTAL
@@ -2448,6 +2470,17 @@ false
 "" ""
 PENS
 "edu-pen" 1.0 0 -16777216 true "" "plot mean [ education-level ] of all-persons"
+
+SWITCH
+865
+805
+1057
+838
+unemployment-tuning
+unemployment-tuning
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
