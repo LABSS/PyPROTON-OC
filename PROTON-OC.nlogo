@@ -145,6 +145,7 @@ globals [
   number-offspring-recruited-this-tick
   co-offender-group-histo
   people-jailed
+  number-crimes
 ]
 
 to profile-setup
@@ -271,7 +272,7 @@ to load-stats-tables
   set work_status group-by-first-two-items read-csv "work_status"
   set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
   set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
-  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
+  set punishment-length-list but-first csv:from-file "inputs/general/data/conviction_length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
@@ -967,10 +968,6 @@ to find-job ; person procedure
   if the-job = nobody [
     set the-job one-of jobs with [ my-worker = nobody and job-level < [ job-level ] of myself ]
   ]
-  if the-job = nobody [
-    set the-job one-of jobs with [ my-worker = nobody ]
-  ]
-  if the-job = nobody [ show "failed" ]
   if the-job != nobody [
     set my-job the-job
     ask the-job [ set my-worker myself ]
@@ -1188,8 +1185,9 @@ to commit-crimes
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value  * count people-in-cell * criminal-rate / ticks-per-year
+    let n-of-crimes last value * count people-in-cell * criminal-rate / ticks-per-year
     repeat round n-of-crimes [
+      set number-crimes number-crimes + 1
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
@@ -1880,7 +1878,7 @@ BUTTON
 169
 71
 202
-NIL
+go
 go
 NIL
 1
@@ -2391,7 +2389,7 @@ CHOOSER
 intervention
 intervention
 "use current values" "baseline" "preventive" "disruptive"
-2
+0
 
 MONITOR
 268
@@ -2484,9 +2482,9 @@ unemployment-target
 3
 
 MONITOR
-50
+15
 555
-195
+160
 600
 unemployed rate (link)
 count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
@@ -2495,9 +2493,9 @@ count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and
 11
 
 MONITOR
-50
+15
 605
-195
+160
 650
 unemployed rate (level)
 count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
@@ -2506,13 +2504,24 @@ count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and a
 11
 
 MONITOR
-51
+16
 509
-176
+141
 554
 assignment errors
 count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age < 65 ]
 17
+1
+11
+
+MONITOR
+165
+510
+260
+555
+NIL
+number-crimes
+3
 1
 11
 
