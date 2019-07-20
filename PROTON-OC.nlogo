@@ -172,7 +172,7 @@ end
 
 to fix-unemployment [ target-level-un ]
   ; key is list education-level male?
-  let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age <= 65 and my-school = nobody ] / count all-persons with [ age > 16 and age <= 65 and my-school = nobody]
+  let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
   let correction (target-level-un / 100 / current-unemployment)
   foreach table:keys work_status_by_edu_lvl [ key ->
     let un item 1 item 0 table:get work_status_by_edu_lvl key
@@ -187,7 +187,6 @@ to fix-unemployment [ target-level-un ]
     ][
       map [ i -> (list (i + 2) (item i orig * (1 + reallocate / perc-occupied))) ] [ 0 1 2 ]
     ]
-    show fput (list 1 new-un) new-row
     table:put work_status_by_edu_lvl key fput (list 1 new-un) new-row
   ]
   ; this repeats the procedure already ran in init-person, updating the values to the new situation
@@ -221,7 +220,7 @@ to setup
   generate-households
   setup-siblings
   setup-employers-jobs
-  ask persons with [ my-school = nobody and age >= 16 and age < retirement-age and job-level > 1 ] [ find-job ]
+  ask persons with [ my-job = nobody and my-school = nobody and age >= 16 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
   calculate-arrest-rate
@@ -940,7 +939,8 @@ end
 to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence read-csv "employer_sizes"
-  let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age <= 65 ])
+  ;; a small multiplier is added so to increase the pool to allow for matching at the job level
+  let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age < 65 ]) * 1.2
   while [ count jobs < jobs-target ] [
     let n (one-of job-counts)
     create-employers 1 [
@@ -963,10 +963,14 @@ end
 
 to find-job ; person procedure
   output "Looking for jobs"
-  let the-job one-of jobs with [ my-worker = nobody and [ job-level ] of myself = job-level ]
+  let the-job one-of jobs with [ my-worker = nobody and job-level = [ job-level ] of myself ]
   if the-job = nobody [
-    set the-job one-of jobs with [ my-worker = nobody and [ job-level ] of myself = job-level + 1 ]
+    set the-job one-of jobs with [ my-worker = nobody and job-level < [ job-level ] of myself ]
   ]
+  if the-job = nobody [
+    set the-job one-of jobs with [ my-worker = nobody ]
+  ]
+  if the-job = nobody [ show "failed" ]
   if the-job != nobody [
     set my-job the-job
     ask the-job [ set my-worker myself ]
@@ -2156,7 +2160,7 @@ CHOOSER
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
-0
+3
 
 CHOOSER
 15
@@ -2187,7 +2191,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-10.0
+50.0
 1
 1
 NIL
@@ -2254,7 +2258,7 @@ intervention-end
 intervention-end
 0
 50
-50.0
+9999.0
 1
 1
 NIL
@@ -2366,9 +2370,9 @@ HORIZONTAL
 
 SLIDER
 865
-840
+825
 1037
-873
+858
 punishment-length
 punishment-length
 0.5
@@ -2387,7 +2391,7 @@ CHOOSER
 intervention
 intervention
 "use current values" "baseline" "preventive" "disruptive"
-0
+2
 
 MONITOR
 268
@@ -2470,34 +2474,34 @@ PENS
 "edu-pen" 1.0 0 -16777216 true "" "plot mean [ education-level ] of all-persons"
 
 CHOOSER
-845
-910
-1012
-955
+865
+775
+1032
+820
 unemployment-target
 unemployment-target
 "base" 15 30 45
-1
+3
 
 MONITOR
 50
 555
-202
+195
 600
 unemployed rate (link)
-count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
-17
+count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
+3
 1
 11
 
 MONITOR
 50
-619
-207
-664
+605
+195
+650
 unemployed rate (level)
-count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
-17
+count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
+3
 1
 11
 
@@ -2507,7 +2511,7 @@ MONITOR
 176
 554
 assignment errors
-count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age <= 65 ]
+count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age < 65 ]
 17
 1
 11
