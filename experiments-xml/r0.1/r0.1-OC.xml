@@ -110,10 +110,10 @@
             <value value="1"/>
         </enumeratedValueSet>
         <!-- 4. Law enforcement intervention rate -->
-        <enumeratedValueSet variable="law-enforcement-rate">
-            <value value="0.5"/>
-            <value value="1.0"/>
-            <value value="1.5"/>
+        <enumeratedValueSet variable="number-arrests-per-year">
+            <value value="15"/>
+            <value value="30"/>
+            <value value="45"/>
         </enumeratedValueSet>
         <!-- 5. Punishment length -->
         <enumeratedValueSet variable="punishment-length">

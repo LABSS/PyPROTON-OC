@@ -1184,7 +1184,6 @@ to commit-crimes
     ]
   ]
   foreach co-offender-groups [ co-offenders ->
-    show arrest-probability-with-intervention co-offenders
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
 end
