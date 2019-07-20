@@ -172,7 +172,7 @@ end
 
 to fix-unemployment [ target-level-un ]
   ; key is list education-level male?
-  let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age <= 65 and my-school = nobody ] / count all-persons with [ age > 16 and age <= 65 and my-school = nobody]
+  let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
   let correction (target-level-un / 100 / current-unemployment)
   foreach table:keys work_status_by_edu_lvl [ key ->
     let un item 1 item 0 table:get work_status_by_edu_lvl key
@@ -187,7 +187,6 @@ to fix-unemployment [ target-level-un ]
     ][
       map [ i -> (list (i + 2) (item i orig * (1 + reallocate / perc-occupied))) ] [ 0 1 2 ]
     ]
-    show fput (list 1 new-un) new-row
     table:put work_status_by_edu_lvl key fput (list 1 new-un) new-row
   ]
   ; this repeats the procedure already ran in init-person, updating the values to the new situation
@@ -941,7 +940,7 @@ to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence read-csv "employer_sizes"
   ;; a small multiplier is added so to increase the pool to allow for matching at the job level
-  let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age <= 65 ]) * 1.2
+  let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age < 65 ]) * 1.2
   while [ count jobs < jobs-target ] [
     let n (one-of job-counts)
     create-employers 1 [
@@ -2490,7 +2489,7 @@ MONITOR
 195
 600
 unemployed rate (link)
-count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
+count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
 3
 1
 11
@@ -2501,7 +2500,7 @@ MONITOR
 195
 650
 unemployed rate (level)
-count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
+count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
 3
 1
 11
@@ -2512,7 +2511,7 @@ MONITOR
 176
 554
 assignment errors
-count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age <= 65 ]
+count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age < 65 ]
 17
 1
 11
