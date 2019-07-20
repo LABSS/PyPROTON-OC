@@ -144,6 +144,7 @@ globals [
   number-protected-recruited-this-tick
   number-offspring-recruited-this-tick
   co-offender-group-histo
+  people-jailed
 ]
 
 to profile-setup
@@ -415,8 +416,8 @@ to-report intervention-on?
 end
 
 to calculate-arrest-rate
-  ; this gives the probability of arrest, propotionally to:       population       number of expected crimes in the first year
-  set arrest-rate number-arrests-per-year / ticks-per-year / 10000 * num-persons / 60
+  ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year
+  set arrest-rate number-arrests-per-year / ticks-per-year / 842
 end
 
 to dump-networks
@@ -1183,6 +1184,7 @@ to commit-crimes
     ]
   ]
   foreach co-offender-groups [ co-offenders ->
+    show arrest-probability-with-intervention co-offenders
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
 end
@@ -1199,8 +1201,8 @@ end
 
 to-report arrest-probability-with-intervention [ group ]
   if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ])
-  [ report OC-repression-prob group ]
-  [ report arrest-rate ]
+  [ report count group * OC-repression-prob group ]
+  [ report count group * arrest-rate ]
 end
 
 to-report OC-repression-prob [ a-group ]
@@ -1255,6 +1257,7 @@ end
 to get-caught [ co-offenders ]
   ask co-offenders [
     set number-law-interventions-this-tick number-law-interventions-this-tick + 1
+    set people-jailed people-jailed + 1
     set breed prisoners
     set shape "face sad"
     ifelse male?
@@ -1945,9 +1948,9 @@ SLIDER
 number-arrests-per-year
 number-arrests-per-year
 0
-60
-31.0
-1
+100
+30.0
+5
 1
 NIL
 HORIZONTAL

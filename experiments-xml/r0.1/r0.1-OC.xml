@@ -78,6 +78,7 @@
         <metric>count jobs</metric>
         <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
         <metric>count all-persons with [ my-job = nobody and age &gt; 18 and age &lt;= 65 ] / count all-persons with [age &gt; 18 and age &lt;= 65 ]</metric>
+        <metric>people-jailed</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
