@@ -210,7 +210,7 @@ to setup
   setup-education-levels
   init-breed-colors
   setup-persons-and-friendship
-  if unemployment-tuning [ fix-unemployment unemployment-target ]
+  if unemployment-target != "base" [ fix-unemployment unemployment-target ]
   generate-households
   setup-siblings
   setup-schools
@@ -2341,27 +2341,12 @@ SLIDER
 735
 1047
 768
-unemployment-target
-unemployment-target
-0
-1
-0.45
-0.01
-1
-NIL
-HORIZONTAL
-
-SLIDER
-865
-770
-1037
-803
 education-rate
 education-rate
 0
 2
 1.0
-0.1
+0.01
 1
 NIL
 HORIZONTAL
@@ -2471,16 +2456,15 @@ false
 PENS
 "edu-pen" 1.0 0 -16777216 true "" "plot mean [ education-level ] of all-persons"
 
-SWITCH
-865
-805
-1057
-838
-unemployment-tuning
-unemployment-tuning
-1
-1
--1000
+CHOOSER
+845
+910
+1012
+955
+unemployment-target
+unemployment-target
+"base" 15 30 45
+0
 
 @#$#@#$#@
 ## WHAT IS IT?

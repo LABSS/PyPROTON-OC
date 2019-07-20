@@ -102,8 +102,10 @@
             <value value="1.5"/>
         </enumeratedValueSet>
         <!-- 3a. Employment rate and education rate must vary together -->
-        <enumeratedValueSet variable="employment-rate">
-            <value value="1"/>
+        <enumeratedValueSet variable="unemployment-target">
+            <value value="15"/>
+            <value value="30"/>
+            <value value="45"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
