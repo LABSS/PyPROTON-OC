@@ -173,7 +173,7 @@ end
 to fix-unemployment [ target-level-un ]
   ; key is list education-level male?
   let current-unemployment count all-persons with [ job-level = 1 and age > 18 and age <= 65 ] / count all-persons with [age > 18 and age <= 65 ]
-  let correction (target-level-un / current-unemployment
+  let correction (target-level-un / current-unemployment)
     foreach table:keys work_status_by_edu_lvl [ key ->
       let un item 1 item 0 table:get work_status_by_edu_lvl key
       let oc item 1 item 1 table:get work_status_by_edu_lvl key
