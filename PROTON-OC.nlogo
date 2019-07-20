@@ -332,7 +332,7 @@ to-report my-person-links
     my-partner-links
     my-household-links
     my-friendship-links
-    ;my-criminal-links
+    my-criminal-links
     my-professional-links
     my-school-links)
 end
@@ -344,7 +344,7 @@ to-report person-link-neighbors
     partner-link-neighbors
     household-link-neighbors
     friendship-link-neighbors
-    ;criminal-link-neighbors
+    criminal-link-neighbors
     professional-link-neighbors
     school-link-neighbors)
 end
@@ -356,7 +356,7 @@ to-report person-links
     partner-links
     household-links
     friendship-links
-    ;criminal-links
+    criminal-links
     professional-links
     school-links)
 end
@@ -2483,7 +2483,7 @@ MONITOR
 50
 555
 202
-601
+600
 unemployed rate (link)
 count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
 17
@@ -2494,7 +2494,7 @@ MONITOR
 50
 619
 207
-665
+664
 unemployed rate (level)
 count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
 17
@@ -2505,7 +2505,7 @@ MONITOR
 51
 509
 176
-555
+554
 assignment errors
 count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age <= 65 ]
 17
