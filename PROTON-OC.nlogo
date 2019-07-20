@@ -172,16 +172,23 @@ end
 
 to fix-unemployment [ target-level-un ]
   ; key is list education-level male?
-  let current-unemployment count all-persons with [ job-level = 1 and age > 18 and age <= 65 ] / count all-persons with [age > 18 and age <= 65 ]
+  let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age <= 65 and my-school = nobody ] / count all-persons with [ age > 16 and age <= 65 and my-school = nobody]
   let correction (target-level-un / 100 / current-unemployment)
   foreach table:keys work_status_by_edu_lvl [ key ->
     let un item 1 item 0 table:get work_status_by_edu_lvl key
     let oc item 1 item 1 table:get work_status_by_edu_lvl key
     ; we push some people to work at level 2 to reduce unemployment
     let new-un un * correction
-    set oc oc + (un - new-un)
-    let orig table:get  work_status_by_edu_lvl key
-    table:put work_status_by_edu_lvl key (list (list 1 new-un) (list 2 oc ) item 2 orig item 3 orig)
+    let reallocate (un - new-un)
+    let orig map [ i -> item 1 i ] but-first table:get work_status_by_edu_lvl key
+    let perc-occupied 1 - un
+    let new-row ifelse-value (perc-occupied = 0) [
+      map [ i -> (list (i + 2) (1 / 3) ) ] [ 0 1 2 ]
+    ][
+      map [ i -> (list (i + 2) (item i orig * (1 + reallocate / perc-occupied))) ] [ 0 1 2 ]
+    ]
+    show fput (list 1 new-un) new-row
+    table:put work_status_by_edu_lvl key fput (list 1 new-un) new-row
   ]
   ; this repeats the procedure already ran in init-person, updating the values to the new situation
   ask persons [
@@ -207,13 +214,14 @@ to setup
   setup-education-levels
   init-breed-colors
   setup-persons-and-friendship
+  setup-schools
+  init-students
+  assign-jobs-and-wealth
   if unemployment-target != "base" [ fix-unemployment unemployment-target ]
   generate-households
   setup-siblings
-  setup-schools
-  init-students
   setup-employers-jobs
-  ask persons with [ my-school = nobody and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
+  ask persons with [ my-school = nobody and age >= 16 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
   calculate-arrest-rate
@@ -391,7 +399,7 @@ to go
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
   ]
-  if ((ticks mod ticks-per-year) = 0) [
+  if ((ticks mod ticks-per-year) = 0) [ ; this should be 11, probably, otherwise
     calculate-criminal-tendency
     graduate
     ask persons with [
@@ -821,12 +829,17 @@ to init-person [ age-gender-dist ] ; person command
   set max-education-level tune-edu pick-from-pair-list table:get edu male?
   set education-level max-education-level
   limit-education-by-age
-  ifelse age > 16 [
-    set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
-    set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
-  ] [
-    set job-level 1
-    set wealth-level 1 ; this will be updated by family membership
+end
+
+to assign-jobs-and-wealth
+  ask persons [
+    ifelse age > 16 [
+      set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+      set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+    ] [
+      set job-level 1
+      set wealth-level 1 ; this will be updated by family membership
+    ]
   ]
 end
 
@@ -927,7 +940,7 @@ end
 to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence read-csv "employer_sizes"
-  let jobs-target (count persons with [ job-level != 1 ])
+  let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age <= 65 ])
   while [ count jobs < jobs-target ] [
     let n (one-of job-counts)
     create-employers 1 [
@@ -951,6 +964,9 @@ end
 to find-job ; person procedure
   output "Looking for jobs"
   let the-job one-of jobs with [ my-worker = nobody and [ job-level ] of myself = job-level ]
+  if the-job = nobody [
+    set the-job one-of jobs with [ my-worker = nobody and [ job-level ] of myself = job-level + 1 ]
+  ]
   if the-job != nobody [
     set my-job the-job
     ask the-job [ set my-worker myself ]
@@ -2462,6 +2478,39 @@ unemployment-target
 unemployment-target
 "base" 15 30 45
 1
+
+MONITOR
+50
+555
+202
+601
+unemployed rate (link)
+count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
+17
+1
+11
+
+MONITOR
+50
+619
+207
+665
+unemployed rate (level)
+count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age <= 65 ] / count all-persons with [ my-school = nobody and age > 16 and age <= 65 ]
+17
+1
+11
+
+MONITOR
+51
+509
+176
+555
+assignment errors
+count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age <= 65 ]
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
