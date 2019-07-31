@@ -121,6 +121,7 @@ globals [
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
+  arrest-rate
   jobs_by_company_size
   education-levels  ; table from education level to data
   c-by-age-and-sex
@@ -143,6 +144,8 @@ globals [
   number-protected-recruited-this-tick
   number-offspring-recruited-this-tick
   co-offender-group-histo
+  people-jailed
+  number-crimes
 ]
 
 to profile-setup
@@ -168,6 +171,34 @@ to profile-go
   show timer
 end
 
+to fix-unemployment [ target-level-un ]
+  ; key is list education-level male?
+  let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
+  let correction (target-level-un / 100 / current-unemployment)
+  foreach table:keys work_status_by_edu_lvl [ key ->
+    let un item 1 item 0 table:get work_status_by_edu_lvl key
+    let oc item 1 item 1 table:get work_status_by_edu_lvl key
+    ; we push some people to work at level 2 to reduce unemployment
+    let new-un un * correction
+    let reallocate (un - new-un)
+    let orig map [ i -> item 1 i ] but-first table:get work_status_by_edu_lvl key
+    let perc-occupied 1 - un
+    let new-row ifelse-value (perc-occupied = 0) [
+      map [ i -> (list (i + 2) (1 / 3) ) ] [ 0 1 2 ]
+    ][
+      map [ i -> (list (i + 2) (item i orig * (1 + reallocate / perc-occupied))) ] [ 0 1 2 ]
+    ]
+    table:put work_status_by_edu_lvl key fput (list 1 new-un) new-row
+  ]
+  ; this repeats the procedure already ran in init-person, updating the values to the new situation
+  ask persons [
+    if age > 16 [
+      set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+      set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+    ]
+  ]
+end
+
 to setup
   clear-all
   choose-intervention-setting
@@ -183,14 +214,17 @@ to setup
   setup-education-levels
   init-breed-colors
   setup-persons-and-friendship
-  generate-households
-  setup-siblings
   setup-schools
   init-students
+  assign-jobs-and-wealth
+  if unemployment-target != "base" [ fix-unemployment unemployment-target ]
+  generate-households
+  setup-siblings
   setup-employers-jobs
-  ask persons with [ my-school = nobody and age >= 18 and age < retirement-age and job-level > 1 ] [ find-job ]
+  ask persons with [ my-job = nobody and my-school = nobody and age >= 16 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
   calculate-criminal-tendency
+  calculate-arrest-rate
   setup-oc-groups
   setup-facilitators
   reset-oc-embeddedness
@@ -238,7 +272,7 @@ to load-stats-tables
   set work_status group-by-first-two-items read-csv "work_status"
   set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
   set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
-  set punishment-length-list csv:from-file "inputs/palermo/data/imprisonment-length.csv"
+  set punishment-length-list but-first csv:from-file "inputs/general/data/conviction_length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
@@ -298,7 +332,7 @@ to-report my-person-links
     my-partner-links
     my-household-links
     my-friendship-links
-    ;my-criminal-links
+    my-criminal-links
     my-professional-links
     my-school-links)
 end
@@ -310,7 +344,7 @@ to-report person-link-neighbors
     partner-link-neighbors
     household-link-neighbors
     friendship-link-neighbors
-    ;criminal-link-neighbors
+    criminal-link-neighbors
     professional-link-neighbors
     school-link-neighbors)
 end
@@ -322,7 +356,7 @@ to-report person-links
     partner-links
     household-links
     friendship-links
-    ;criminal-links
+    criminal-links
     professional-links
     school-links)
 end
@@ -365,7 +399,7 @@ to go
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
     ; OC-ties-disruption? we don't yet have an implementation.
   ]
-  if ((ticks mod ticks-per-year) = 0) [
+  if ((ticks mod ticks-per-year) = 0) [ ; this should be 11, probably, otherwise
     calculate-criminal-tendency
     graduate
     ask persons with [
@@ -410,6 +444,11 @@ to-report intervention-on?
   report ticks mod ticks-between-intervention = 0 and
      ticks >= intervention-start and
      ticks <  intervention-end
+end
+
+to calculate-arrest-rate
+  ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year
+  set arrest-rate number-arrests-per-year / ticks-per-year / 842
 end
 
 to dump-networks
@@ -623,7 +662,10 @@ to-report dunbar-number ; person reporter
 end
 
 to setup-oc-groups
-  ask rnd:weighted-n-of num-oc-families persons [
+  ; OC members are scaled down if we don't have 10K agents
+  let scaled-num-oc-families ceiling num-oc-families * num-persons / 10000
+  let scaled-num-oc-persons  ceiling num-oc-persons  * num-persons / 10000
+  ask rnd:weighted-n-of scaled-num-oc-families persons [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ] [
     set oc-member? true
@@ -632,14 +674,14 @@ to setup-oc-groups
     age > 18 and not oc-member? and any? household-link-neighbors with [ oc-member? ]
   ]
   ; fill up the families as much as possible
-  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (num-oc-persons - num-oc-families))
+  ask rnd:weighted-n-of min (list count suitable-candidates-in-families (scaled-num-oc-persons - scaled-num-oc-families))
   suitable-candidates-in-families [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ] [
     set oc-member? true
   ]
   ; take some more if needed (note that this modifies the count of families)
-  ask rnd:weighted-n-of (num-oc-persons - count persons with [ oc-member? ])
+  ask rnd:weighted-n-of (scaled-num-oc-persons - count persons with [ oc-member? ])
   persons with [ not oc-member? ] [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [ set oc-member? true ]
   ask persons with [ oc-member? ] [
@@ -716,7 +758,7 @@ to choose-intervention-setting
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 9999
   ]
   if intervention = "preventive" [
     set family-intervention "remove-if-caught-and-OC-member"
@@ -726,7 +768,7 @@ to choose-intervention-setting
     set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 9999
   ]
   if intervention = "disruptive" [
     set family-intervention "none"
@@ -736,7 +778,7 @@ to choose-intervention-setting
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
-    set intervention-end 36
+    set intervention-end 9999
   ]
 end
 
@@ -787,12 +829,17 @@ to init-person [ age-gender-dist ] ; person command
   set max-education-level tune-edu pick-from-pair-list table:get edu male?
   set education-level max-education-level
   limit-education-by-age
-  ifelse age > 16 [
-    set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
-    set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
-  ] [
-    set job-level 1
-    set wealth-level 1 ; this will be updated by family membership
+end
+
+to assign-jobs-and-wealth
+  ask persons [
+    ifelse age > 16 [
+      set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+      set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+    ] [
+      set job-level 1
+      set wealth-level 1 ; this will be updated by family membership
+    ]
   ]
 end
 
@@ -890,16 +937,13 @@ to-report calculate-age
   report floor ((ticks - birth-tick) / ticks-per-year)
 end
 
-to-report manipulate-employment-rate [ a-number ]
-  report int (round (a-number * employment-rate))
-end
-
 to setup-employers-jobs
   output "Setting up employers"
   let job-counts reduce sentence read-csv "employer_sizes"
-  let jobs-target manipulate-employment-rate (count persons with [ job-level != 1 ])
+  ;; a small multiplier is added so to increase the pool to allow for matching at the job level
+  let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age < 65 ]) * 1.2
   while [ count jobs < jobs-target ] [
-    let n manipulate-employment-rate (one-of job-counts)
+    let n (one-of job-counts)
     create-employers 1 [
       set my-jobs nobody
       hatch-jobs n [
@@ -920,7 +964,10 @@ end
 
 to find-job ; person procedure
   output "Looking for jobs"
-  let the-job one-of jobs with [ my-worker = nobody and [ job-level ] of myself = job-level ]
+  let the-job one-of jobs with [ my-worker = nobody and job-level = [ job-level ] of myself ]
+  if the-job = nobody [
+    set the-job one-of jobs with [ my-worker = nobody and job-level < [ job-level ] of myself ]
+  ]
   if the-job != nobody [
     set my-job the-job
     ask the-job [ set my-worker myself ]
@@ -1138,8 +1185,9 @@ to commit-crimes
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value  * count people-in-cell * criminal-rate / ticks-per-year
+    let n-of-crimes last value * count people-in-cell * criminal-rate / ticks-per-year
     repeat round n-of-crimes [
+      set number-crimes number-crimes + 1
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
@@ -1189,8 +1237,8 @@ end
 
 to-report arrest-probability-with-intervention [ group ]
   if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ])
-  [ report OC-repression-prob group * law-enforcement-rate ]
-  [ report probability-of-getting-caught * law-enforcement-rate ]
+  [ report count group * OC-repression-prob group ]
+  [ report count group * arrest-rate ]
 end
 
 to-report OC-repression-prob [ a-group ]
@@ -1243,8 +1291,9 @@ to commit-crime [ co-offenders ] ; observer command
 end
 
 to get-caught [ co-offenders ]
-  set number-law-interventions-this-tick number-law-interventions-this-tick + 1
   ask co-offenders [
+    set number-law-interventions-this-tick number-law-interventions-this-tick + 1
+    set people-jailed people-jailed + 1
     set breed prisoners
     set shape "face sad"
     ifelse male?
@@ -1300,9 +1349,8 @@ to calc-degree-correction-for-bosses
       let n count person-link-neighbors with [ oc-member? ]
       set to-sum lput (n / (n + 1) ^ 2) to-sum
     ]
-    let p-mean mean [ probability-of-getting-caught ] of gang
     ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
-    set degree-correction-for-bosses ifelse-value (mean to-sum = 0) [ 1 ] [ p-mean / mean to-sum ]
+    set degree-correction-for-bosses ifelse-value (mean to-sum = 0) [ 1 ] [ arrest-rate / mean to-sum ]
   ]
 end
 
@@ -1747,7 +1795,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+1000.0
 50
 1
 NIL
@@ -1830,7 +1878,7 @@ BUTTON
 169
 71
 202
-NIL
+go
 go
 NIL
 1
@@ -1933,12 +1981,12 @@ SLIDER
 264
 1342
 297
-probability-of-getting-caught
-probability-of-getting-caught
+number-arrests-per-year
+number-arrests-per-year
 0
-1
-0.05
-0.05
+100
+30.0
+5
 1
 NIL
 HORIZONTAL
@@ -2110,7 +2158,7 @@ CHOOSER
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
-0
+3
 
 CHOOSER
 15
@@ -2141,7 +2189,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-10.0
+50.0
 1
 1
 NIL
@@ -2208,7 +2256,7 @@ intervention-end
 intervention-end
 0
 50
-36.0
+9999.0
 1
 1
 NIL
@@ -2223,7 +2271,7 @@ percentage-of-facilitators
 percentage-of-facilitators
 0
 0.1
-0.005
+0.009
 0.001
 1
 NIL
@@ -2306,53 +2354,23 @@ HORIZONTAL
 SLIDER
 865
 735
-1037
+1047
 768
-employment-rate
-employment-rate
-0
-2
-1.0
-0.1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-865
-770
-1037
-803
 education-rate
 education-rate
 0
 2
 1.0
-0.1
+0.01
 1
 NIL
 HORIZONTAL
 
 SLIDER
 865
-805
+825
 1037
-838
-law-enforcement-rate
-law-enforcement-rate
-0.5
-2
-1.0
-0.5
-1
-NIL
-HORIZONTAL
-
-SLIDER
-865
-840
-1037
-873
+858
 punishment-length
 punishment-length
 0.5
@@ -2423,8 +2441,8 @@ PLOT
 220
 1014
 c
-NIL
-NIL
+tick
+mean c
 0.0
 20.0
 -0.1
@@ -2441,8 +2459,8 @@ PLOT
 461
 1019
 education
-NIL
-NIL
+tick
+mean education
 0.0
 3.0
 2.0
@@ -2452,6 +2470,60 @@ false
 "" ""
 PENS
 "edu-pen" 1.0 0 -16777216 true "" "plot mean [ education-level ] of all-persons"
+
+CHOOSER
+865
+775
+1032
+820
+unemployment-target
+unemployment-target
+"base" 15 30 45
+3
+
+MONITOR
+15
+555
+160
+600
+unemployed rate (link)
+count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
+3
+1
+11
+
+MONITOR
+15
+605
+160
+650
+unemployed rate (level)
+count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
+3
+1
+11
+
+MONITOR
+16
+509
+141
+554
+assignment errors
+count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age < 65 ]
+17
+1
+11
+
+MONITOR
+165
+510
+260
+555
+NIL
+number-crimes
+3
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
