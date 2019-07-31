@@ -6,12 +6,9 @@ import org.nlogo.api.ScalaConversions.RichSeq
 
 class OCSchoolTest extends OCModelSuite {
 
-  // note that persons have a birth tick, not an age (age is a reporter)
-  // thus, after the tick, a person can be just turned 65 but not retired yet (it will be after the go)
-  // that's why we use age > retirement-age and not >=.
   test("People should be in schools of the correct education level. Nobody should be both at work and in school. ") { ws =>
     ws.cmd("""
-      set num-persons 1000
+      set num-persons 10000
       setup
       """
     )
@@ -23,7 +20,6 @@ class OCSchoolTest extends OCModelSuite {
     println("Initial test done, running for three years:")
     var fid = 0
     for (fid <- 1 to 36) {
-        //ws.cmd("repeat 3 * ticks-per-year [ go ]")
       println(fid)
       ws.cmd("go")
     ws.rpt("not any? persons with [ my-school != nobody and my-job != nobody ]") shouldBe true 
@@ -34,7 +30,16 @@ class OCSchoolTest extends OCModelSuite {
         (birth-tick mod ticks-per-year = 0 and
           (age > 25 or 
           education-level = (possible-school-level - 2))) 
-      ]""") shouldBe true   
+    ]""") shouldBe true
+    ws.rpt("""
+      all? all-persons [ my-school = nobody or member? self [ my-students ] of my-school ]
+    """) shouldBe true 
+    ws.rpt("""
+      all? schools [ all? turtle-set my-students [ my-school = myself ] ]    """) shouldBe true 
+    // nobody is listed in two schools
+    ws.rpt("""
+      all? all-persons with [ my-school != nobody ] [ count schools with [ member? myself my-students ] = 1 ]
+    """) shouldBe true 
     }
   }
 }
