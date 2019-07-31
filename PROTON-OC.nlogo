@@ -888,13 +888,13 @@ to let-migrants-in
     ; we do not care about education level and wealth of migrants, as those variables
     ; exist only in order to generate the job position.
     hatch-persons 1 [
+      init-person-empty
       set my-job myself
       ask my-job [ set my-worker myself ]
       let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
       let conn decide-conn-number employees 20
       create-professional-links-with n-of conn other employees
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
-      init-person-empty
       set wealth-level [ job-level ] of myself
       set migrant? true
     ]
@@ -1100,7 +1100,6 @@ to graduate
   ]
 end
 
-; !!!!
 to leave-school ; person command
   let other-students other turtle-set [ my-students ] of my-school
   ask my-school [ set my-students other-students ]
@@ -1113,15 +1112,16 @@ end
 
 to make-people-die
   ask all-persons [
-    if random-float 1 < p-mortality [
+    if random-float 1 < p-mortality or age > 119 [
       if facilitator? [
         let new-facilitator one-of other persons with [ not facilitator? and age > 18 ]
         ask new-facilitator [ set facilitator? true ]
       ]
       set number-deceased number-deceased + 1
+      if my-job != nobody [ ask my-job [ set my-worker nobody ] ]
+      if my-school != nobody [ ask my-school [ set my-students other my-students ] ]
       die
     ]
-    ask all-persons with [ age > 119 ] [ die ]
   ]
 end
 
