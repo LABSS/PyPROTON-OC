@@ -146,6 +146,7 @@ globals [
   co-offender-group-histo
   people-jailed
   number-crimes
+  crime-multiplier
 ]
 
 to profile-setup
@@ -223,6 +224,7 @@ to setup
   setup-employers-jobs
   ask persons with [ my-job = nobody and my-school = nobody and age >= 16 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
+  calculate-crime-multiplier
   calculate-criminal-tendency
   calculate-arrest-rate
   setup-oc-groups
@@ -1098,6 +1100,7 @@ to graduate
   ]
 end
 
+; !!!!
 to leave-school ; person command
   let other-students other turtle-set [ my-students ] of my-school
   ask my-school [ set my-students other-students ]
@@ -1178,6 +1181,22 @@ to-report facilitator-test [ co-offending-group ]
   ]
 end
 
+to calculate-crime-multiplier
+  let total-crimes 0
+  foreach table:keys c-range-by-age-and-sex [ cell ->
+    let value last table:get c-range-by-age-and-sex cell
+    let people-in-cell persons with [
+      age > last cell and age <= first value and male? = first cell
+    ]
+    let n-of-crimes last value * count people-in-cell * criminal-rate
+    show (word first cell " " last cell ": rate " last value ", total " n-of-crimes)
+    set total-crimes total-crimes + n-of-crimes
+  ]
+  show total-crimes
+  set crime-multiplier number-crimes-yearly-per10k / 10000 * count all-persons / total-crimes
+  show crime-multiplier
+end
+
 to commit-crimes
   let co-offender-groups []
   foreach table:keys c-range-by-age-and-sex [ cell ->
@@ -1185,8 +1204,8 @@ to commit-crimes
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value * count people-in-cell * criminal-rate / ticks-per-year
-    repeat round n-of-crimes [
+    let target-n-of-crimes last value * count people-in-cell * criminal-rate / ticks-per-year * crime-multiplier
+    repeat round target-n-of-crimes [
       set number-crimes number-crimes + 1
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
@@ -1795,7 +1814,7 @@ num-persons
 num-persons
 100
 10000
-1000.0
+500.0
 50
 1
 NIL
@@ -2524,6 +2543,21 @@ number-crimes
 3
 1
 11
+
+SLIDER
+1095
+655
+1347
+688
+number-crimes-yearly-per10k
+number-crimes-yearly-per10k
+0
+3000
+200.0
+100
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
