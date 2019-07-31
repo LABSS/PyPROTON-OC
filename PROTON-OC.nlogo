@@ -895,6 +895,7 @@ to let-migrants-in
       let conn decide-conn-number employees 20
       create-professional-links-with n-of conn other employees
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
+      set age calculate-age
       set wealth-level [ job-level ] of myself
       set migrant? true
     ]
