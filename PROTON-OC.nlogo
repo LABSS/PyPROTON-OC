@@ -1082,7 +1082,7 @@ end
 to graduate
   let levels education-levels
   let primary-age item 0 table:get levels 0
-  ask persons with [ education-level = -1 and age = primary-age ] [
+  ask persons with [ education-level = -1 and age = primary-age and my-school = nobody ] [
     enroll-to-school 0
   ]
   ask schools [
