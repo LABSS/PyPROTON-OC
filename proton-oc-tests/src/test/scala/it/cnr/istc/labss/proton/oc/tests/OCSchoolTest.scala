@@ -8,7 +8,7 @@ class OCSchoolTest extends OCModelSuite {
 
   test("People should be in schools of the correct education level. Nobody should be both at work and in school. ") { ws =>
     ws.cmd("""
-      set num-persons 10000
+      set num-persons 1000
       setup
       """
     )
@@ -34,7 +34,7 @@ class OCSchoolTest extends OCModelSuite {
       all? all-persons with [ my-school != nobody ] [ count schools with [ member? myself my-students ] = 1 ]
     """) shouldBe true 
     println("Initial test done, running for three years:")
-      
+
     var fid = 0
     for (fid <- 1 to 36) {
       println(fid)
@@ -52,7 +52,8 @@ class OCSchoolTest extends OCModelSuite {
       all? all-persons [ my-school = nobody or member? self [ my-students ] of my-school ]
     """) shouldBe true 
     ws.rpt("""
-      all? schools [ all? turtle-set my-students [ my-school = myself ] ] """) shouldBe true 
+      all? schools [ all? turtle-set my-students [ my-school = myself ] ]
+    """) shouldBe true 
     // nobody is listed in two schools
     ws.rpt("""
       all? all-persons with [ my-school != nobody ] [ count schools with [ member? myself my-students ] = 1 ]

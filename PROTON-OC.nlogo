@@ -450,7 +450,7 @@ end
 
 to calculate-arrest-rate
   ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year
-  set arrest-rate number-arrests-per-year / ticks-per-year / 842
+  set arrest-rate number-arrests-per-year / ticks-per-year / number-crimes-yearly-per10k
 end
 
 to dump-networks
@@ -1189,12 +1189,9 @@ to calculate-crime-multiplier
       age > last cell and age <= first value and male? = first cell
     ]
     let n-of-crimes last value * count people-in-cell * criminal-rate
-    show (word first cell " " last cell ": rate " last value ", total " n-of-crimes)
     set total-crimes total-crimes + n-of-crimes
   ]
-  show total-crimes
   set crime-multiplier number-crimes-yearly-per10k / 10000 * count all-persons / total-crimes
-  show crime-multiplier
 end
 
 to commit-crimes
@@ -1814,7 +1811,7 @@ num-persons
 num-persons
 100
 10000
-500.0
+1000.0
 50
 1
 NIL
@@ -2553,7 +2550,7 @@ number-crimes-yearly-per10k
 number-crimes-yearly-per10k
 0
 3000
-200.0
+2000.0
 100
 1
 NIL
