@@ -86,27 +86,17 @@
             <value value="&quot;preventive&quot;"/>
             <value value="&quot;disruptive&quot;"/>
         </enumeratedValueSet>
-        <!-- 1. Number of OC members -->
+ <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
-            <value value="15"/>
             <value value="30"/>
-            <value value="45"/>
         </enumeratedValueSet>
         <!-- PALERMO SETUP -->
         <enumeratedValueSet variable="data-folder">
             <value value="&quot;inputs/palermo/data/&quot;"/>
         </enumeratedValueSet>
-        <!-- 2. Criminal rate -->
-        <enumeratedValueSet variable="number-crimes-yearly-per10k">
-            <value value="1000"/>
-            <value value="2000"/>
-            <value value="3000"/>
-        </enumeratedValueSet>
         <!-- 3a. Employment rate and education rate must vary together -->
         <enumeratedValueSet variable="unemployment-target">
-            <value value="15"/>
             <value value="30"/>
-            <value value="45"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
@@ -114,15 +104,17 @@
         </enumeratedValueSet>
         <!-- 4. Law enforcement intervention rate -->
         <enumeratedValueSet variable="number-arrests-per-year">
-            <value value="15"/>
             <value value="30"/>
-            <value value="45"/>
         </enumeratedValueSet>
         <!-- 5. Punishment length -->
         <enumeratedValueSet variable="punishment-length">
-            <value value="0.5"/>
             <value value="1.0"/>
-            <value value="1.5"/>
+        </enumeratedValueSet>
+        <!-- 2. Criminal rate -->
+        <enumeratedValueSet variable="number-crimes-yearly-per10k">
+            <value value="1000"/>
+            <value value="2000"/>
+            <value value="3000"/>
         </enumeratedValueSet>
 <!-- FIXED parameters     -->
         <enumeratedValueSet variable="num-oc-families">
