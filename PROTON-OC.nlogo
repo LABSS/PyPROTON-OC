@@ -23,9 +23,9 @@ persons-own [
   num-crimes-committed-this-tick
   education-level
   max-education-level
-  wealth-level           ; -1 for migrants
+  wealth-level
   job-level
-  my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
+  my-job                 ; 0 for inactive, 1 for unemployed. Could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
   propensity
@@ -126,6 +126,7 @@ globals [
   education-levels  ; table from education level to data
   c-by-age-and-sex
   c-range-by-age-and-sex
+  labour-status-by-age-and-sex
   ; outputs
   number-deceased
   facilitator-fails
@@ -175,6 +176,7 @@ to fix-unemployment [ target-level-un ]
   ; key is list education-level male?
   let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
   let correction (target-level-un / 100 / current-unemployment)
+  show correction
   foreach table:keys work_status_by_edu_lvl [ key ->
     let un item 1 item 0 table:get work_status_by_edu_lvl key
     let oc item 1 item 1 table:get work_status_by_edu_lvl key
@@ -278,6 +280,7 @@ to load-stats-tables
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
+  set labour-status-by-age-and-sex group-by-first-two-items read-csv "labour_status"
   ; further sources:
   ; schools.csv table goes into education-levels
   let marr item 0 but-first csv:from-file "inputs/general/data/marriages_stats.csv"
@@ -840,6 +843,10 @@ to assign-jobs-and-wealth
       set job-level 1
       set wealth-level 1 ; this will be updated by family membership
     ]
+    if (age > 14 and age < 65 and job-level = 1 and random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age) ) [
+      set job-level 0
+    ]
+    ; but what happens when people grow up?
   ]
 end
 
@@ -963,7 +970,6 @@ to-report random-level-by-size [ employer-size ]
 end
 
 to find-job ; person procedure
-  output "Looking for jobs"
   let the-job one-of jobs with [ my-worker = nobody and job-level = [ job-level ] of myself ]
   if the-job = nobody [
     set the-job one-of jobs with [ my-worker = nobody and job-level < [ job-level ] of myself ]
@@ -976,19 +982,6 @@ end
 
 to-report current-employees ; employer reporter
   report turtle-set [ my-worker ] of my-jobs
-end
-
-to-report pick-new-employee-from [ the-candidates ] ; job reporter
-  let the-job self
-  report one-of the-candidates with [
-    not retired? and interested-in? the-job
-  ]
-end
-
-to-report interested-in? [ the-job ] ; person reporter
-  report ifelse-value (my-job = nobody) [ true ] [
-    [ job-level ] of the-job > [ job-level ] of my-job
-  ]
 end
 
 to-report decide-conn-number [ people max-lim ]
@@ -1311,6 +1304,8 @@ to get-caught [ co-offenders ]
   ]
 end
 
+; this is what in the paper is called r - this is r
+;R is then operationalised as the proportion of OC members among the social relations of each individual (comprising family, friendship, school, working and co-offending relations)
 to-report candidate-weight ; person reporter
   let r ifelse-value [ oc-member? ] of myself [ oc-embeddedness ] [ 0 ]
   report -1 * (social-proximity-with myself + r)
@@ -1386,7 +1381,7 @@ end
 to-report factors-c
   report (list
     ;     var-name     normalized-reporter
-    (list "employment"   [ -> ifelse-value (my-job = nobody)                 [ 1.30 ] [ 1.0 ] ])
+    (list "employment"   [ -> ifelse-value (job-level = 1)                   [ 1.30 ] [ 1.0 ] ])
     (list "education"    [ -> ifelse-value (education-level >= 2)            [ 0.94 ] [ 1.0 ] ])
     (list "propensity"   [ -> ifelse-value (propensity >
       exp (nat-propensity-m - nat-propensity-sigma ^ 2 / 2) + nat-propensity-threshold *
@@ -1795,7 +1790,7 @@ num-persons
 num-persons
 100
 10000
-1000.0
+10000.0
 50
 1
 NIL
@@ -2004,9 +1999,9 @@ count prisoners
 
 PLOT
 15
-690
+700
 390
-845
+855
 Age distribution
 age
 count
@@ -2271,7 +2266,7 @@ percentage-of-facilitators
 percentage-of-facilitators
 0
 0.1
-0.009
+0.005
 0.001
 1
 NIL
@@ -2479,7 +2474,7 @@ CHOOSER
 unemployment-target
 unemployment-target
 "base" 15 30 45
-3
+0
 
 MONITOR
 15
@@ -2495,10 +2490,10 @@ count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and
 MONITOR
 15
 605
-160
+222
 650
-unemployed rate (level)
-count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
+unemployed rate (level, percent)
+count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 3
 1
 11
@@ -2522,6 +2517,17 @@ MONITOR
 NIL
 number-crimes
 3
+1
+11
+
+MONITOR
+15
+655
+212
+700
+Not looking for work (percent)
+count all-persons with [ job-level = 0 ] / count all-persons * 100
+0
 1
 11
 
