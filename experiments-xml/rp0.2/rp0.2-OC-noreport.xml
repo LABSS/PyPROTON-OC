@@ -2,89 +2,19 @@
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <experiments>
     <experiment name="rp0.2" repetitions="1" runMetricsEveryStep="true">
-        <setup>setup</setup>
-        <go>go</go>
+        <setup></setup>
+        <go>setup</go>
         <final>show (word "Time elapsed:" timer)
         dump-networks
         </final>
         <!-- assuming 40 years  -->
-        <timeLimit steps="12"/>
+        <timeLimit steps="1"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
-        <!-- 2. Number of recruited individuals into OC per time unit -->
-        <metric>o2</metric>
-        <!-- 3. Number of crimes per time unit -->
-        <metric>o3</metric>
-        <!-- 4. Number of crimes committed by OC members per time unit -->
-        <metric>o4</metric>
-        <!-- 5. Distribution and mean of C (which is the individual propensity towards crime commission) -->
-        <metric>o5</metric>
-        <metric>o5a</metric>
-        <!-- 6. Distribution and mean of R (which is the individual embededdness into OC-prone local networks) -->
-        <metric>o6</metric>
-        <metric>o6a</metric>
-        <!-- 7. Distribution of socio-demographic variables on new recruited individuals -->
-        <metric>o7a</metric>
-        <metric>o7b</metric>
-        <metric>o7c</metric>
-        <!-- 8. Distribution of socio-demographic variables of OC members -->
-        <metric>o8a</metric>
-        <metric>o8b</metric>
-        <metric>o8c</metric>
-        <!-- 9. Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC) -->
-        <metric>o9a</metric>
-        <metric>o9b</metric>
-        <metric>o9c</metric>
-        <!-- 10. Distribution of socio-demographic variables of the general population -->
-        <metric>o10a</metric>
-        <metric>o10b</metric>
-        <metric>o10c</metric>
-        <!-- 11. Number of crimes committed by facilitator agents per time unit -->
-        <metric>o11</metric>
-        <!-- 12. Number of law enforcement interventions per time unit -->
-        <metric>o12</metric>
-        <!-- 13. age structure of offenses -->
-        <metric>o13</metric>
-        <!-- 14. co-offenses per turn. A vector of co-offenses the side of the index, starting with zero. -->
-        <metric>o14</metric>
-        <!-- 15. number of persons addressed by a preventive interventions recruited this tick-->
-        <metric>o15</metric>
-        <!-- 16. number of OC person offsprings recruited this tick -->
-        <metric>o16</metric>
- 
-        <!-- Other reporters for debug and check -->
-        <metric>count persons</metric>
-        <metric>count links</metric>
-        <metric>count prisoners</metric>
-        <metric>count persons with [ migrant? ]</metric>
-        <metric>number-deceased</metric>
-        <metric>sum [ num-crimes-committed ] of persons</metric>
-        <metric>count persons with [ my-job != nobody ]</metric>
-        <metric>count jobs with [ my-worker != nobody  ]</metric>
-        <metric>crime-size-fails</metric>
-        <metric>count persons with [facilitator?]</metric>       
-        <metric>facilitator-fails</metric>        
-        <metric>facilitator-crimes</metric>        
-        <metric>count household-links </metric>
-        <metric>count partner-links</metric>
-        <metric>count sibling-links</metric>
-        <metric>count offspring-links</metric>
-        <metric>count friendship-links</metric>
-        <metric>count criminal-links</metric>
-        <metric>count professional-links</metric>
-        <metric>count school-links</metric>
-        <metric>count meta-links</metric>
-        <metric>sum [ count my-students ] of schools</metric>
-        <metric>count jobs</metric>
-        <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
-        <metric>count all-persons with [ my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ] / count all-persons with [my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ]</metric>
-        <metric>people-jailed</metric>
         <metric>initial-random-seed</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
-            <value value="&quot;preventive&quot;"/>
-            <value value="&quot;disruptive&quot;"/>
         </enumeratedValueSet>
  <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
@@ -112,9 +42,7 @@
         </enumeratedValueSet>
         <!-- 2. Criminal rate -->
         <enumeratedValueSet variable="number-crimes-yearly-per10k">
-            <value value="1000"/>
             <value value="2000"/>
-            <value value="3000"/>
         </enumeratedValueSet>
 <!-- FIXED parameters     -->
         <enumeratedValueSet variable="num-oc-families">

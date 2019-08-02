@@ -43,8 +43,6 @@
         <metric>o11</metric>
         <!-- 12. Number of law enforcement interventions per time unit -->
         <metric>o12</metric>
-        <!-- Other reporters for debug and check -->
-        <metric>o12</metric>
         <!-- 13. age structure of offenses -->
         <metric>o13</metric>
         <!-- 14. co-offenses per turn. A vector of co-offenses the side of the index, starting with zero. -->
@@ -53,6 +51,8 @@
         <metric>o15</metric>
         <!-- 16. number of OC person offsprings recruited this tick -->
         <metric>o16</metric>
+
+        <!-- Other reporters for debug and check -->
         <metric>count persons</metric>
         <metric>count links</metric>
         <metric>count prisoners</metric>
