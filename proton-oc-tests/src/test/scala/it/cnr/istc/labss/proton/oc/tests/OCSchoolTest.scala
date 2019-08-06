@@ -13,7 +13,7 @@ class OCSchoolTest extends OCModelSuite {
       """
     )
     ws.rpt("not any? persons with [ my-school != nobody and my-job != nobody ]") shouldBe true 
-    ws.rpt("all? persons [ my-school = nobody or education-level = ([ education-level ] of my-school) - 1 ] ") shouldBe true
+    ws.rpt("all? persons [ my-school = nobody or education-level = ([ diploma-level ] of my-school) - 1 ] ") shouldBe true
     ws.rpt("""
       all? all-persons [ my-school = nobody or ([ education-level ] of my-school = possible-school-level and education-level = possible-school-level - 1) ]
       """) shouldBe true

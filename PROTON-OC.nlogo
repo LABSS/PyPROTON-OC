@@ -21,7 +21,7 @@ undirected-link-breed [meta-links         meta-link]         ; person <--> perso
 persons-own [
   num-crimes-committed
   num-crimes-committed-this-tick
-  education-level
+  education-level        ; level: last school I finished (for example, 4: I finished university)
   max-education-level
   wealth-level
   job-level
@@ -49,7 +49,7 @@ prisoners-own [
   sentence-countdown
   num-crimes-committed
   num-crimes-committed-this-tick
-  education-level
+  education-level     ; level: last school I finished (for example, 4: I finished university)
   max-education-level
   wealth-level
   job-level
@@ -83,7 +83,7 @@ employers-own [
 ]
 
 schools-own [
-  education-level
+  diploma-level ; finishing this school provides the level here
   my-students
 ]
 
@@ -104,7 +104,6 @@ globals [
   network-saving-list          ; the networks that should be saved
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
-  num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
@@ -501,7 +500,7 @@ to socialization-intervene
 end
 
 to soc-add-educational [ targets ]
-    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels + 1) ]
+    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
 end
 
 to soc-add-psychological [ targets ]
@@ -870,7 +869,7 @@ to init-person-empty ; person command
   set num-crimes-committed 0
   set num-crimes-committed-this-tick 0
   ; some agents should probably have a few initial crimes at start
-  set education-level -1                                ; we set starting education level in init-students
+  set education-level 0                                 ; we set starting education level in init-students
   set max-education-level 0 ; useful only for children, will be updated in that case
   set wealth-level 1 ; this will be updated by family membership
   set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime  propensity
@@ -1013,7 +1012,7 @@ end
 to setup-education-levels
   let list-schools read-csv "schools"
   set education-levels []
-  let index 0
+  let index 1
   foreach list-schools [ row ->
     let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-persons) )
     let new-row replace-item 3 row x
@@ -1035,7 +1034,7 @@ end
 to setup-schools
   foreach table:keys education-levels [ level ->
     create-schools item 3 table:get education-levels level [
-      set education-level level
+      set diploma-level level
       set my-students no-turtles
     ]
   ]
@@ -1059,24 +1058,23 @@ end
 to enroll-to-school [ level ] ; person command
   let potential-schools (turtle-set [
     my-school
-  ] of household-link-neighbors) with [ education-level = level ]
+  ] of household-link-neighbors) with [ diploma-level = level ]
   ifelse any? potential-schools [
     set my-school one-of potential-schools
   ] [
-    set my-school one-of schools with [ education-level = level ]
+    set my-school one-of schools with [ diploma-level = level ]
   ]
   ask my-school [ set my-students (turtle-set my-students myself) ]
 end
 
 to graduate-and-enter-jobmarket
-  let levels education-levels
-  let primary-age item 0 table:get levels 0
-  ask persons with [ education-level = -1 and age = primary-age ] [
-    enroll-to-school 0
+  let primary-age item 0 table:get education-levels 1
+  ask persons with [ education-level = 0 and age = primary-age ] [
+    enroll-to-school 1
   ]
   ask schools [
-    let end-age item 1 table:get levels education-level
-    let school-education-level education-level
+    let end-age item 1 table:get education-levels diploma-level
+    let school-education-level diploma-level
     ask my-students with [ age = (end-age + 1)] [
       leave-school
       set education-level school-education-level
