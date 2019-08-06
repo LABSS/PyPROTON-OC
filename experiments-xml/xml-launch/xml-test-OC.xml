@@ -95,7 +95,7 @@
         </enumeratedValueSet>
         <!-- 3a. Employment rate -->
         <enumeratedValueSet variable="unemployment-multiplier">
-            <value value="&quot;baseline&quot;"/>
+            <value value="&quot;base&quot;"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
