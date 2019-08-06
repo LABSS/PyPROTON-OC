@@ -1209,6 +1209,7 @@ end
 
 to commit-crimes
   let co-offender-groups []
+  let co-offenders-started-by-OC []
   foreach table:keys c-range-by-age-and-sex [ cell ->
     let value last table:get c-range-by-age-and-sex cell
     let people-in-cell persons with [
@@ -1220,6 +1221,7 @@ to commit-crimes
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
+        if oc-member? [ set co-offenders-started-by-OC lput (turtle-set self accomplices) co-offenders-started-by-OC ]
         ; check for big crimes started from a normal guy
         if length accomplices + 1 > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
           set big-crime-from-small-fish big-crime-from-small-fish +  1
@@ -1234,10 +1236,7 @@ to commit-crimes
   if not empty? co-offender-groups [
     set co-offender-group-histo make-co-offending-histo co-offender-groups
   ]
-  let oc-co-offender-groups filter [ co-offenders ->
-    any? co-offenders with [ oc-member? ]
-  ] co-offender-groups
-  foreach oc-co-offender-groups [ co-offenders ->
+  foreach co-offenders-started-by-OC [ co-offenders ->
       ask co-offenders with [ not oc-member? ] [
       set new-recruit ticks
       set oc-member? true
@@ -1287,6 +1286,7 @@ to retire-persons
 end
 
 to-report find-accomplices [ n ] ; person reporter
+  if n = 0 [ report [ ] ]
   let d 1 ; start with a network distance of 1
   let accomplices []
   nw:with-context persons person-links [
@@ -1343,8 +1343,11 @@ end
 ; this is what in the paper is called r - this is r
 ;R is then operationalised as the proportion of OC members among the social relations of each individual (comprising family, friendship, school, working and co-offending relations)
 to-report candidate-weight ; person reporter
-  let r ifelse-value [ oc-member? ] of myself [ oc-embeddedness ] [ 0 ]
-  report -1 * (social-proximity-with myself + r)
+  report -1 * ifelse-value [ oc-member? ] of myself [
+    (social-proximity-with myself * oc-embeddedness * criminal-tendency)
+  ] [
+    (social-proximity-with myself * criminal-tendency)
+  ]
 end
 
 to calculate-criminal-tendency
@@ -2193,7 +2196,7 @@ CHOOSER
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
-3
+0
 
 CHOOSER
 15
