@@ -174,10 +174,8 @@ to profile-go
 end
 
 to fix-unemployment [ correction ]
-  ; key is list education-level male?
   let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
-  ;let correction (target-level-un / 100 / current-unemployment)
-  ;show correction
+  ; key is list education-level male?
   foreach table:keys work_status_by_edu_lvl [ key ->
     let un item 1 item 0 table:get work_status_by_edu_lvl key
     let oc item 1 item 1 table:get work_status_by_edu_lvl key
