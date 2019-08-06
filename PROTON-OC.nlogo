@@ -127,6 +127,7 @@ globals [
   c-by-age-and-sex
   c-range-by-age-and-sex
   labour-status-by-age-and-sex
+  labour-status-range
   ; outputs
   number-deceased
   facilitator-fails
@@ -281,6 +282,7 @@ to load-stats-tables
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
   set labour-status-by-age-and-sex group-by-first-two-items read-csv "labour_status"
+  set labour-status-range group-by-first-two-items read-csv "labour_status_range"
   ; further sources:
   ; schools.csv table goes into education-levels
   let marr item 0 but-first csv:from-file "inputs/general/data/marriages_stats.csv"
@@ -404,13 +406,17 @@ to go
   ]
   if ((ticks mod ticks-per-year) = 0) [ ; this should be 11, probably, otherwise
     calculate-criminal-tendency
-    graduate
+    graduate-and-enter-jobmarket
+    ; updates neet status only when changing age range        (the age is a key of the table)
+    ask persons with [ job-level < 2 and just-changed-age? and member? list age male? table:keys labour-status-range ] [
+      update-unemployment-status
+    ]
     ask persons with [
       my-school = nobody and age >= 18 and age < retirement-age and my-job = nobody and
       not retired? and job-level > 1
     ] [
-     find-job
-     if my-job != nobody [
+      find-job
+      if my-job != nobody [
         let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
         let conn decide-conn-number employees 20
         create-professional-links-with n-of conn other employees
@@ -1026,14 +1032,6 @@ to-report max-age-edu-level [ the-level ]
   report item 1 table:get education-levels the-level
 end
 
-to-report possible-school-level ; person command
-  let the-level -1
-  foreach table:keys education-levels [ i ->
-    if age <= max-age-edu-level i and age >= min-age-edu-level i [ set the-level i ]
-  ]
-  report the-level
-end
-
 to setup-schools
   foreach table:keys education-levels [ level ->
     create-schools item 3 table:get education-levels level [
@@ -1070,7 +1068,7 @@ to enroll-to-school [ level ] ; person command
   ask my-school [ set my-students (turtle-set my-students myself) ]
 end
 
-to graduate
+to graduate-and-enter-jobmarket
   let levels education-levels
   let primary-age item 0 table:get levels 0
   ask persons with [ education-level = -1 and age = primary-age ] [
@@ -1082,10 +1080,16 @@ to graduate
     ask my-students with [ age = (end-age + 1)] [
       leave-school
       set education-level school-education-level
-      if table:has-key? education-levels (school-education-level + 1) and
+      ifelse table:has-key? education-levels (school-education-level + 1) and
       (school-education-level + 1 < max-education-level)
       [
         enroll-to-school (school-education-level + 1)
+      ] [ ; otherwise, get a job level compatible with my education. Find-jobs will then try to assign the job. This includes the neet-check.
+        set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+        set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+        if (age > 14 and age < 65 and job-level = 1 and random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age) ) [
+          set job-level 0
+        ]
       ]
     ]
   ]
@@ -1095,6 +1099,10 @@ to leave-school ; person command
   let other-students other turtle-set [ my-students ] of my-school
   ask my-school [ set my-students other-students ]
   set my-school nobody
+end
+
+to update-unemployment-status
+  set job-level ifelse-value (random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age)) [ 0 ] [ 1 ]
 end
 
 to-report link-color
@@ -1736,6 +1744,10 @@ end
 to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
 end
+
+to-report just-changed-age?
+  report floor ((ticks - birth-tick) / ticks-per-year) = ((ticks - birth-tick) / ticks-per-year)
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -1790,7 +1802,7 @@ num-persons
 num-persons
 100
 10000
-10000.0
+1000.0
 50
 1
 NIL
