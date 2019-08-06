@@ -73,6 +73,9 @@
         <metric>sum [ count my-students ] of schools</metric>
         <metric>count jobs</metric>
         <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
+        <metric>count all-persons with [ my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ] / count all-persons with [my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ]</metric>
+        <metric>people-jailed</metric>
+        <metric>initial-random-seed</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
