@@ -172,11 +172,11 @@ to profile-go
   show timer
 end
 
-to fix-unemployment [ target-level-un ]
+to fix-unemployment [ correction ]
   ; key is list education-level male?
   let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
-  let correction (target-level-un / 100 / current-unemployment)
-  show correction
+  ;let correction (target-level-un / 100 / current-unemployment)
+  ;show correction
   foreach table:keys work_status_by_edu_lvl [ key ->
     let un item 1 item 0 table:get work_status_by_edu_lvl key
     let oc item 1 item 1 table:get work_status_by_edu_lvl key
@@ -219,7 +219,8 @@ to setup
   setup-schools
   init-students
   assign-jobs-and-wealth
-  if unemployment-target != "base" [ fix-unemployment unemployment-target ]
+  if unemployment-multiplier != "base" [ fix-unemployment unemployment-multiplier ]
+  setup-inactive-status
   generate-households
   setup-siblings
   setup-employers-jobs
@@ -848,10 +849,15 @@ to assign-jobs-and-wealth
       set job-level 1
       set wealth-level 1 ; this will be updated by family membership
     ]
-    if (age > 14 and age < 65 and job-level = 1 and random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age) ) [
+    ; this is just a first assignment, and will be modified first by the multiplier then by adding neet status.
+  ]
+end
+
+to setup-inactive-status
+  ask persons [
+      if (age > 14 and age < 65 and job-level = 1 and random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age) ) [
       set job-level 0
     ]
-    ; but what happens when people grow up?
   ]
 end
 
@@ -2488,11 +2494,11 @@ PENS
 CHOOSER
 865
 775
-1032
+1047
 820
-unemployment-target
-unemployment-target
-"base" 15 30 45
+unemployment-multiplier
+unemployment-multiplier
+"base" 0.5
 0
 
 MONITOR
