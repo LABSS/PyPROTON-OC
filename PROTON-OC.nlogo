@@ -21,11 +21,11 @@ undirected-link-breed [meta-links         meta-link]         ; person <--> perso
 persons-own [
   num-crimes-committed
   num-crimes-committed-this-tick
-  education-level
+  education-level        ; level: last school I finished (for example, 4: I finished university)
   max-education-level
-  wealth-level           ; -1 for migrants
+  wealth-level
   job-level
-  my-job                 ; could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
+  my-job                 ; 0 for inactive, 1 for unemployed. Could be known from `one-of job-link-neighbors`, but is stored directly for performance - need to be kept in sync
   birth-tick
   male?
   propensity
@@ -49,7 +49,7 @@ prisoners-own [
   sentence-countdown
   num-crimes-committed
   num-crimes-committed-this-tick
-  education-level
+  education-level     ; level: last school I finished (for example, 4: I finished university)
   max-education-level
   wealth-level
   job-level
@@ -83,7 +83,7 @@ employers-own [
 ]
 
 schools-own [
-  education-level
+  diploma-level ; finishing this school provides the level here
   my-students
 ]
 
@@ -104,7 +104,6 @@ globals [
   network-saving-list          ; the networks that should be saved
   model-saving-interval        ; every how many we save model structure
   breed-colors           ; a table from breeds to turtle colors
-  num-education-levels
   this-is-a-big-crime good-guy-threshold big-crime-from-small-fish ; checking anomalous crimes
   ; statistics tables
   num-co-offenders-dist  ; a list of probability for different crime sizes
@@ -126,6 +125,8 @@ globals [
   education-levels  ; table from education level to data
   c-by-age-and-sex
   c-range-by-age-and-sex
+  labour-status-by-age-and-sex
+  labour-status-range
   ; outputs
   number-deceased
   facilitator-fails
@@ -172,10 +173,9 @@ to profile-go
   show timer
 end
 
-to fix-unemployment [ target-level-un ]
-  ; key is list education-level male?
+to fix-unemployment [ correction ]
   let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
-  let correction (target-level-un / 100 / current-unemployment)
+  ; key is list education-level male?
   foreach table:keys work_status_by_edu_lvl [ key ->
     let un item 1 item 0 table:get work_status_by_edu_lvl key
     let oc item 1 item 1 table:get work_status_by_edu_lvl key
@@ -218,7 +218,8 @@ to setup
   setup-schools
   init-students
   assign-jobs-and-wealth
-  if unemployment-target != "base" [ fix-unemployment unemployment-target ]
+  if unemployment-multiplier != "base" [ fix-unemployment unemployment-multiplier ]
+  setup-inactive-status
   generate-households
   setup-siblings
   setup-employers-jobs
@@ -280,6 +281,8 @@ to load-stats-tables
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
+  set labour-status-by-age-and-sex group-by-first-two-items read-csv "labour_status"
+  set labour-status-range group-by-first-two-items read-csv "labour_status_range"
   ; further sources:
   ; schools.csv table goes into education-levels
   let marr item 0 but-first csv:from-file "inputs/general/data/marriages_stats.csv"
@@ -403,13 +406,17 @@ to go
   ]
   if ((ticks mod ticks-per-year) = 0) [ ; this should be 11, probably, otherwise
     calculate-criminal-tendency
-    graduate
+    graduate-and-enter-jobmarket
+    ; updates neet status only when changing age range        (the age is a key of the table)
+    ask persons with [ job-level < 2 and just-changed-age? and member? list age male? table:keys labour-status-range ] [
+      update-unemployment-status
+    ]
     ask persons with [
       my-school = nobody and age >= 18 and age < retirement-age and my-job = nobody and
       not retired? and job-level > 1
     ] [
-     find-job
-     if my-job != nobody [
+      find-job
+      if my-job != nobody [
         let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
         let conn decide-conn-number employees 20
         create-professional-links-with n-of conn other employees
@@ -494,7 +501,7 @@ to socialization-intervene
 end
 
 to soc-add-educational [ targets ]
-    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels + 1) ]
+    ask targets [ set max-education-level min list (max-education-level + 1) (max table:keys education-levels) ]
 end
 
 to soc-add-psychological [ targets ]
@@ -842,6 +849,15 @@ to assign-jobs-and-wealth
       set job-level 1
       set wealth-level 1 ; this will be updated by family membership
     ]
+    ; this is just a first assignment, and will be modified first by the multiplier then by adding neet status.
+  ]
+end
+
+to setup-inactive-status
+  ask persons [
+      if (age > 14 and age < 65 and job-level = 1 and random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age) ) [
+      set job-level 0
+    ]
   ]
 end
 
@@ -859,7 +875,7 @@ to init-person-empty ; person command
   set num-crimes-committed 0
   set num-crimes-committed-this-tick 0
   ; some agents should probably have a few initial crimes at start
-  set education-level -1                                ; we set starting education level in init-students
+  set education-level 0                                 ; we set starting education level in init-students
   set max-education-level 0 ; useful only for children, will be updated in that case
   set wealth-level 1 ; this will be updated by family membership
   set propensity lognormal nat-propensity-m nat-propensity-sigma   ; natural propensity to crime  propensity
@@ -966,7 +982,6 @@ to-report random-level-by-size [ employer-size ]
 end
 
 to find-job ; person procedure
-  output "Looking for jobs"
   let the-job one-of jobs with [ my-worker = nobody and job-level = [ job-level ] of myself ]
   if the-job = nobody [
     set the-job one-of jobs with [ my-worker = nobody and job-level < [ job-level ] of myself ]
@@ -979,19 +994,6 @@ end
 
 to-report current-employees ; employer reporter
   report turtle-set [ my-worker ] of my-jobs
-end
-
-to-report pick-new-employee-from [ the-candidates ] ; job reporter
-  let the-job self
-  report one-of the-candidates with [
-    not retired? and interested-in? the-job
-  ]
-end
-
-to-report interested-in? [ the-job ] ; person reporter
-  report ifelse-value (my-job = nobody) [ true ] [
-    [ job-level ] of the-job > [ job-level ] of my-job
-  ]
 end
 
 to-report decide-conn-number [ people max-lim ]
@@ -1017,7 +1019,7 @@ end
 to setup-education-levels
   let list-schools read-csv "schools"
   set education-levels []
-  let index 0
+  let index 1
   foreach list-schools [ row ->
     let x ceiling ( ((item 3 row) / (item 4 row)) *  (num-persons) )
     let new-row replace-item 3 row x
@@ -1036,6 +1038,7 @@ to-report max-age-edu-level [ the-level ]
   report item 1 table:get education-levels the-level
 end
 
+; used in automated tests
 to-report possible-school-level ; person command
   let the-level -1
   foreach table:keys education-levels [ i ->
@@ -1047,7 +1050,7 @@ end
 to setup-schools
   foreach table:keys education-levels [ level ->
     create-schools item 3 table:get education-levels level [
-      set education-level level
+      set diploma-level level
       set my-students no-turtles
     ]
   ]
@@ -1071,31 +1074,36 @@ end
 to enroll-to-school [ level ] ; person command
   let potential-schools (turtle-set [
     my-school
-  ] of household-link-neighbors) with [ education-level = level ]
+  ] of household-link-neighbors) with [ diploma-level = level ]
   ifelse any? potential-schools [
     set my-school one-of potential-schools
   ] [
-    set my-school one-of schools with [ education-level = level ]
+    set my-school one-of schools with [ diploma-level = level ]
   ]
   ask my-school [ set my-students (turtle-set my-students myself) ]
 end
 
-to graduate
-  let levels education-levels
-  let primary-age item 0 table:get levels 0
-  ask persons with [ education-level = -1 and age = primary-age and my-school = nobody ] [
-    enroll-to-school 0
+to graduate-and-enter-jobmarket
+  let primary-age item 0 table:get education-levels 1
+  ask persons with [ education-level = 0 and age = primary-age and my-school = nobody ] [
+    enroll-to-school 1
   ]
   ask schools [
-    let end-age item 1 table:get levels education-level
-    let school-education-level education-level
+    let end-age item 1 table:get education-levels diploma-level
+    let school-education-level diploma-level
     ask my-students with [ age = (end-age + 1)] [
       leave-school
       set education-level school-education-level
-      if table:has-key? education-levels (school-education-level + 1) and
+      ifelse table:has-key? education-levels (school-education-level + 1) and
       (school-education-level + 1 < max-education-level)
       [
         enroll-to-school (school-education-level + 1)
+      ] [ ; otherwise, get a job level compatible with my education. Find-jobs will then try to assign the job. This includes the neet-check.
+        set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
+        set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+        if (age > 14 and age < 65 and job-level = 1 and random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age) ) [
+          set job-level 0
+        ]
       ]
     ]
   ]
@@ -1105,6 +1113,10 @@ to leave-school ; person command
   let other-students other turtle-set [ my-students ] of my-school
   ask my-school [ set my-students other-students ]
   set my-school nobody
+end
+
+to update-unemployment-status
+  set job-level ifelse-value (random-float 1 < (item 0 table:get labour-status-by-age-and-sex list male? age)) [ 0 ] [ 1 ]
 end
 
 to-report link-color
@@ -1328,6 +1340,8 @@ to get-caught [ co-offenders ]
   ]
 end
 
+; this is what in the paper is called r - this is r
+;R is then operationalised as the proportion of OC members among the social relations of each individual (comprising family, friendship, school, working and co-offending relations)
 to-report candidate-weight ; person reporter
   let r ifelse-value [ oc-member? ] of myself [ oc-embeddedness ] [ 0 ]
   report -1 * (social-proximity-with myself + r)
@@ -1403,7 +1417,7 @@ end
 to-report factors-c
   report (list
     ;     var-name     normalized-reporter
-    (list "employment"   [ -> ifelse-value (my-job = nobody)                 [ 1.30 ] [ 1.0 ] ])
+    (list "employment"   [ -> ifelse-value (job-level = 1)                   [ 1.30 ] [ 1.0 ] ])
     (list "education"    [ -> ifelse-value (education-level >= 2)            [ 0.94 ] [ 1.0 ] ])
     (list "propensity"   [ -> ifelse-value (propensity >
       exp (nat-propensity-m - nat-propensity-sigma ^ 2 / 2) + nat-propensity-threshold *
@@ -1758,6 +1772,10 @@ end
 to-report lognormal [ mu sigma ]
   report exp (mu + sigma * random-normal 0 1)
 end
+
+to-report just-changed-age?
+  report floor ((ticks - birth-tick) / ticks-per-year) = ((ticks - birth-tick) / ticks-per-year)
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 400
@@ -2021,9 +2039,9 @@ count prisoners
 
 PLOT
 15
-690
+700
 390
-845
+855
 Age distribution
 age
 count
@@ -2288,7 +2306,7 @@ percentage-of-facilitators
 percentage-of-facilitators
 0
 0.1
-0.009
+0.005
 0.001
 1
 NIL
@@ -2491,12 +2509,12 @@ PENS
 CHOOSER
 865
 775
-1032
+1047
 820
-unemployment-target
-unemployment-target
-"base" 15 30 45
-3
+unemployment-multiplier
+unemployment-multiplier
+"base" 0.5
+0
 
 MONITOR
 15
@@ -2512,10 +2530,10 @@ count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and
 MONITOR
 15
 605
-160
+222
 650
-unemployed rate (level)
-count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
+unemployed rate (level, percent)
+count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 3
 1
 11
@@ -2556,6 +2574,17 @@ number-crimes-yearly-per10k
 1
 NIL
 HORIZONTAL
+
+MONITOR
+15
+650
+212
+695
+Not looking for work (percent)
+count all-persons with [ job-level = 0 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
