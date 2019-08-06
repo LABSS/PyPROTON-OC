@@ -93,9 +93,9 @@
         <enumeratedValueSet variable="criminal-rate">
             <value value="1.0"/>
         </enumeratedValueSet>
-        <!-- 3a. Employment rate and education rate must vary together -->
-        <enumeratedValueSet variable="unemployment-target">
-            <value value="30"/>
+        <!-- 3a. Employment rate -->
+        <enumeratedValueSet variable="unemployment-multiplier">
+            <value value="base"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">

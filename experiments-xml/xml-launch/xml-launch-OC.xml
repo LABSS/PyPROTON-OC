@@ -7,8 +7,8 @@
         <final>show (word "Time elapsed:" timer)
         dump-networks
         </final>
-        <!-- assuming 40 years  -->
-        <timeLimit steps="240"/>
+        <!--  30 years  -->
+        <timeLimit steps="360"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
@@ -99,11 +99,10 @@
             <value value="1.0"/>
             <value value="1.5"/>
         </enumeratedValueSet>
-        <!-- 3a. Employment rate and education rate must vary together -->
-        <enumeratedValueSet variable="unemployment-target">
-            <value value="15"/>
-            <value value="30"/>
-            <value value="45"/>
+        <!-- 3a. Employment rate -->
+        <enumeratedValueSet variable="unemployment-multiplier">
+            <value value="base"/>
+            <value value="0.5"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
