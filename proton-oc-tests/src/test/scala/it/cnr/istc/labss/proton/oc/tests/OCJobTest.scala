@@ -18,11 +18,8 @@ class OCJobTest extends OCModelSuite {
       // no minors working
       ws.rpt("any? persons with [ my-job != nobody and age < 18 ] ") shouldBe false
       // unemployed stay so
-      ws.rpt("any? persons with [ job-level = 1 and my-job != nobody ] ") shouldBe false
-      // job levels are coherent
-      ws.rpt("""
-        all? persons with [ my-job != nobody ] [ job-level = [ job-level ] of my-job ]
-      """) shouldBe true      
+      ws.rpt("any? persons with [ (job-level = 1 or job-level = 0) and my-job != nobody ] ") shouldBe false
+      // job levels are coherent     
     }
   }
 }
