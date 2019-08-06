@@ -1031,6 +1031,15 @@ to-report max-age-edu-level [ the-level ]
   report item 1 table:get education-levels the-level
 end
 
+; used in automated tests
+to-report possible-school-level ; person command
+  let the-level -1
+  foreach table:keys education-levels [ i ->
+    if age <= max-age-edu-level i and age >= min-age-edu-level i [ set the-level i ]
+  ]
+  report the-level
+end
+
 to setup-schools
   foreach table:keys education-levels [ level ->
     create-schools item 3 table:get education-levels level [

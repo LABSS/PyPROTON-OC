@@ -15,7 +15,7 @@ class OCSchoolTest extends OCModelSuite {
     ws.rpt("not any? persons with [ my-school != nobody and my-job != nobody ]") shouldBe true 
     ws.rpt("all? persons [ my-school = nobody or education-level = ([ diploma-level ] of my-school) - 1 ] ") shouldBe true
     ws.rpt("""
-      all? all-persons [ my-school = nobody or ([ education-level ] of my-school = possible-school-level and education-level = possible-school-level - 1) ]
+      all? all-persons [ my-school = nobody or ([ diploma-level ] of my-school = possible-school-level and education-level = possible-school-level - 1) ]
       """) shouldBe true
     println("Initial test done, running for three years:")
     var fid = 0
@@ -23,7 +23,7 @@ class OCSchoolTest extends OCModelSuite {
       println(fid)
       ws.cmd("go")
       ws.rpt("not any? persons with [ my-school != nobody and my-job != nobody ]") shouldBe true 
-      ws.rpt("all? persons [ my-school = nobody or education-level = ([ education-level ] of my-school) - 1 ] ") shouldBe true
+      ws.rpt("all? persons [ my-school = nobody or education-level = ([ diploma-level ] of my-school) - 1 ] ") shouldBe true
       ws.rpt("""all? persons [ 
           my-school = nobody or 
           education-level = (possible-school-level - 1) or 
