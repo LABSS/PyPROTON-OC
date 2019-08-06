@@ -1086,9 +1086,9 @@ to enroll-to-school [ level ] ; person command
 end
 
 to graduate-and-enter-jobmarket
-  let primary-age item 0 table:get education-levels 0
+  let primary-age item 0 table:get education-levels 1
   ask persons with [ education-level = 0 and age = primary-age and my-school = nobody ] [
-    enroll-to-school 0
+    enroll-to-school 1
   ]
   ask schools [
     let end-age item 1 table:get education-levels diploma-level
@@ -2576,6 +2576,17 @@ number-crimes-yearly-per10k
 1
 NIL
 HORIZONTAL
+
+MONITOR
+15
+650
+212
+695
+Not looking for work (percent)
+count all-persons with [ job-level = 0 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
