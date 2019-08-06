@@ -672,8 +672,8 @@ end
 
 to setup-oc-groups
   ; OC members are scaled down if we don't have 10K agents
-  let scaled-num-oc-families ceiling num-oc-families * num-persons / 10000
-  let scaled-num-oc-persons  ceiling num-oc-persons  * num-persons / 10000
+  let scaled-num-oc-families ceiling (num-oc-families * num-persons / 10000 * num-oc-persons / 30)
+  let scaled-num-oc-persons  ceiling (num-oc-persons  * num-persons / 10000)
   ask rnd:weighted-n-of scaled-num-oc-families persons [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ] [
@@ -2145,7 +2145,7 @@ num-oc-persons
 num-oc-persons
 2
 200
-20.0
+30.0
 1
 1
 NIL
