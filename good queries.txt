@@ -48,11 +48,7 @@ persons with [any? other family-link-neighbors with [ wealth-level != [ wealth-l
 # are schools teaching the right people?
 schools with [ any? school-attendance-link-neighbors with [ education-level != [ education-level ] of myself + 1 ] ]
 # all people should be in appropriate schools
-all? persons [ not any? school-attendance-link-neighbors or education-level = ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ] 
-# people out of place
-persons with [  any? school-attendance-link-neighbors and education-level != ([ education-level ] of one-of school-attendance-link-neighbors) - 1 ]
-; work and school at the same time
-persons with [ any? school-attendance-link-neighbors and any? job-link ]
+
 ; people in the wrong level of school. Does not work because at the change of year, some people has different distances. The one in the test works.
 all-persons with [ any? school-attendance-link-neighbors and [ education-level ] of one-of school-attendance-link-neighbors != possible-school-level ]
 ; works
@@ -66,6 +62,14 @@ all-persons with [ any? school-attendance-link-neighbors and [ education-level ]
 ; report
     ws.show("[ (list who age education-level possible-school-level [ education-level ] of one-of school-attendance-link-neighbors [ who ] of one-of school-attendance-link-neighbors [ breed = schools ] of one-of school-attendance-link-neighbors) ] of persons with [ any? school-attendance-link-neighbors and education-level != (possible-school-level - 1) ]")
 
+
+; schools that have students who don't know of being one
+schools with [ any? persons with [ member? self [my-students] of myself and my-school != myself ] ]
+; people in school that don't list them
+people with [ my-school = nobody and any? schools with [ member? myself my-students ] ]
+all? all-persons [ my-school = nobody or member? self [ my-students ] of my-school ]
+; counting problems
+all? all-persons with [ my-school != nobody ] [ count schools with [ member? myself my-students ] = 1 ]
 
 # how to plot times
 

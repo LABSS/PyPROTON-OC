@@ -147,6 +147,7 @@ globals [
   co-offender-group-histo
   people-jailed
   number-crimes
+  crime-multiplier
 ]
 
 to profile-setup
@@ -226,6 +227,7 @@ to setup
   setup-employers-jobs
   ask persons with [ my-job = nobody and my-school = nobody and age >= 16 and age < retirement-age and job-level > 1 ] [ find-job ]
   init-professional-links
+  calculate-crime-multiplier
   calculate-criminal-tendency
   calculate-arrest-rate
   setup-oc-groups
@@ -457,7 +459,7 @@ end
 
 to calculate-arrest-rate
   ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year
-  set arrest-rate number-arrests-per-year / ticks-per-year / 842
+  set arrest-rate number-arrests-per-year / ticks-per-year / number-crimes-yearly-per10k
 end
 
 to dump-networks
@@ -904,13 +906,14 @@ to let-migrants-in
     ; we do not care about education level and wealth of migrants, as those variables
     ; exist only in order to generate the job position.
     hatch-persons 1 [
+      init-person-empty
       set my-job myself
       ask my-job [ set my-worker myself ]
       let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
       let conn decide-conn-number employees 20
       create-professional-links-with n-of conn other employees
       set birth-tick ticks - (random 20 + 18) * ticks-per-year
-      init-person-empty
+      set age calculate-age
       set wealth-level [ job-level ] of myself
       set migrant? true
     ]
@@ -1083,9 +1086,9 @@ to enroll-to-school [ level ] ; person command
 end
 
 to graduate-and-enter-jobmarket
-  let primary-age item 0 table:get education-levels 1
-  ask persons with [ education-level = 0 and age = primary-age ] [
-    enroll-to-school 1
+  let primary-age item 0 table:get education-levels 0
+  ask persons with [ education-level = 0 and age = primary-age and my-school = nobody ] [
+    enroll-to-school 0
   ]
   ask schools [
     let end-age item 1 table:get education-levels diploma-level
@@ -1124,15 +1127,16 @@ end
 
 to make-people-die
   ask all-persons [
-    if random-float 1 < p-mortality [
+    if random-float 1 < p-mortality or age > 119 [
       if facilitator? [
         let new-facilitator one-of other persons with [ not facilitator? and age > 18 ]
         ask new-facilitator [ set facilitator? true ]
       ]
       set number-deceased number-deceased + 1
+      if my-job != nobody [ ask my-job [ set my-worker nobody ] ]
+      if my-school != nobody [ ask my-school [ set my-students other my-students ] ]
       die
     ]
-    ask all-persons with [ age > 119 ] [ die ]
   ]
 end
 
@@ -1192,6 +1196,19 @@ to-report facilitator-test [ co-offending-group ]
   ]
 end
 
+to calculate-crime-multiplier
+  let total-crimes 0
+  foreach table:keys c-range-by-age-and-sex [ cell ->
+    let value last table:get c-range-by-age-and-sex cell
+    let people-in-cell persons with [
+      age > last cell and age <= first value and male? = first cell
+    ]
+    let n-of-crimes last value * count people-in-cell * criminal-rate
+    set total-crimes total-crimes + n-of-crimes
+  ]
+  set crime-multiplier number-crimes-yearly-per10k / 10000 * count all-persons / total-crimes
+end
+
 to commit-crimes
   let co-offender-groups []
   foreach table:keys c-range-by-age-and-sex [ cell ->
@@ -1199,8 +1216,8 @@ to commit-crimes
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value * count people-in-cell * criminal-rate / ticks-per-year
-    repeat round n-of-crimes [
+    let target-n-of-crimes last value * count people-in-cell * criminal-rate / ticks-per-year * crime-multiplier
+    repeat round target-n-of-crimes [
       set number-crimes number-crimes + 1
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
@@ -2545,16 +2562,20 @@ number-crimes
 1
 11
 
-MONITOR
-15
+SLIDER
+1095
 655
-212
-700
-Not looking for work (percent)
-count all-persons with [ job-level = 0 ] / count all-persons * 100
+1347
+688
+number-crimes-yearly-per10k
+number-crimes-yearly-per10k
 0
+3000
+2000.0
+100
 1
-11
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
