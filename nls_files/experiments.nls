@@ -20,7 +20,7 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  report make-histo [ -> criminal-tendency ] 7 -2 2.5 all-persons
+  report make-histo [ -> criminal-tendency ] 7 -2 3 all-persons
 end
 
 to-report make-histo [ citizen-reporter bins min-v max-v the-set ]
@@ -30,7 +30,7 @@ to-report make-histo [ citizen-reporter bins min-v max-v the-set ]
   let thresholds (sentence (range min-v max-v ((max-v - min-v) / bins)) max-v) 
   let i 0 
   foreach values [ v ->
-    ifelse (v < first thresholds or v > last thresholds) [
+    ifelse (v < min-v or v > max-v) [
       show (word behaviorspace-run-number ": histogram for " citizen-reporter " has values outside of coverage (" v ")")
     ] [
       set i 0
@@ -45,7 +45,11 @@ to-report make-discrete-histo [ citizen-reporter low high ]
   let values table:to-list table:counts runresult citizen-reporter
   let counts n-values (high - low + 1) [ i -> list (i + low) 0 ]
   foreach values [ v ->
-    set counts replace-item ((first v) - low) counts (list first v last v) 
+    ifelse (v < low or v > high) [
+      show (word behaviorspace-run-number ": histogram for " citizen-reporter " has values outside of coverage (" v ")")
+    ] [    
+      set counts replace-item ((first v) - low) counts (list first v last v) 
+    ]
   ]
   report counts
 end
