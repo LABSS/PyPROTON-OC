@@ -45,7 +45,7 @@ to-report make-discrete-histo [ citizen-reporter low high ]
   let values table:to-list table:counts runresult citizen-reporter
   let counts n-values (high - low + 1) [ i -> list (i + low) 0 ]
   foreach values [ v ->
-    ifelse (v < low or v > high) [
+    ifelse (first v < low or first v > high) [
       show (word behaviorspace-run-number ": histogram for " citizen-reporter " has values outside of coverage (" v ")")
     ] [    
       set counts replace-item ((first v) - low) counts (list first v last v) 
