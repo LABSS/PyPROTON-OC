@@ -1127,7 +1127,7 @@ to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality or age > 119 [
       if facilitator? [
-        let new-facilitator one-of other persons with [ not facilitator? and age > 18 ]
+        let new-facilitator one-of other persons with [ not facilitator? and not oc-member? and age > 18 ]
         ask new-facilitator [ set facilitator? true ]
       ]
       set number-deceased number-deceased + 1
@@ -1157,24 +1157,19 @@ to-report p-fertility
 end
 
 to-report find-facilitator [ co-offending-group ]
-  let the-facilitator nobody
+  let the-facilitator no-turtles
   ; first, test if there is a facilitator into co-offender-groups
   let available-facilitators co-offending-group with [ facilitator? ]
   ifelse any? available-facilitators [
-    set the-facilitator one-of (available-facilitators with [ facilitator? ])
+    set the-facilitator one-of available-facilitators
   ] [
     ; second, search a facilitator into my networks
-    while [ the-facilitator = nobody and any? co-offending-group ] [
-      let pool nobody
-      ask one-of co-offending-group [
-        nw:with-context persons person-links [
-          set pool (turtle-set nw:turtles-in-radius max-accomplice-radius nw:turtles-in-reverse-radius max-accomplice-radius)
-          set pool other pool with [ facilitator? ]
-        ]
-        if any? pool [ set the-facilitator one-of pool ]
-        set co-offending-group other co-offending-group
+    set available-facilitators turtle-set [
+      (turtle-set nw:turtles-in-radius max-accomplice-radius nw:turtles-in-reverse-radius max-accomplice-radius) with [
+        facilitator?
       ]
-    ]
+    ] of co-offending-group
+    if any? available-facilitators [ set the-facilitator one-of available-facilitators ]
   ]
   report the-facilitator
 end
@@ -1220,6 +1215,8 @@ to commit-crimes
       set number-crimes number-crimes + 1
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
         let accomplices find-accomplices number-of-accomplices
+
+        ; here we should change it. The facilitator must be one of them, not an added member: see https://github.com/LABSS/PROTON-OC/issues/60#issuecomment-472075050
         set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
         if oc-member? [ set co-offenders-started-by-OC lput (turtle-set self accomplices) co-offenders-started-by-OC ]
         ; check for big crimes started from a normal guy
