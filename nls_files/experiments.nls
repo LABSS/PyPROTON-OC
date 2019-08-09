@@ -20,17 +20,17 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  report make-histo [ -> criminal-tendency ] 7 -2 2
+  report make-histo [ -> criminal-tendency ] 7 -2 3 all-persons
 end
 
-to-report make-histo [ citizen-reporter bins min-v max-v ]
-  let values [ runresult citizen-reporter ] of all-persons
+to-report make-histo [ citizen-reporter bins min-v max-v the-set ]
+  let values [ runresult citizen-reporter ] of the-set
   let counts n-values bins [ 0 ]
   assert [ -> min-v < max-v ]
   let thresholds (sentence (range min-v max-v ((max-v - min-v) / bins)) max-v) 
   let i 0 
   foreach values [ v ->
-    ifelse (v < first thresholds or v > last thresholds) [
+    ifelse (v < min-v or v > max-v) [
       show (word behaviorspace-run-number ": histogram for " citizen-reporter " has values outside of coverage (" v ")")
     ] [
       set i 0
@@ -45,7 +45,11 @@ to-report make-discrete-histo [ citizen-reporter low high ]
   let values table:to-list table:counts runresult citizen-reporter
   let counts n-values (high - low + 1) [ i -> list (i + low) 0 ]
   foreach values [ v ->
-    set counts replace-item ((first v) - low) counts (list first v last v) 
+    ifelse (first v < low or first v > high) [
+      show (word behaviorspace-run-number ": histogram for " citizen-reporter " has values outside of coverage (" v ")")
+    ] [    
+      set counts replace-item ((first v) - low) counts (list first v last v) 
+    ]
   ]
   report counts
 end
@@ -57,12 +61,12 @@ end
 
 to-report o6
   ; Distribution of R (which is the individual embededdness into OC-prone local networks)
-  report make-histo [ -> oc-embeddedness ] 7 0 1
+  report make-histo [ -> oc-embeddedness  ] 7 0 1 all-persons with [ oc-member? ]
 end
 
 to-report o6a
   ; average of R (which is the individual embededdness into OC-prone local networks)
-  report mean [ oc-embeddedness ] of all-persons
+  report mean [ oc-embeddedness ] of all-persons with [ oc-member? ]
 end
 
 to-report o7a
@@ -113,7 +117,7 @@ end
 
 to-report o10a
   ; Distribution of socio-demographic variables of the general population
-  report make-discrete-histo [ -> [ education-level ] of all-persons ] -1 4
+  report make-discrete-histo [ -> [ education-level ] of all-persons ] 0 4
 end
 
 to-report o10b
@@ -123,7 +127,7 @@ end
 
 to-report o10c
   ; Distribution of socio-demographic variables of the general population
-  report make-discrete-histo [ -> [ job-level ] of all-persons ] 1 4
+  report make-discrete-histo [ -> [ job-level ] of all-persons ] 0 4
 end
 
 to-report o11
