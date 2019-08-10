@@ -20,7 +20,7 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  report make-histo [ -> criminal-tendency ] 7 -2 3 all-persons
+  report make-histo [ -> criminal-tendency ] 7 -2 5 all-persons
 end
 
 to-report make-histo [ citizen-reporter bins min-v max-v the-set ]
