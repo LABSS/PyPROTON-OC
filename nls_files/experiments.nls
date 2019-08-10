@@ -71,7 +71,7 @@ end
 
 to-report o7a
   ; Distribution of socio-demographic variables on new recruited individuals
-  report make-discrete-histo [ -> [ education-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] -1 4
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 0 4
 end
 
 to-report o7b
@@ -82,12 +82,12 @@ end
 
 to-report o7c
   ; Distribution of socio-demographic variables on new recruited individuals
-  report make-discrete-histo [ -> [ job-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 1 4
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 0 4
 end
 
 to-report o8a
   ; Distribution of socio-demographic variables of OC members
-  report make-discrete-histo [ -> [ education-level ] of all-persons with [ oc-member? ] ] -1 4
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ oc-member? ] ] 0 4
 end
 
 to-report o8b
@@ -97,12 +97,12 @@ end
 
 to-report o8c
   ; Distribution of socio-demographic variables of OC members
-  report make-discrete-histo [ -> [ job-level ] of all-persons with [ oc-member? ] ] 1 4
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ oc-member? ] ] 0 4
 end
 
 to-report o9a
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report make-discrete-histo [ -> [ education-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ] ] -1 4
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ] ] 0 4
 end
 
 to-report o9b
@@ -112,7 +112,7 @@ end
 
 to-report o9c
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report make-discrete-histo [ -> [ job-level ] of all-persons with [ not oc-member?  and num-crimes-committed > 0 ] ] 1 4
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ not oc-member?  and num-crimes-committed > 0 ] ] 0 4
 end
 
 to-report o10a
