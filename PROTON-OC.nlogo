@@ -174,28 +174,22 @@ to profile-go
 end
 
 to fix-unemployment [ correction ]
-  let current-unemployment count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ age > 16 and age < 65 and my-school = nobody]
-  ; key is list education-level male?
-  foreach table:keys work_status_by_edu_lvl [ key ->
-    let un item 1 item 0 table:get work_status_by_edu_lvl key
-    let oc item 1 item 1 table:get work_status_by_edu_lvl key
-    ; we push some people to work at level 2 to reduce unemployment
-    let new-un un * correction
-    let reallocate (un - new-un)
-    let orig map [ i -> item 1 i ] but-first table:get work_status_by_edu_lvl key
-    let perc-occupied 1 - un
-    let new-row ifelse-value (perc-occupied = 0) [
-      map [ i -> (list (i + 2) (1 / 3) ) ] [ 0 1 2 ]
-    ][
-      map [ i -> (list (i + 2) (item i orig * (1 + reallocate / perc-occupied))) ] [ 0 1 2 ]
+  let unemployed persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ]
+  let occupied   persons with [ job-level > 1 and age > 16 and age < 65 and my-school = nobody ]
+  let notlooking persons with [ job-level = 0 and age > 16 and age < 65 and my-school = nobody ]
+  let ratio-on count occupied / (count occupied + count notlooking)
+  ifelse correction > 1.0 [
+    ; increase unemployment
+    ask n-of ((correction - 1) * count unemployed * ratio-on) occupied [
+      set job-level 1 ; no need to resciss job links as they haven't been created yet.
     ]
-    table:put work_status_by_edu_lvl key fput (list 1 new-un) new-row
-  ]
-  ; this repeats the procedure already ran in init-person, updating the values to the new situation
-  ask persons [
-    if age > 16 [
-      set job-level pick-from-pair-list table:get work_status_by_edu_lvl list education-level male?
-      set wealth-level pick-from-pair-list table:get wealth_quintile_by_work_status list job-level male?
+    ask n-of ((correction - 1) * count unemployed * (1 - ratio-on)) notlooking [
+      set job-level 1
+    ]
+  ] [
+    ; decrease unemployment
+    ask n-of ((1 - correction) * count unemployed) unemployed [
+      set job-level ifelse-value (random-float 1 < ratio-on) [ 2 ] [ 0 ]
     ]
   ]
 end
@@ -218,8 +212,8 @@ to setup
   setup-schools
   init-students
   assign-jobs-and-wealth
-  if unemployment-multiplier != "base" [ fix-unemployment unemployment-multiplier ]
   setup-inactive-status
+  if unemployment-multiplier != "base" [ fix-unemployment unemployment-multiplier ]
   generate-households
   setup-siblings
   setup-employers-jobs
@@ -1310,6 +1304,7 @@ to get-caught [ co-offenders ]
     if my-job != nobody [
       ask my-job [ set my-worker nobody ]
       set my-job nobody
+      set my-job-level 1
     ]
     if my-school != nobody [ leave-school ]
     ask my-professional-links [ die ]

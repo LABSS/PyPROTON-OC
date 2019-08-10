@@ -85,8 +85,8 @@
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
-            <value value="15"/>
             <value value="30"/>
+            <value value="15"/>
             <value value="45"/>
         </enumeratedValueSet>
         <!-- PALERMO SETUP -->
@@ -94,15 +94,16 @@
             <value value="&quot;inputs/palermo/data/&quot;"/>
         </enumeratedValueSet>
         <!-- 2. Criminal rate -->
-        <enumeratedValueSet variable="criminal-rate">
-            <value value="0.5"/>
-            <value value="1.0"/>
-            <value value="1.5"/>
+        <enumeratedValueSet variable="number-crimes-yearly-per10k">
+            <value value="1000"/>
+            <value value="2000"/>
+            <value value="3000"/>
         </enumeratedValueSet>
         <!-- 3a. Employment rate -->
         <enumeratedValueSet variable="unemployment-multiplier">
             <value value="&quot;base&quot;"/>
             <value value="0.5"/>
+            <value value="1.5"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
