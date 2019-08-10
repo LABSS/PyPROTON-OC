@@ -1304,7 +1304,7 @@ to get-caught [ co-offenders ]
     if my-job != nobody [
       ask my-job [ set my-worker nobody ]
       set my-job nobody
-      set my-job-level 1
+      set job-level 1
     ]
     if my-school != nobody [ leave-school ]
     ask my-professional-links [ die ]
@@ -2474,8 +2474,8 @@ CHOOSER
 820
 unemployment-multiplier
 unemployment-multiplier
-"base" 0.5
-0
+"base" 0.5 1.5
+1
 
 MONITOR
 15
@@ -2489,13 +2489,13 @@ count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and
 11
 
 MONITOR
-15
-605
-222
-650
+1080
+760
+1290
+805
 unemployed rate (level, percent)
-count all-persons with [ job-level = 1 and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
-3
+count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
+2
 1
 11
 
@@ -2537,13 +2537,24 @@ NIL
 HORIZONTAL
 
 MONITOR
-15
-650
-212
-695
+1080
+810
+1290
+855
 Not looking for work (percent)
-count all-persons with [ job-level = 0 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
-17
+count all-persons with [ job-level = 0 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
+2
+1
+11
+
+MONITOR
+1080
+860
+1290
+905
+occupied (level, percent)
+count all-persons with [ job-level > 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
+2
 1
 11
 
