@@ -20,7 +20,7 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  report make-histo [ -> criminal-tendency ] 7 -2 3 all-persons
+  report make-histo [ -> criminal-tendency ] 7 -2 5 all-persons
 end
 
 to-report make-histo [ citizen-reporter bins min-v max-v the-set ]
@@ -46,7 +46,7 @@ to-report make-discrete-histo [ citizen-reporter low high ]
   let counts n-values (high - low + 1) [ i -> list (i + low) 0 ]
   foreach values [ v ->
     ifelse (first v < low or first v > high) [
-      show (word behaviorspace-run-number ": histogram for " citizen-reporter " has values outside of coverage (" v ")")
+      show (word behaviorspace-run-number ": histogram for " citizen-reporter " has values outside of coverage (" first v ")")
     ] [    
       set counts replace-item ((first v) - low) counts (list first v last v) 
     ]
@@ -71,7 +71,7 @@ end
 
 to-report o7a
   ; Distribution of socio-demographic variables on new recruited individuals
-  report make-discrete-histo [ -> [ education-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] -1 4
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 0 4
 end
 
 to-report o7b
@@ -82,12 +82,12 @@ end
 
 to-report o7c
   ; Distribution of socio-demographic variables on new recruited individuals
-  report make-discrete-histo [ -> [ job-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 1 4
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ new-recruit = (ticks - 1) ] ] 0 4
 end
 
 to-report o8a
   ; Distribution of socio-demographic variables of OC members
-  report make-discrete-histo [ -> [ education-level ] of all-persons with [ oc-member? ] ] -1 4
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ oc-member? ] ] 0 4
 end
 
 to-report o8b
@@ -97,12 +97,12 @@ end
 
 to-report o8c
   ; Distribution of socio-demographic variables of OC members
-  report make-discrete-histo [ -> [ job-level ] of all-persons with [ oc-member? ] ] 1 4
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ oc-member? ] ] 0 4
 end
 
 to-report o9a
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report make-discrete-histo [ -> [ education-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ] ] -1 4
+  report make-discrete-histo [ -> [ education-level ] of all-persons with [ not oc-member? and num-crimes-committed > 0 ] ] 0 4
 end
 
 to-report o9b
@@ -112,7 +112,7 @@ end
 
 to-report o9c
   ; Distribution of socio-demographic variables of “ordinary criminals” (people that commit crime but are not part of an OC)
-  report make-discrete-histo [ -> [ job-level ] of all-persons with [ not oc-member?  and num-crimes-committed > 0 ] ] 1 4
+  report make-discrete-histo [ -> [ job-level ] of all-persons with [ not oc-member?  and num-crimes-committed > 0 ] ] 0 4
 end
 
 to-report o10a
@@ -132,7 +132,7 @@ end
 
 to-report o11
   ; Number of crimes committed by facilitator agents per time unit
-  report sum [ num-crimes-committed ] of all-persons with [ facilitator? ]
+  report sum [ num-crimes-committed-this-tick ] of all-persons with [ facilitator? ]
 end
 
 to-report o12
