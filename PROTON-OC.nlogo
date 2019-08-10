@@ -1156,39 +1156,6 @@ to-report p-fertility
   ]
 end
 
-to-report find-facilitator [ co-offending-group ]
-  let the-facilitator no-turtles
-  ; first, test if there is a facilitator into co-offender-groups
-  let available-facilitators co-offending-group with [ facilitator? ]
-  ifelse any? available-facilitators [
-    set the-facilitator one-of available-facilitators
-  ] [
-    ; second, search a facilitator into my networks
-    set available-facilitators turtle-set [
-      (turtle-set nw:turtles-in-radius max-accomplice-radius nw:turtles-in-reverse-radius max-accomplice-radius) with [
-        facilitator?
-      ]
-    ] of co-offending-group
-    if any? available-facilitators [ set the-facilitator one-of available-facilitators ]
-  ]
-  report the-facilitator
-end
-
-to-report facilitator-test [ co-offending-group ]
-  ifelse (count co-offending-group < threshold-use-facilitators)
-    [ report true ]
-  [
-    let available-facilitator find-facilitator (co-offending-group)
-    ifelse available-facilitator = nobody [
-      set facilitator-fails facilitator-fails + 1
-      report false
-    ] [
-      set facilitator-crimes facilitator-crimes + 1
-      report true
-    ]
-  ]
-end
-
 to calculate-crime-multiplier
   let total-crimes 0
   foreach table:keys c-range-by-age-and-sex [ cell ->
@@ -1196,7 +1163,7 @@ to calculate-crime-multiplier
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let n-of-crimes last value * count people-in-cell * criminal-rate
+    let n-of-crimes last value * count people-in-cell
     set total-crimes total-crimes + n-of-crimes
   ]
   set crime-multiplier number-crimes-yearly-per10k / 10000 * count all-persons / total-crimes
@@ -1210,25 +1177,20 @@ to commit-crimes
     let people-in-cell persons with [
       age > last cell and age <= first value and male? = first cell
     ]
-    let target-n-of-crimes last value * count people-in-cell * criminal-rate / ticks-per-year * crime-multiplier
+    let target-n-of-crimes last value * count people-in-cell / ticks-per-year * crime-multiplier
     repeat round target-n-of-crimes [
       set number-crimes number-crimes + 1
       ask rnd:weighted-one-of people-in-cell [ criminal-tendency + criminal-tendency-addme-for-weighted-extraction ] [
-        let accomplices find-accomplices number-of-accomplices
-
-        ; here we should change it. The facilitator must be one of them, not an added member: see https://github.com/LABSS/PROTON-OC/issues/60#issuecomment-472075050
-        set co-offender-groups lput (turtle-set self accomplices) co-offender-groups
-        if oc-member? [ set co-offenders-started-by-OC lput (turtle-set self accomplices) co-offenders-started-by-OC ]
+        let accomplices find-accomplices number-of-accomplices ; this takes care of facilitators as well.
+        set co-offender-groups lput accomplices co-offender-groups
+        if oc-member? [ set co-offenders-started-by-OC lput accomplices co-offenders-started-by-OC ]
         ; check for big crimes started from a normal guy
-        if length accomplices + 1 > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
+        if count accomplices > this-is-a-big-crime and criminal-tendency < good-guy-threshold [
           set big-crime-from-small-fish big-crime-from-small-fish +  1
         ]
       ]
     ]
   ]
-  set co-offender-groups filter [ co-offenders ->
-    facilitator-test co-offenders
-  ] co-offender-groups
   foreach co-offender-groups commit-crime
   if not empty? co-offender-groups [
     set co-offender-group-histo make-co-offending-histo co-offender-groups
@@ -1283,25 +1245,44 @@ to retire-persons
 end
 
 to-report find-accomplices [ n ] ; person reporter
-  if n = 0 [ report [ ] ]
+  if n = 0 [ report turtle-set self ]
   let d 1 ; start with a network distance of 1
-  let accomplices []
+  let accomplices no-turtles
+  let facilitator-needed? n >= threshold-use-facilitators and not facilitator?
+  if facilitator-needed? [ set n n - 1 ] ; save a slot for the facilitator
+  ; first create the group
   nw:with-context persons person-links [
-    while [ length accomplices < n and d < max-accomplice-radius ] [
+    while [ count accomplices < n and d <= max-accomplice-radius ] [
       let candidates sort-on [
         candidate-weight
       ] (turtle-set nw:turtles-in-radius d nw:turtles-in-reverse-radius d) with [ nw:distance-to myself = d ]
-      while [ length accomplices < n and not empty? candidates ] [
+      while [ count accomplices < n and not empty? candidates ] [
         let candidate first candidates
         set candidates but-first candidates
-        if random-float 1 < [ criminal-tendency ] of candidate [
-          set accomplices lput candidate accomplices
-        ]
+        set accomplices (turtle-set candidate accomplices)
+        if [ facilitator? ] of candidate [ set n n + 1 set facilitator-needed? false ]
       ]
       set d d + 1
     ]
+    if facilitator-needed? [
+      ; Search a facilitator into my networks
+      let available-facilitators turtle-set [
+        (turtle-set nw:turtles-in-radius max-accomplice-radius nw:turtles-in-reverse-radius max-accomplice-radius) with [
+          facilitator?
+        ]
+      ] of accomplices
+      if any? available-facilitators [ set accomplices (turtle-set available-facilitators accomplices) ]
+    ]
   ]
-  if length accomplices < n [ set crime-size-fails crime-size-fails + 1 ]
+  if count accomplices < n [ set crime-size-fails crime-size-fails + 1 ]
+  set accomplices (turtle-set self accomplices)
+  if n >= threshold-use-facilitators [
+    ifelse any? accomplices with [ facilitator? ] [
+      set facilitator-crimes facilitator-crimes + 1
+    ] [
+      set facilitator-fails facilitator-fails + 1
+    ]
+  ]
   report accomplices
 end
 
@@ -2320,8 +2301,8 @@ SLIDER
 threshold-use-facilitators
 threshold-use-facilitators
 0
-100
-4.0
+10
+3.0
 1
 1
 NIL
@@ -2370,21 +2351,6 @@ crime-size-fails
 17
 1
 11
-
-SLIDER
-865
-700
-1037
-733
-criminal-rate
-criminal-rate
-0
-3
-1.0
-0.1
-1
-NIL
-HORIZONTAL
 
 SLIDER
 865
