@@ -2286,8 +2286,8 @@ SLIDER
 percentage-of-facilitators
 percentage-of-facilitators
 0
-0.1
-0.005
+0.01
+0.004
 0.001
 1
 NIL
@@ -2302,7 +2302,7 @@ threshold-use-facilitators
 threshold-use-facilitators
 0
 10
-3.0
+4.0
 1
 1
 NIL
