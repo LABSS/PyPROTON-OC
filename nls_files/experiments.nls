@@ -132,7 +132,7 @@ end
 
 to-report o11
   ; Number of crimes committed by facilitator agents per time unit
-  report sum [ num-crimes-committed ] of all-persons with [ facilitator? ]
+  report sum [ num-crimes-committed-this-tick ] of all-persons with [ facilitator? ]
 end
 
 to-report o12
