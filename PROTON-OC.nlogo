@@ -246,7 +246,7 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   set removed-fatherships []
-  update-plots
+  show word "Setup complete in " timer
 end
 
 to setup-facilitators
@@ -436,11 +436,10 @@ to go
     output (word listname ": " count links with [ breed = runresult listname ])
   ]
   output "------------------"
-
-  tick
   if behaviorspace-experiment-name != "" [
-    show (word behaviorspace-run-number "." ticks)
+    show (word behaviorspace-run-number "." ticks " t:" timer )
   ]
+  tick
 end
 
 to-report intervention-on?
