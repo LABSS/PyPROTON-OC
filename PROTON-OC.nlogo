@@ -1398,10 +1398,10 @@ to calc-degree-correction-for-bosses
     let to-sum []
     ask gang [
       let n count person-link-neighbors with [ oc-member? ]
-      set to-sum lput (n / (n + 1) ^ 2) to-sum
+      set to-sum lput ((n / (n + 1)) ^ 2) to-sum
     ]
     ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
-    set degree-correction-for-bosses ifelse-value (sum to-sum = 0) [ 1 ] [ arrest-rate / mean to-sum ]
+    set degree-correction-for-bosses ifelse-value (sum to-sum = 0) [ arrest-rate ] [ arrest-rate / mean to-sum ]
   ]
 end
 
@@ -2633,17 +2633,6 @@ facilitator-repression-multiplier
 1
 NIL
 HORIZONTAL
-
-MONITOR
-595
-880
-797
-925
-NIL
-degree-correction-for-bosses
-17
-1
-11
 
 @#$#@#$#@
 ## WHAT IS IT?
