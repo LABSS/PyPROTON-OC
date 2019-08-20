@@ -503,7 +503,7 @@ end
 to soc-add-psychological [ targets ]
   ; we use a random sample (arbitrarily set to 50 people size max) to avoid weighting sample from large populations
   ask targets [
-    let support-set persons with [
+    let support-set other persons with [
       num-crimes-committed = 0
     ]
     if any? support-set [
@@ -785,7 +785,7 @@ to choose-intervention-setting
     set intervention-start 13
     set intervention-end 9999
   ]
-  if intervention = "school" [
+  if intervention = "students" [
     set family-intervention "none"
     set social-support "all"
     set welfare-support "none"
@@ -2396,7 +2396,7 @@ CHOOSER
 750
 intervention
 intervention
-"use current values" "baseline" "preventive" "disruptive"
+"use current values" "baseline" "preventive" "disruptive" "students"
 0
 
 MONITOR
