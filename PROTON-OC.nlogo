@@ -142,6 +142,7 @@ globals [
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
   degree-correction-for-bosses
+  correction-for-non-facilitators
   number-protected-recruited-this-tick
   number-offspring-recruited-this-tick
   co-offender-group-histo
@@ -760,6 +761,7 @@ to choose-intervention-setting
     set social-support "none"
     set welfare-support "none"
     set OC-boss-repression? false
+    set facilitator-repression? false
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -770,6 +772,7 @@ to choose-intervention-setting
     set social-support "none"
     set welfare-support "none"
     set OC-boss-repression? false
+    set facilitator-repression? false
     set targets-addressed-percent 50
     set ticks-between-intervention 1
     set intervention-start 13
@@ -780,6 +783,7 @@ to choose-intervention-setting
     set social-support "none"
     set welfare-support "none"
     set OC-boss-repression? true
+    set facilitator-repression? false
     set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
@@ -790,8 +794,21 @@ to choose-intervention-setting
     set social-support "all"
     set welfare-support "none"
     set OC-boss-repression? false
+    set facilitator-repression? false
     set targets-addressed-percent 10
     set ticks-between-intervention 12
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+    if intervention = "facilitators" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? true
+    set facilitator-repression-multiplier 2
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 9999
   ]
@@ -1229,9 +1246,21 @@ to-report make-co-offending-histo [ co-offender-groups ]
 end
 
 to-report arrest-probability-with-intervention [ group ]
-  if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ])
-  [ report count group * OC-repression-prob group ]
-  [ report count group * arrest-rate ]
+  ; the OC intervention self-compensates (bosses more likely, lackeys less
+  if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ]) [
+    report count group * OC-repression-prob group
+  ][
+    ; the facilitator intervention needs to compensate with everybody, including the non-facilitators
+    if-else (intervention-on? and facilitator-repression?) [
+      report ifelse-value any? group with [ facilitator? ] [
+        count group * arrest-rate * facilitator-repression-multiplier
+      ][
+        count group * arrest-rate * correction-for-non-facilitators
+      ]
+    ][
+      report count group * arrest-rate
+    ]
+  ]
 end
 
 to-report OC-repression-prob [ a-group ]
@@ -1357,7 +1386,10 @@ to calculate-criminal-tendency
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
   calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
-  calc-degree-correction-for-bosses
+  if intervention-on? [
+    if OC-boss-repression? [ calc-degree-correction-for-bosses ]
+    if facilitator-repression? [ calc-correction-for-non-facilitators ]
+  ]
 end
 
 to calc-degree-correction-for-bosses
@@ -1371,6 +1403,12 @@ to calc-degree-correction-for-bosses
     ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
     set degree-correction-for-bosses ifelse-value (mean to-sum = 0) [ 1 ] [ arrest-rate / mean to-sum ]
   ]
+end
+
+to calc-correction-for-non-facilitators
+  let f count persons with [ facilitator? ]
+  let n count persons
+  set correction-for-non-facilitators ifelse-value (f > 0) [ (n - facilitator-repression-multiplier * f) / (n - f) ][ 1 ]
 end
 
 to-report social-proximity-with [ target ] ; person reporter
@@ -2191,7 +2229,7 @@ CHOOSER
 social-support
 social-support
 "none" "educational" "psychological" "more friends" "all"
-4
+0
 
 CHOOSER
 15
@@ -2212,7 +2250,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-50.0
+10.0
 1
 1
 NIL
@@ -2396,8 +2434,8 @@ CHOOSER
 750
 intervention
 intervention
-"use current values" "baseline" "preventive" "disruptive" "students"
-0
+"use current values" "baseline" "preventive" "disruptive" "students" "facilitators"
+5
 
 MONITOR
 268
@@ -2501,10 +2539,10 @@ count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and
 11
 
 MONITOR
-1080
-760
-1290
-805
+1095
+830
+1305
+875
 unemployed rate (level, percent)
 count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2549,10 +2587,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-1080
-810
-1290
-855
+1095
+880
+1305
+925
 Not looking for work (percent)
 count all-persons with [ job-level = 0 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2560,15 +2598,41 @@ count all-persons with [ job-level = 0 and age > 16 and age < 65 and my-school =
 11
 
 MONITOR
-1080
-860
-1290
-905
+1095
+930
+1305
+975
 occupied (level, percent)
 count all-persons with [ job-level > 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
 1
 11
+
+SWITCH
+1095
+750
+1340
+783
+facilitator-repression?
+facilitator-repression?
+0
+1
+-1000
+
+SLIDER
+1095
+785
+1342
+818
+facilitator-repression-multiplier
+facilitator-repression-multiplier
+1
+5
+2.0
+0.1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
