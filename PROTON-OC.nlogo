@@ -476,20 +476,23 @@ to calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
 end
 
 to socialization-intervene
-  let potential-targets all-persons with [ age <= 18 and age >= 6 and any? school-link-neighbors ]
+  let potential-targets all-persons with [ age <= 18 and age >= 6 and my-school != nobody ]
   let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ]
-  ifelse social-support = "educational" [
+  ifelse social-support = "educational" or social-support = "all" [
     soc-add-educational targets
   ][
-    ifelse social-support = "psychological" [
+    ifelse social-support = "psychological" or social-support = "all" [
       soc-add-psychological targets
     ][
-      if social-support = "more friends" [
+      if social-support = "more friends" or social-support = "all" [
         soc-add-more-friends targets
       ]
     ]
+  ]
+  if social-support = "all" [ ; also give a job to the mothers
+    welfare-createjobs (turtle-set [ in-offspring-link-neighbors ] of targets) with [ not male? ]
   ]
 end
 
@@ -498,10 +501,10 @@ to soc-add-educational [ targets ]
 end
 
 to soc-add-psychological [ targets ]
-  ; we use a random sample (arbitrarily set to 50 people size max) to avoid weigthed sample from large populations
+  ; we use a random sample (arbitrarily set to 50 people size max) to avoid weighting sample from large populations
   ask targets [
-    let support-set other persons with [
-      num-crimes-committed = 0 and not member? myself person-link-neighbors
+    let support-set persons with [
+      num-crimes-committed = 0
     ]
     if any? support-set [
       create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
@@ -517,7 +520,7 @@ end
 
 to soc-add-more-friends [ targets ]
   ask targets [
-    let support-set other persons with [ not member? myself person-link-neighbors ]
+    let support-set other persons
     if any? support-set [
       create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
         criminal-tendency-subtractfromme-for-inverse-weighted-extraction - criminal-tendency
@@ -530,7 +533,7 @@ to welfare-intervene
   let the-employer nobody
   let targets no-turtles
   ifelse welfare-support = "job-mother" [
-    set targets all-persons with [not male? and any? partner-link-neighbors with [ oc-member? ] and my-job = nobody ]
+    set targets all-persons with [ not male? and any? partner-link-neighbors with [ oc-member? ] and my-job = nobody ]
   ][
     if welfare-support = "job-child" [
       set targets all-persons with [ age > 16 and age < 24
@@ -779,6 +782,16 @@ to choose-intervention-setting
     set OC-boss-repression? true
     set targets-addressed-percent 10
     set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "school" [
+    set family-intervention "none"
+    set social-support "all"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 12
     set intervention-start 13
     set intervention-end 9999
   ]
@@ -2177,8 +2190,8 @@ CHOOSER
 305
 social-support
 social-support
-"none" "educational" "psychological" "more friends"
-0
+"none" "educational" "psychological" "more friends" "all"
+4
 
 CHOOSER
 15
