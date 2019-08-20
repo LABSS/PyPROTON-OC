@@ -247,6 +247,8 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   set removed-fatherships []
+  calc-degree-correction-for-bosses
+  calc-correction-for-non-facilitators
   show word "Setup complete in " timer
 end
 

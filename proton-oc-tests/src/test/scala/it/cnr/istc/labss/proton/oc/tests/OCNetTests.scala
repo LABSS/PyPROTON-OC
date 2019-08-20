@@ -8,7 +8,7 @@ class OCNetTests extends OCModelSuite {
 
   test("General coherency of network structure") { ws =>
     ws.cmd("""
-      set num-persons 1000
+      set num-persons 3000
       set intervention "disruptive"
       setup
       """
