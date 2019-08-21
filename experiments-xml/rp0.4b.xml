@@ -79,9 +79,8 @@
         <metric>people-jailed</metric>
         <!-- PARAMETERS -->
         <enumeratedValueSet variable="intervention">
-            <value value="&quot;baseline&quot;"/>
-            <value value="&quot;preventive&quot;"/>
-            <value value="&quot;disruptive&quot;"/>
+            <value value="&quot;students&quot;"/>
+            <value value="&quot;facilitators&quot;"/>
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
