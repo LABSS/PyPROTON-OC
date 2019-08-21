@@ -2334,7 +2334,7 @@ percentage-of-facilitators
 percentage-of-facilitators
 0
 0.01
-0.004
+0.005
 0.001
 1
 NIL
