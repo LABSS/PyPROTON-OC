@@ -265,7 +265,7 @@ to load-stats-tables
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
-  set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
+  ;set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
   set work_status group-by-first-two-items read-csv "work_status"
   set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
   set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
