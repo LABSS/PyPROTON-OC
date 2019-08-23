@@ -116,7 +116,6 @@ globals [
   edu
   work_status
   wealth_quintile
-  criminal_propensity
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
@@ -268,7 +267,6 @@ to load-stats-tables
   ;set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
   set work_status group-by-first-two-items read-csv "work_status"
   set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
-  set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
   set punishment-length-list but-first csv:from-file "inputs/general/data/conviction_length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
