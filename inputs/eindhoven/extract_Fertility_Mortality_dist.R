@@ -1,3 +1,5 @@
+# missing data
+
 library(tidyverse)
 library(readxl)
 library(foreign)
@@ -6,6 +8,8 @@ library(foreign)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 data <- read.spss("raw/Bevolking 2018 - kenmerken persoon tbv fertility.sav", to.data.frame=TRUE)
+
+...?
 
 
 

@@ -114,7 +114,6 @@ globals [
   wealth_quintile_by_work_status
   criminal_propensity_by_wealth_quintile
   edu
-  wealth_quintile
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
@@ -257,13 +256,12 @@ end
 
 to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
-  set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
+  set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"  ; COPIED FROM PALERMO
+  set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"   ; COPIED FROM PALERMO
   set edu group-by-first-of-three read-csv "edu"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
-  set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
   set punishment-length-list but-first csv:from-file "inputs/general/data/conviction_length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
