@@ -275,8 +275,8 @@ to load-stats-tables
   set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
-  set labour-status-by-age-and-sex group-by-first-two-items read-csv "labour_status"
-  set labour-status-range group-by-first-two-items read-csv "labour_status_range"
+  set labour-status-by-age-and-sex group-by-first-two-items read-csv "labour_status" ; OKNL
+  set labour-status-range group-by-first-two-items read-csv "labour_status_range" ; OKNL
   ; further sources:
   ; schools.csv table goes into education-levels
   let marr item 0 but-first csv:from-file "inputs/general/data/marriages_stats.csv"
@@ -951,7 +951,7 @@ end
 
 to setup-employers-jobs
   output "Setting up employers"
-  let job-counts reduce sentence read-csv "employer_sizes"
+  let job-counts reduce sentence read-csv "employer_sizes" ;OKNL
   ;; a small multiplier is added so to increase the pool to allow for matching at the job level
   let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age < 65 ]) * 1.2
   while [ count jobs < jobs-target ] [
@@ -1822,17 +1822,6 @@ count jobs
 1
 11
 
-INPUTBOX
-1095
-13
-1340
-73
-data-folder
-inputs/palermo/data/
-1
-0
-String
-
 SWITCH
 265
 50
@@ -1873,10 +1862,10 @@ NIL
 1
 
 INPUTBOX
-1224
-78
-1339
-138
+1230
+60
+1345
+120
 ticks-per-year
 12.0
 1
@@ -2556,6 +2545,16 @@ count all-persons with [ job-level > 1 and age > 16 and age < 65 and my-school =
 2
 1
 11
+
+CHOOSER
+1090
+10
+1287
+55
+data-folder
+data-folder
+"inputs/palermo/data/" "inputs/eindhoven/data/"
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
