@@ -262,7 +262,7 @@ to load-stats-tables
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "../../palermo/data/edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "../../palermo/data/work_status_by_edu_lvl"
   set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "../../palermo/data/wealth_quintile_by_work_status"
-  set punishment-length-list read-csv "conviction_length.csv"
+  set punishment-length-list read-csv "conviction_length"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
   set jobs_by_company_size table-map table:group-items read-csv "../../palermo/data/jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
