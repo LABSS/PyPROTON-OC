@@ -16,7 +16,6 @@
 
 # Things that we recycle from palermo setup:
   let csv-data read-csv "../../palermo/data/children_age_dist"
-
   set edu group-by-first-of-three read-csv "../../palermo/data/edu"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "../../palermo/data/edu_by_wealth_lvl"
   set fertility-table group-by-first-two-items read-csv "../../palermo/data/initial_fertility_rates"
