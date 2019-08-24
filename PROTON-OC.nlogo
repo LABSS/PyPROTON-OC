@@ -944,7 +944,7 @@ end
 
 to setup-employers-jobs
   output "Setting up employers"
-  let job-counts reduce sentence read-csv "employer_sizes" ;OKNL
+  let job-counts reduce sentence read-csv "employer_sizes"
   ;; a small multiplier is added so to increase the pool to allow for matching at the job level
   let jobs-target (count persons with [ job-level > 1 and my-school = nobody and age > 16 and age < 65 ]) * 1.2
   while [ count jobs < jobs-target ] [
