@@ -5,7 +5,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 
 df <-
-  file.path("raw", "Eurostat_Sicily_NL_labour_status.xls") %>%
+  file.path("raw", "Eurostat_Sicily_NL_labour_status_v2.xls") %>%
   read_excel(sheet = "Sicily",skip = 6, n_max = 10)
 
 # this is to make it compatible with old versions of read_excel
@@ -58,8 +58,8 @@ df2 <- df %>%
 #### and now the netherlands
 
 df <-
-  file.path("raw", "Eurostat_Sicily_NL_labour_status.xls") %>%
-  read_excel(sheet = "NL",skip = 6, n_max = 18)
+  file.path("raw", "Eurostat_Sicily_NL_labour_status_v2.xls") %>%
+  read_excel(sheet = "NL",skip = 6, n_max = 20)
 
 # this is to make it compatible with old versions of read_excel
 ifelse("2016...9" %in% names(df),
