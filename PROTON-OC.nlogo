@@ -265,7 +265,7 @@ to load-stats-tables
   set punishment-length-list but-first csv:from-file "inputs/general/data/conviction_length.csv"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
-  set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
+  set jobs_by_company_size table-map table:group-items read-csv "../../palermo/data/jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
   set labour-status-by-age-and-sex group-by-first-two-items read-csv "labour_status"
@@ -1003,7 +1003,7 @@ to output [ str ]
 end
 
 to setup-education-levels
-  let list-schools read-csv "schools"
+  let list-schools read-csv "../../palermo/data/schools"
   set education-levels []
   let index 1
   foreach list-schools [ row ->
@@ -1583,7 +1583,7 @@ end
 to-report make-children-age-dist-table
   ; reports a two-level table where the first level is
   ; child number and the second level is the mother's age
-  let csv-data read-csv "children_age_dist"
+  let csv-data read-csv "../../palermo/data/children_age_dist"
   report table-map (group-by-first-item csv-data) [ entry ->
     group-by-first-item entry
   ]

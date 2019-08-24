@@ -15,7 +15,7 @@ df_size_dist <-
   gather(size, p) %>%
   mutate(size = as.numeric(size)) %>%
   filter(size <= 9) %>% # because we can only generate max. 8 children
-  mutate(p = p / sum(p)) %>%
+  mutate(p= p / sum(p)) %>%
   write_csv(file.path("data", "household_size_dist.csv"))
 
 df_age_by_size_dist <-
@@ -24,9 +24,12 @@ df_age_by_size_dist <-
   select(-"...1") %>%
   mutate(age = as.numeric(age)) %>%
   filter(age >= min_age_of_head & age <= max_age_of_head) %>%
+  rename("16" = "16+") %>%
+  select( - "...19") %>%
   gather(size, p, -age) %>%
   group_by(size) %>%
-  mutate(p= p / sum(p) ) %>%
+  mutate(p = p / sum(p)) %>%
+  select(size, age, p) %>%
   write_csv(file.path("data", "head_age_dist_by_household_size.csv"))
 
 df_hh_type_by_age <-
@@ -34,9 +37,11 @@ df_hh_type_by_age <-
   rename(type = `Age`) %>%
   filter(type != "single" & type != "Total") %>%
   na.omit() %>%
+  select(-"...108") %>%
   gather(age, p, -type) %>%
   group_by(age) %>%
   mutate(p = p / sum(p)) %>%
+  mutate(p = if_else(is.nan(p) ,0 , p)) %>%
   ungroup() %>%
   transmute(age = as.numeric(age), type, p = as.numeric(p)) %>%
   filter(age >= min_age_of_head) %>%

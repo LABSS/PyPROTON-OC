@@ -251,15 +251,15 @@ age,type,p
 101,couple,0.25
 101,single parent,0.25
 101,other,0.5
-102,couple,NaN
-102,single parent,NaN
-102,other,NaN
+102,couple,0
+102,single parent,0
+102,other,0
 103,couple,0
 103,single parent,0
 103,other,1
-104,couple,NaN
-104,single parent,NaN
-104,other,NaN
-105,couple,NaN
-105,single parent,NaN
-105,other,NaN
+104,couple,0
+104,single parent,0
+104,other,0
+105,couple,0
+105,single parent,0
+105,other,0
