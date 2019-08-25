@@ -77,10 +77,7 @@
         <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
         <metric>count all-persons with [ my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ] / count all-persons with [my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ]</metric>
         <metric>people-jailed</metric>
-        <!-- PARAMETERS -->
-    <enumeratedValueSet variable="data-folder">
-            <value value="&quot;inputs/eindhoven/data/&quot;"/>
-    </enumeratedValueSet>        
+        <!-- PARAMETERS -->      
         <enumeratedValueSet variable="intervention">
             <value value="&quot;students&quot;"/>
         </enumeratedValueSet>
@@ -88,9 +85,9 @@
         <enumeratedValueSet variable="num-oc-persons">
             <value value="15"/>
         </enumeratedValueSet>
-        <!-- PALERMO SETUP -->
+        <!-- NL SETUP -->
         <enumeratedValueSet variable="data-folder">
-            <value value="&quot;inputs/palermo/data/&quot;"/>
+            <value value="&quot;inputs/eindhoven/data/&quot;"/>
         </enumeratedValueSet>
         <!-- 2. Criminal rate -->
         <enumeratedValueSet variable="number-crimes-yearly-per10k">

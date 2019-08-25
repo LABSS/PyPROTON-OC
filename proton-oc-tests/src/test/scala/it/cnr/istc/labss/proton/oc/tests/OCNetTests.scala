@@ -34,7 +34,15 @@ class OCNetTests extends OCModelSuite {
         """))
         println(ws.rpt("""
           [ count person-link-neighbors with [ oc-member? ] ] of persons with [ oc-member? ]
-        """))      
+        """)) 
+        ws.cmd("calc-degree-correction-for-bosses")
+        target = ws.rpt("""
+          sum [ arrest-rate ] of persons with [ oc-member? ]
+         """).asInstanceOf[Number].floatValue  
+        value = ws.rpt("""
+          sum [ (OC-repression-prob turtle-set self) ] of persons with [ oc-member? ]
+        """).asInstanceOf[Number].floatValue 
+        if (target - value > 1E-5) {println("problem solved by recalc")}    
       }
       //ws.rpt("ifelse-value (ticks mod ticks-per-year = 0) [ sum [ arrest-rate ] of persons with [ oc-member? ] - sum [ (OC-repression-prob turtle-set self) ] of persons with [ oc-member? ] < 1E-5 ] [ true ]") shouldBe true
     }
