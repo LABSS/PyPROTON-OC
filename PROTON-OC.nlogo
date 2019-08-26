@@ -996,7 +996,19 @@ to setup-employers-jobs
 end
 
 to-report random-level-by-size [ employer-size ]
-  report pick-from-pair-list table:get jobs_by_company_size employer-size
+  ifelse table:has-key? jobs_by_company_size employer-size [
+    report pick-from-pair-list table:get jobs_by_company_size employer-size
+  ] [
+    let min-dist 1E10
+    let most-similar-key -1
+    foreach table:keys  jobs_by_company_size [ k ->
+      if abs (employer-size - k) < min-dist [
+        set most-similar-key k
+        set min-dist abs (employer-size - k)
+      ]
+    ]
+    report pick-from-pair-list table:get jobs_by_company_size most-similar-key
+  ]
 end
 
 to find-job ; person procedure
