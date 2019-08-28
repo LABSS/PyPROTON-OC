@@ -14,3 +14,4 @@ outputs/netlogo.log
 outputs/table-output.csv
 outputs/.ipynb_checkpoints
 *.~lock.*xls#
+ipynb_checkpoints

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <experiments>
-    <experiment name="rp0.4" repetitions="20" runMetricsEveryStep="true">
+    <experiment name="rp0.4b" repetitions="20" runMetricsEveryStep="true">
         <setup>setup</setup>
         <go>go</go>
         <final>show (word "Time elapsed:" timer)

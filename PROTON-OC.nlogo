@@ -114,9 +114,6 @@ globals [
   wealth_quintile_by_work_status
   criminal_propensity_by_wealth_quintile
   edu
-  work_status
-  wealth_quintile
-  criminal_propensity
   punishment-length-list
   male-punishment-length-list
   female-punishment-length-list
@@ -262,20 +259,16 @@ end
 
 to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
-  set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
-  set edu group-by-first-of-three read-csv "edu"
-  set edu_by_wealth_lvl group-couples-by-2-keys read-csv "edu_by_wealth_lvl"
-  set work_status_by_edu_lvl group-couples-by-2-keys read-csv "work_status_by_edu_lvl"
-  set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "wealth_quintile_by_work_status"
-  set criminal_propensity_by_wealth_quintile "criminal_propensity_by_wealth_quintile"
-  set work_status group-by-first-two-items read-csv "work_status"
-  set wealth_quintile group-by-first-two-items read-csv "wealth_quintile"
-  set criminal_propensity group-by-first-two-items read-csv "criminal_propensity"
-  set punishment-length-list but-first csv:from-file "inputs/general/data/conviction_length.csv"
+  set fertility-table group-by-first-two-items read-csv "../../palermo/data/initial_fertility_rates"
+  set mortality-table group-by-first-two-items read-csv "../../palermo/data/initial_mortality_rates"
+  set edu group-by-first-of-three read-csv "../../palermo/data/edu"
+  set edu_by_wealth_lvl group-couples-by-2-keys read-csv "../../palermo/data/edu_by_wealth_lvl"
+  set work_status_by_edu_lvl group-couples-by-2-keys read-csv "../../palermo/data/work_status_by_edu_lvl"
+  set wealth_quintile_by_work_status group-couples-by-2-keys read-csv "../../palermo/data/wealth_quintile_by_work_status"
+  set punishment-length-list read-csv "conviction_length"
   set male-punishment-length-list map [ i -> (list (item 0 i) (item 2 i)) ] punishment-length-list
   set female-punishment-length-list map [ i -> (list (item 0 i) (item 1 i)) ] punishment-length-list
-  set jobs_by_company_size table-map table:group-items read-csv "jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
+  set jobs_by_company_size table-map table:group-items read-csv "../../palermo/data/jobs_by_company_size" [ line -> first line  ]   [ rows -> map but-first rows ]
   set c-range-by-age-and-sex group-couples-by-2-keys read-csv "crime_rate_by_gender_and_age_range"
   set c-by-age-and-sex group-by-first-two-items read-csv "crime_rate_by_gender_and_age"
   set labour-status-by-age-and-sex group-by-first-two-items read-csv "labour_status"
@@ -1003,7 +996,19 @@ to setup-employers-jobs
 end
 
 to-report random-level-by-size [ employer-size ]
-  report pick-from-pair-list table:get jobs_by_company_size employer-size
+  ifelse table:has-key? jobs_by_company_size employer-size [
+    report pick-from-pair-list table:get jobs_by_company_size employer-size
+  ] [
+    let min-dist 1E10
+    let most-similar-key -1
+    foreach table:keys  jobs_by_company_size [ k ->
+      if abs (employer-size - k) < min-dist [
+        set most-similar-key k
+        set min-dist abs (employer-size - k)
+      ]
+    ]
+    report pick-from-pair-list table:get jobs_by_company_size most-similar-key
+  ]
 end
 
 to find-job ; person procedure
@@ -1042,7 +1047,7 @@ to output [ str ]
 end
 
 to setup-education-levels
-  let list-schools read-csv "schools"
+  let list-schools read-csv "../../palermo/data/schools"
   set education-levels []
   let index 1
   foreach list-schools [ row ->
@@ -1539,7 +1544,7 @@ to generate-households
   let head-age-dist group-by-first-item read-csv "head_age_dist_by_household_size"
   let proportion-of-male-singles-by-age table:from-list read-csv "proportion_of_male_singles_by_age"
   let hh-type-dist group-by-first-item read-csv "household_type_dist_by_age"
-  let partner-age-dist group-by-first-item read-csv "partner_age_dist"
+  let partner-age-dist group-by-first-item read-csv "../../palermo/data/partner_age_dist"
   let children-age-dist make-children-age-dist-table
   let p-single-father first first csv:from-file (word data-folder "proportion_single_fathers.csv")
   let population new-population-pool persons
@@ -1643,7 +1648,7 @@ end
 to-report make-children-age-dist-table
   ; reports a two-level table where the first level is
   ; child number and the second level is the mother's age
-  let csv-data read-csv "children_age_dist"
+  let csv-data read-csv "../../palermo/data/children_age_dist"
   report table-map (group-by-first-item csv-data) [ entry ->
     group-by-first-item entry
   ]
@@ -1875,17 +1880,6 @@ count jobs
 1
 11
 
-INPUTBOX
-1095
-13
-1340
-73
-data-folder
-inputs/palermo/data/
-1
-0
-String
-
 SWITCH
 265
 50
@@ -1926,10 +1920,10 @@ NIL
 1
 
 INPUTBOX
-1224
-78
-1339
-138
+1230
+60
+1345
+120
 ticks-per-year
 12.0
 1
@@ -2609,6 +2603,16 @@ count all-persons with [ job-level > 1 and age > 16 and age < 65 and my-school =
 2
 1
 11
+
+CHOOSER
+1090
+10
+1287
+55
+data-folder
+data-folder
+"inputs/palermo/data/" "inputs/eindhoven/data/"
+1
 
 SWITCH
 1095
