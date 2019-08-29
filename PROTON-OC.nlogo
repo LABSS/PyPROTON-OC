@@ -1504,7 +1504,7 @@ to-report number-of-accomplices
 end
 
 to update-meta-links [ agents ]
-  nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
+  nw:with-context agents person-links [ ; limit the context to the agents in the radius of interest
     ask agents [
       ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
         create-meta-link-with myself [ ; if that link already exists, it won't be re-created
