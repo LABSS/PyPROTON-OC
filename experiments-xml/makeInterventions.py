@@ -77,6 +77,9 @@ al.insert(1, ET.Element("value", value="&quot;students&quot;"))
 tree = ET.ElementTree(indent(root))
 tree.write(version + '.xml',  encoding='utf-8')
 
+# watch out, this should have changed much more to become rp5
+
+
 # ----------------------------------
 version="rp0.5a"
 tree = ET.parse('rp_base.xml')
