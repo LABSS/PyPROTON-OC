@@ -124,6 +124,7 @@ globals [
   c-range-by-age-and-sex
   labour-status-by-age-and-sex
   labour-status-range
+  oc-status         ; mean one over all oc members, gives probability of arrest.
   ; outputs
   number-deceased
   facilitator-fails
@@ -1238,6 +1239,7 @@ to commit-crimes
       ]
     ]
   ]
+  calc-OC-status
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
@@ -1273,10 +1275,24 @@ end
 
 to-report OC-repression-prob [ a-group ]
   let representative one-of a-group with [ OC-member? ]
-  let n [ count (my-links with [ [oc-member?] of other-end ]) ] of representative
-  let myOCcrim my-criminal-links with [ [oc-member?] of other-end ]
-  set n n + sum [ num-co-offenses ] of myOCcrim - count myOCcrim ; subtracting the ones already counted above
-  report (n / (n + 1)) ^ 2 * degree-correction-for-bosses
+  report arrest-rate * table:get oc-status [ who ] of representative
+end
+
+to calc-OC-status
+  set oc-status table:from-list [ list who calc-OC-member-position ] of persons with [ oc-member? ]
+  let min-score min table:values oc-status
+  let divide-score mean table:values oc-status - min-score
+  foreach table:keys oc-status [ k ->
+    table:put oc-status k (table:get oc-status k - min-score) / divide-score
+  ]
+  show sort table:values oc-status
+  show mean table:values oc-status
+end
+
+to-report calc-OC-member-position
+  let n count my-links with [ [oc-member?] of other-end ]
+  let myOCcrim my-criminal-links with [ [ oc-member? ] of other-end ]
+  report n + sum [ num-co-offenses ] of myOCcrim - count myOCcrim ; subtracting the ones already counted above
 end
 
 to retire-persons
@@ -1410,6 +1426,7 @@ to calc-degree-correction-for-bosses
       let n count person-link-neighbors with [ oc-member? ]
       set to-sum lput (n ^ 2 / (n + 1) ^ 2) to-sum
     ]
+    show mean to-sum
     ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
     set degree-correction-for-bosses ifelse-value (sum to-sum = 0) [ arrest-rate ] [ arrest-rate / mean to-sum ]
   ]
@@ -2168,7 +2185,7 @@ num-oc-persons
 2
 200
 30.0
-1
+5
 1
 NIL
 HORIZONTAL
@@ -2288,7 +2305,7 @@ SWITCH
 743
 OC-boss-repression?
 OC-boss-repression?
-0
+1
 1
 -1000
 
