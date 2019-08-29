@@ -27,13 +27,12 @@ root = tree.getroot()
 
 
 al = tree.find('.//experiment')
-print(al)
 al.set('name', version)
 al.set('repetitions', str(int(repetitions/3)))
 
 al = tree.find('.//enumeratedValueSet[@variable="intervention"]')
-al.insert(1, ET.Element("value", value="&quot;preventive&quot;"))
-al.insert(1, ET.Element("value", value="&quot;disruptive&quot;"))
+al.insert(1, ET.Element("value", value='"preventive"'))
+al.insert(1, ET.Element("value", value='"disruptive"'))
 
 #write to file
 tree = ET.ElementTree(indent(root))
@@ -45,14 +44,13 @@ tree = ET.parse('rp_base.xml')
 root = tree.getroot()
 
 al = tree.find('.//experiment')
-print(al)
 al.set('name', version)
 al.set('repetitions', str(int(repetitions)))
 
 al = tree.find('.//enumeratedValueSet[@variable="intervention"]')
 for x in al.getchildren():
     al.remove(x)
-al.insert(1, ET.Element("value", value="&quot;facilitators&quot;"))
+al.insert(1, ET.Element("value", value='"facilitators"'))
 
 #write to file
 tree = ET.ElementTree(indent(root))
@@ -64,14 +62,13 @@ tree = ET.parse('rp_base.xml')
 root = tree.getroot()
 
 al = tree.find('.//experiment')
-print(al)
 al.set('name', version)
 al.set('repetitions', str(int(repetitions)))
 
 al = tree.find('.//enumeratedValueSet[@variable="intervention"]')
 for x in al.getchildren():
     al.remove(x)
-al.insert(1, ET.Element("value", value="&quot;students&quot;"))
+al.insert(1, ET.Element("value", value='"students"'))
 
 #write to file
 tree = ET.ElementTree(indent(root))
@@ -86,19 +83,18 @@ tree = ET.parse('rp_base.xml')
 root = tree.getroot()
 
 al = tree.find('.//experiment')
-print(al)
 al.set('name', version)
 al.set('repetitions', str(int(repetitions/3)))
 
 al = tree.find('.//enumeratedValueSet[@variable="data-folder"]')
 for x in al.getchildren():
     al.remove(x)
-al.insert(1, ET.Element("value", value="&quot;inputs/eindhoven/data/&quot;"))
+al.insert(1, ET.Element("value", value='"inputs/eindhoven/data/"'))
 
 
 al = tree.find('.//enumeratedValueSet[@variable="intervention"]')
-al.insert(1, ET.Element("value", value="&quot;preventive&quot;"))
-al.insert(1, ET.Element("value", value="&quot;disruptive&quot;"))
+al.insert(1, ET.Element("value", value='"preventive"'))
+al.insert(1, ET.Element("value", value='"disruptive"'))
 
 #write to file
 tree = ET.ElementTree(indent(root))
@@ -110,20 +106,19 @@ tree = ET.parse('rp_base.xml')
 root = tree.getroot()
 
 al = tree.find('.//experiment')
-print(al)
 al.set('name', version)
 al.set('repetitions', str(int(repetitions/3)))
 
 al = tree.find('.//enumeratedValueSet[@variable="data-folder"]')
 for x in al.getchildren():
     al.remove(x)
-al.insert(1, ET.Element("value", value="&quot;inputs/eindhoven/data/&quot;"))
+al.insert(1, ET.Element("value", value='"inputs/eindhoven/data/"'))
 
 al = tree.find('.//enumeratedValueSet[@variable="intervention"]')
 for x in al.getchildren():
     al.remove(x)
-al.insert(1, ET.Element("value", value="&quot;students&quot;"))
-al.insert(1, ET.Element("value", value="&quot;facilitators&quot;"))
+al.insert(1, ET.Element("value", value='"students"'))
+al.insert(1, ET.Element("value", value='"facilitators"'))
 
 #write to file
 tree = ET.ElementTree(indent(root))

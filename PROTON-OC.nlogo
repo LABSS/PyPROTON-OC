@@ -139,7 +139,6 @@ globals [
   criminal-tendency-addme-for-weighted-extraction
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
-  degree-correction-for-bosses
   correction-for-non-facilitators
   number-protected-recruited-this-tick
   number-offspring-recruited-this-tick
@@ -246,7 +245,6 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   set removed-fatherships []
-  calc-degree-correction-for-bosses
   calc-correction-for-non-facilitators
   show word "Setup complete in " timer
 end
@@ -1417,22 +1415,7 @@ to calculate-criminal-tendency
   calc-criminal-tendency-addme-for-weighted-extraction
   calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   if intervention-on? [
-    if OC-boss-repression? [ calc-degree-correction-for-bosses ]
     if facilitator-repression? [ calc-correction-for-non-facilitators ]
-  ]
-end
-
-to calc-degree-correction-for-bosses
-  let gang persons with [ oc-member? ]
-  if any? gang [
-    let to-sum []
-    ask gang [
-      let n count person-link-neighbors with [ oc-member? ]
-      set to-sum lput (n ^ 2 / (n + 1) ^ 2) to-sum
-    ]
-    show mean to-sum
-    ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
-    set degree-correction-for-bosses ifelse-value (sum to-sum = 0) [ arrest-rate ] [ arrest-rate / mean to-sum ]
   ]
 end
 
@@ -1888,7 +1871,7 @@ num-persons
 100
 10000
 1000.0
-50
+100
 1
 NIL
 HORIZONTAL

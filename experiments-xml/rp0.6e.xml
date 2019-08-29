@@ -63,16 +63,16 @@
   <metric>kids-intervention-counter</metric>
   <enumeratedValueSet variable="intervention">
       <value value="&quot;baseline&quot;" />
-    <value value="&amp;quot;facilitators&amp;quot;" />
-    <value value="&amp;quot;students&amp;quot;" />
-    <value value="&amp;quot;disruptive&amp;quot;" />
-    <value value="&amp;quot;preventive&amp;quot;" />
+    <value value="&quot;facilitators&quot;" />
+    <value value="&quot;students&quot;" />
+    <value value="&quot;disruptive&quot;" />
+    <value value="&quot;preventive&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="num-oc-persons">
       <value value="15" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="data-folder">
-      <value value="&amp;quot;inputs/eindhoven/data/&amp;quot;" />
+      <value value="&quot;inputs/eindhoven/data/&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="number-crimes-yearly-per10k">
       <value value="3368" />
