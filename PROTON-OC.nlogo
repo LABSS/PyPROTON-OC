@@ -147,6 +147,7 @@ globals [
   people-jailed
   number-crimes
   crime-multiplier
+  kids-intervention-counter
 ]
 
 to profile-setup
@@ -591,6 +592,7 @@ to family-intervene
   ]
   if any? kids-to-protect [
     ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
+      set kids-intervention-counter kids-intervention-counter + 1
       ; notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
       ; gee but how comes that it increases with the nubmer of targets? We have to do better here
       let father one-of in-offspring-link-neighbors with [ male? and oc-member? ]
@@ -765,12 +767,12 @@ to choose-intervention-setting
     set intervention-end 9999
   ]
   if intervention = "preventive" [
-    set family-intervention "remove-if-caught-and-OC-member"
+    set family-intervention "remove-if-OC-member"
     set social-support "none"
     set welfare-support "none"
     set OC-boss-repression? false
     set facilitator-repression? false
-    set targets-addressed-percent 50
+    set targets-addressed-percent 100
     set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 9999
@@ -781,7 +783,7 @@ to choose-intervention-setting
     set welfare-support "none"
     set OC-boss-repression? true
     set facilitator-repression? false
-    set targets-addressed-percent 10
+    set targets-addressed-percent 10 ; not appliable
     set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 9999
@@ -792,8 +794,8 @@ to choose-intervention-setting
     set welfare-support "none"
     set OC-boss-repression? false
     set facilitator-repression? false
-    set targets-addressed-percent 10
-    set ticks-between-intervention 12
+    set targets-addressed-percent 100
+    set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 9999
   ]
@@ -803,8 +805,8 @@ to choose-intervention-setting
     set welfare-support "none"
     set OC-boss-repression? false
     set facilitator-repression? true
-    set facilitator-repression-multiplier 2
-    set targets-addressed-percent 10
+    set facilitator-repression-multiplier 20
+    set targets-addressed-percent 10 ; not appliable
     set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 9999
@@ -1285,8 +1287,6 @@ to calc-OC-status
   foreach table:keys oc-status [ k ->
     table:put oc-status k (table:get oc-status k - min-score) / divide-score
   ]
-  show sort table:values oc-status
-  show mean table:values oc-status
 end
 
 to-report calc-OC-member-position
@@ -2235,7 +2235,7 @@ CHOOSER
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
-0
+2
 
 CHOOSER
 15

@@ -60,6 +60,7 @@
   <metric>people-jailed</metric>
   <metric>count all-persons with [ my-school != nobody ]</metric>
   <metric>count all-persons with [ my-job != nobody ]</metric>
+  <metric>kids-intervention-counter</metric>
   <enumeratedValueSet variable="intervention">
       <value value="&quot;baseline&quot;" />
     <value value="&amp;quot;facilitators&amp;quot;" />
