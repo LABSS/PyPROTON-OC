@@ -447,8 +447,8 @@ to-report intervention-on?
 end
 
 to calculate-arrest-rate
-  ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year
-  set arrest-rate number-arrests-per-year / ticks-per-year / number-crimes-yearly-per10k
+  ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year.
+  set arrest-rate number-arrests-per-year / ticks-per-year / number-crimes-yearly-per10k / 10000 * count persons
 end
 
 to dump-networks

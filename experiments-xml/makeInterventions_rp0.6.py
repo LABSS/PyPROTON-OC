@@ -56,7 +56,6 @@ root = tree.getroot()
 
 
 al = tree.find('.//experiment')
-print(al)
 al.set('name', version)
 al.set('repetitions', str(int(repetitions/3)))
 
@@ -73,6 +72,20 @@ al.insert(1, ET.Element("value", value="&quot;inputs/eindhoven/data/&quot;"))
 al = tree.find('.//enumeratedValueSet[@variable="num-persons"]')
 for x in al.getchildren(): al.remove(x)
 al.insert(1, ET.Element("value", value="3000"))
+
+# the three eindhoven basic changes
+al = tree.find('.//enumeratedValueSet[@variable="num-oc-persons"]')
+for x in al.getchildren(): al.remove(x)
+al.insert(1, ET.Element("value", value="15"))
+al = tree.find('.//enumeratedValueSet[@variable="number-crimes-yearly-per10k"]')
+for x in al.getchildren(): al.remove(x)
+al.insert(1, ET.Element("value", value="3368"))
+al = tree.find('.//enumeratedValueSet[@variable="number-arrests-per-year"]')
+for x in al.getchildren(): al.remove(x)
+al.insert(1, ET.Element("value", value="15"))
+al = tree.find('.//enumeratedValueSet[@variable="num-oc-families"]')
+for x in al.getchildren(): al.remove(x)
+al.insert(1, ET.Element("value", value="4"))
 
 
 #write to file
