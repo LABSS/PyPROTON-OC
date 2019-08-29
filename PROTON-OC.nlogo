@@ -1241,7 +1241,7 @@ to commit-crimes
       ]
     ]
   ]
-  calc-OC-status
+  if any? persons with [ oc-member? ] [ calc-OC-status ]
   foreach co-offender-groups [ co-offenders ->
     if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
   ]
@@ -1283,9 +1283,13 @@ end
 to calc-OC-status
   set oc-status table:from-list [ list who calc-OC-member-position ] of persons with [ oc-member? ]
   let min-score min table:values oc-status
-  let divide-score mean table:values oc-status - min-score
+  let divide-score mean table:values oc-status - min-score    set divide-score divide-score
   foreach table:keys oc-status [ k ->
-    table:put oc-status k (table:get oc-status k - min-score) / divide-score
+    table:put oc-status k ifelse-value (divide-score = 0) [
+      1
+    ] [
+      (table:get oc-status k - min-score) / divide-score
+    ]
   ]
 end
 
