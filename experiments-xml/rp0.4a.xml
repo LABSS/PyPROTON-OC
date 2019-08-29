@@ -1,5 +1,5 @@
 <experiments>
-  <experiment name="rp0.5a" repetitions="6" runMetricsEveryStep="true">
+  <experiment name="rp0.4a" repetitions="6" runMetricsEveryStep="true">
     <setup>setup</setup>
   <go>go</go>
   <final>show (word "Time elapsed:" timer)
@@ -69,7 +69,7 @@
       <value value="30" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="data-folder">
-      <value value="&amp;quot;inputs/eindhoven/data/&amp;quot;" />
+      <value value="&quot;inputs/palermo/data/&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="number-crimes-yearly-per10k">
       <value value="2000" />

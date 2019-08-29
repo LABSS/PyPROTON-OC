@@ -396,6 +396,7 @@ to go
   ]
   if ((ticks mod ticks-per-year) = 0) [ ; this should be 11, probably, otherwise
     calculate-criminal-tendency
+    calculate-crime-multiplier ; we should update it, if population change
     graduate-and-enter-jobmarket
     ; updates neet status only when changing age range        (the age is a key of the table)
     ask persons with [ job-level < 2 and just-changed-age? and member? list age male? table:keys labour-status-range ] [
