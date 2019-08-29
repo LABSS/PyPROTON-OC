@@ -1273,7 +1273,9 @@ end
 
 to-report OC-repression-prob [ a-group ]
   let representative one-of a-group with [ OC-member? ]
-  let n [ count person-link-neighbors with [ OC-member? ] ] of representative
+  let n [ count (my-links with [ [oc-member?] of other-end ]) ] of representative
+  let myOCcrim my-criminal-links with [ [oc-member?] of other-end ]
+  set n n + sum [ num-co-offenses ] of myOCcrim - count myOCcrim ; subtracting the ones already counted above
   report (n / (n + 1)) ^ 2 * degree-correction-for-bosses
 end
 
