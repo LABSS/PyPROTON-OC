@@ -66,8 +66,10 @@ end
 
 to-report o6a
   ; average of R (which is the individual embededdness into OC-prone local networks)
-  report mean [ oc-embeddedness ] of all-persons with [ oc-member? ]
+  let crims all-persons with [ oc-member? ]
+  report ifelse-value (any? crims) [ mean [ oc-embeddedness ] of crims ] [ 0 ]
 end
+
 
 to-report o7a
   ; Distribution of socio-demographic variables on new recruited individuals
