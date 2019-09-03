@@ -474,12 +474,10 @@ to calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
 end
 
 to socialization-intervene
-  show "a"
   let potential-targets all-persons with [ age <= 18 and age >= 6 and my-school != nobody ]
   let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ]
-  show [ who ] of targets
   if social-support = "educational" or social-support = "all" [
     soc-add-educational targets
   ]
