@@ -32,6 +32,7 @@ al.set('name', version)
 al.set('repetitions', str(int(repetitions/3)))
 
 al = tree.find('.//enumeratedValueSet[@variable="intervention"]')
+al.insert(1, ET.Element("value", value='"preventive"'))
 al.insert(1, ET.Element("value", value='"disruptive"'))
 al.insert(1, ET.Element("value", value='"students"'))
 al.insert(1, ET.Element("value", value='"facilitators"'))
