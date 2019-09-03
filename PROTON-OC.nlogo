@@ -1392,12 +1392,10 @@ to-report candidate-weight ; person reporter
 end
 
 to calculate-criminal-tendency
-      let co 0
   foreach table:keys c-range-by-age-and-sex [ genderage ->
     let top-and-value item 0 table:get c-range-by-age-and-sex genderage
     let subpop all-persons with [ age >= item 1 genderage and age < item 0 top-and-value and male? = item 0 genderage ]
     if any? subpop [
-      set co co + count subpop
       let c item 1 top-and-value
       ; c is the cell value. Now we calcolate criminal-tendency with the factors.
       ask subpop [
@@ -1414,7 +1412,6 @@ to calculate-criminal-tendency
       assert [ -> abs (mean [ criminal-tendency ] of subpop - c) < 0.01 * c ]
     ]
   ]
-  show co
   calc-criminal-tendency-addme-for-weighted-extraction
   calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   if intervention-on? [
