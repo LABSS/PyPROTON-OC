@@ -42,6 +42,7 @@ persons-own [
   criminal-tendency
   my-school
   target-of-intervention
+  arrest-weight
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -70,6 +71,7 @@ prisoners-own [
   criminal-tendency
   my-school
   target-of-intervention
+  arrest-weight
 ]
 
 jobs-own [
@@ -124,7 +126,6 @@ globals [
   c-range-by-age-and-sex
   labour-status-by-age-and-sex
   labour-status-range
-  oc-status         ; mean one over all oc members, gives probability of arrest.
   ; outputs
   number-deceased
   facilitator-fails
@@ -1239,10 +1240,19 @@ to commit-crimes
       ]
     ]
   ]
-  if any? persons with [ oc-member? ] [ calc-OC-status ]
-  foreach co-offender-groups [ co-offenders ->
-    if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
+  let criminals (turtle-set co-offender-groups)
+  if-else (intervention-on? and facilitator-repression?) [
+    ask criminals [ set arrest-weight ifelse-value (facilitator?) [ facilitator-repression-multiplier ] [ 1 ] ]
+  ] [
+    if-else (intervention-on? and OC-boss-repression? and any? criminals with [ oc-member? ]) [
+      ask criminals with [ not oc-member? ] [ set arrest-weight 1 ]
+      calc-OC-status criminals with [ oc-member? ]
+    ] [ ; no intervention active
+      ask criminals [ set arrest-weight 1 ]
+    ]
   ]
+  let target-n-of-arrests number-arrests-per-year / ticks-per-year / 10000 * count persons
+  ask rnd:weighted-n-of target-n-of-arrests criminals [ arrest-weight ] [ get-caught ]
 end
 
 to-report make-co-offending-histo [ co-offender-groups ]
@@ -1255,38 +1265,15 @@ to-report make-co-offending-histo [ co-offender-groups ]
   report counts
 end
 
-to-report arrest-probability-with-intervention [ group ]
-  ; the OC intervention self-compensates (bosses more likely, lackeys less
-  if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ]) [
-    report count group * OC-repression-prob group
-  ][
-    ; the facilitator intervention needs to compensate with everybody, including the non-facilitators
-    if-else (intervention-on? and facilitator-repression?) [
-      report ifelse-value any? group with [ facilitator? ] [
-        count group * arrest-rate * facilitator-repression-multiplier
-      ][
-        count group * arrest-rate * correction-for-non-facilitators
-      ]
-    ][
-      report count group * arrest-rate
-    ]
-  ]
-end
-
-to-report OC-repression-prob [ a-group ]
-  let representative one-of a-group with [ OC-member? ]
-  report arrest-rate * table:get oc-status [ who ] of representative
-end
-
-to calc-OC-status
-  set oc-status table:from-list [ list who calc-OC-member-position ] of persons with [ oc-member? ]
-  let min-score min table:values oc-status
-  let divide-score mean table:values oc-status - min-score    set divide-score divide-score
-  foreach table:keys oc-status [ k ->
-    table:put oc-status k ifelse-value (divide-score = 0) [
+; of a group of criminals
+to calc-OC-status [ oc-offenders ]
+  ask oc-offenders [ set arrest-weight calc-OC-member-position ]
+  let min-score min [ arrest-weight ] of oc-offenders
+  let divide-score mean [ arrest-weight - min-score ] of oc-offenders
+  ask oc-offenders [ set arrest-weight ifelse-value (divide-score = 0) [
       1
     ] [
-      (table:get oc-status k - min-score) / divide-score
+      (arrest-weight - min-score) / divide-score
     ]
   ]
 end
@@ -1360,26 +1347,24 @@ to commit-crime [ co-offenders ] ; observer command
   ask criminal-links with [ co-off-flag = 2 ] [ set num-co-offenses num-co-offenses + 1 ]
 end
 
-to get-caught [ co-offenders ]
-  ask co-offenders [
-    set number-law-interventions-this-tick number-law-interventions-this-tick + 1
-    set people-jailed people-jailed + 1
-    set breed prisoners
-    set shape "face sad"
-    ifelse male?
-    [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list   [ [ p ] -> last p ] ]
-    [ set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [ [ p ] -> last p ] ]
-    set sentence-countdown sentence-countdown * punishment-length
-    if my-job != nobody [
-      ask my-job [ set my-worker nobody ]
-      set my-job nobody
-      set job-level 1
-    ]
-    if my-school != nobody [ leave-school ]
-    ask my-professional-links [ die ]
-    ask my-school-links [ die ]
-    ; we keep the friendship links and the family links
+to get-caught
+  set number-law-interventions-this-tick number-law-interventions-this-tick + 1
+  set people-jailed people-jailed + 1
+  set breed prisoners
+  set shape "face sad"
+  ifelse male?
+  [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list   [ [ p ] -> last p ] ]
+  [ set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [ [ p ] -> last p ] ]
+  set sentence-countdown sentence-countdown * punishment-length
+  if my-job != nobody [
+    ask my-job [ set my-worker nobody ]
+    set my-job nobody
+    set job-level 1
   ]
+  if my-school != nobody [ leave-school ]
+  ask my-professional-links [ die ]
+  ask my-school-links [ die ]
+  ; we keep the friendship links and the family links
 end
 
 ; this is what in the paper is called r - this is r
@@ -2306,7 +2291,7 @@ intervention-start
 intervention-start
 0
 100
-13.0
+12.0
 1
 1
 NIL
