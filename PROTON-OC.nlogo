@@ -473,20 +473,20 @@ to calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
 end
 
 to socialization-intervene
+  show "a"
   let potential-targets all-persons with [ age <= 18 and age >= 6 and my-school != nobody ]
   let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ]
-  ifelse social-support = "educational" or social-support = "all" [
+  show [ who ] of targets
+  if social-support = "educational" or social-support = "all" [
     soc-add-educational targets
-  ][
-    ifelse social-support = "psychological" or social-support = "all" [
-      soc-add-psychological targets
-    ][
-      if social-support = "more friends" or social-support = "all" [
-        soc-add-more-friends targets
-      ]
-    ]
+  ]
+  if social-support = "psychological" or social-support = "all" [
+    soc-add-psychological targets
+  ]
+  if social-support = "more friends" or social-support = "all" [
+    soc-add-more-friends targets
   ]
   if social-support = "all" [ ; also give a job to the mothers
     welfare-createjobs (turtle-set [ in-offspring-link-neighbors ] of targets) with [ not male? ]
@@ -501,12 +501,11 @@ to soc-add-psychological [ targets ]
   ; we use a random sample (arbitrarily set to 50 people size max) to avoid weighting sample from large populations
   ask targets [
     let support-set other persons with [
-      num-crimes-committed = 0
+      num-crimes-committed = 0 and age > [ age ] of myself
     ]
     if any? support-set [
-      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
-        1 - (abs (age - [ age ] of myself ) / 120)
-      ]
+      let chosen rnd:weighted-one-of (limited-extraction support-set)  [ 1 - (abs (age - [ age ] of myself ) / 120) ]
+      create-friendship-link-with chosen
     ]
   ]
 end
@@ -1393,10 +1392,13 @@ to-report candidate-weight ; person reporter
 end
 
 to calculate-criminal-tendency
+      let co 0
   foreach table:keys c-range-by-age-and-sex [ genderage ->
-    let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
+    let top-and-value item 0 table:get c-range-by-age-and-sex genderage
+    let subpop all-persons with [ age >= item 1 genderage and age < item 0 top-and-value and male? = item 0 genderage ]
     if any? subpop [
-      let c item 1 item 0 table:get c-range-by-age-and-sex genderage
+      set co co + count subpop
+      let c item 1 top-and-value
       ; c is the cell value. Now we calcolate criminal-tendency with the factors.
       ask subpop [
         set criminal-tendency c
@@ -1412,6 +1414,7 @@ to calculate-criminal-tendency
       assert [ -> abs (mean [ criminal-tendency ] of subpop - c) < 0.01 * c ]
     ]
   ]
+  show co
   calc-criminal-tendency-addme-for-weighted-extraction
   calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   if intervention-on? [
@@ -2222,7 +2225,7 @@ CHOOSER
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
-2
+0
 
 CHOOSER
 15
