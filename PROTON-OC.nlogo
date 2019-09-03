@@ -911,6 +911,7 @@ to init-person-empty ; person command
   set age calculate-age
   set my-school nobody
   set target-of-intervention false
+  set new-recruit -2
 end
 
 to let-migrants-in
