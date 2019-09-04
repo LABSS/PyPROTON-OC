@@ -1250,6 +1250,8 @@ to commit-crimes
     ]
   ]
   let target-n-of-arrests number-arrests-per-year / ticks-per-year / 10000 * count persons
+  ; if I don't add some 1, for low levels of arrests and few agents nobody ever will be arrested.
+  set target-n-of-arrests floor target-n-of-arrests + ifelse-value (random-float 1 < (target-n-of-arrests - floor target-n-of-arrests)) [ 1 ] [ 0 ]
   ask rnd:weighted-n-of target-n-of-arrests criminals [ arrest-weight ] [ get-caught ]
 end
 
@@ -2276,7 +2278,7 @@ SWITCH
 743
 OC-boss-repression?
 OC-boss-repression?
-1
+0
 1
 -1000
 
@@ -2603,7 +2605,7 @@ CHOOSER
 data-folder
 data-folder
 "inputs/palermo/data/" "inputs/eindhoven/data/"
-1
+0
 
 SWITCH
 1095
@@ -2612,7 +2614,7 @@ SWITCH
 783
 facilitator-repression?
 facilitator-repression?
-1
+0
 1
 -1000
 
