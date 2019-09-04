@@ -80,6 +80,8 @@
         <metric>count all-persons with [ my-school != nobody ]</metric>
         <metric>count all-persons with [ my-job != nobody ]</metric>
         <metric>kids-intervention-counter</metric>
+        <metric>mean [ count link-neighbors ] of all-persons with [oc-member?]</metric>
+        <metric>mean [ count link-neighbors ] of all-persons</metric>
         <!-- PARAMETERS -->
       <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>

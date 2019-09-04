@@ -1,5 +1,5 @@
 <experiments>
-  <experiment name="rp0.6e" repetitions="6" runMetricsEveryStep="true">
+  <experiment name="rp0.6p" repetitions="6" runMetricsEveryStep="true">
     <setup>setup</setup>
   <go>go</go>
   <final>show (word "Time elapsed:" timer)
@@ -66,18 +66,17 @@
   <enumeratedValueSet variable="intervention">
       <value value="&quot;baseline&quot;" />
     <value value="&quot;facilitators&quot;" />
-    <value value="&quot;students&quot;" />
     <value value="&quot;disruptive&quot;" />
     <value value="&quot;preventive&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="num-oc-persons">
-      <value value="15" />
+      <value value="100" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="data-folder">
-      <value value="&quot;inputs/eindhoven/data/&quot;" />
+      <value value="&quot;inputs/palermo/data/&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="number-crimes-yearly-per10k">
-      <value value="3368" />
+      <value value="2000" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="unemployment-multiplier">
       <value value="&quot;base&quot;" />
@@ -86,13 +85,13 @@
       <value value="1" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="number-arrests-per-year">
-      <value value="15" />
+      <value value="300" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="punishment-length">
       <value value="1.0" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="num-oc-families">
-      <value value="4" />
+      <value value="20" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="num-persons">
       <value value="3000" />
