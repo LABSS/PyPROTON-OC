@@ -423,6 +423,7 @@ to go
   retire-persons
   make-baby
   remove-excess-friends
+  remove-excess-professional-links
   make-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
@@ -654,6 +655,15 @@ to remove-excess-friends
     let num-friends count my-friendship-links
     if num-friends > dunbar-number [
       ask n-of (num-friends - dunbar-number) my-friendship-links [ die ]
+    ]
+  ]
+end
+
+to remove-excess-professional-links
+  ask persons [
+    let num-friends count my-professional-links
+    if num-friends > 30 [
+      ask n-of (num-friends - 30) my-professional-links [ die ]
     ]
   ]
 end
@@ -2218,7 +2228,7 @@ CHOOSER
 social-support
 social-support
 "none" "educational" "psychological" "more friends" "all"
-0
+4
 
 CHOOSER
 15
@@ -2239,7 +2249,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-10.0
+100.0
 1
 1
 NIL
@@ -2278,7 +2288,7 @@ SWITCH
 743
 OC-boss-repression?
 OC-boss-repression?
-0
+1
 1
 -1000
 
@@ -2291,7 +2301,7 @@ intervention-start
 intervention-start
 0
 100
-12.0
+13.0
 1
 1
 NIL
@@ -2424,7 +2434,7 @@ CHOOSER
 intervention
 intervention
 "use current values" "baseline" "preventive" "disruptive" "students" "facilitators"
-0
+4
 
 MONITOR
 268
@@ -2614,7 +2624,7 @@ SWITCH
 783
 facilitator-repression?
 facilitator-repression?
-0
+1
 1
 -1000
 
