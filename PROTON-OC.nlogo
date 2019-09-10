@@ -60,6 +60,7 @@ prisoners-own [
   propensity
   oc-member?
   cached-oc-embeddedness
+  oc-embeddedness-fresh?
   partner                ; the person's significant other
   retired?
   number-of-children
@@ -417,6 +418,8 @@ to go
     let-migrants-in
     return-kids
   ]
+  calc-criminal-tendency-addme-for-weighted-extraction
+  calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   wedding
   reset-oc-embeddedness
   commit-crimes
@@ -1408,8 +1411,6 @@ to calculate-criminal-tendency
       assert [ -> abs (mean [ criminal-tendency ] of subpop - c) < 0.01 * c ]
     ]
   ]
-  calc-criminal-tendency-addme-for-weighted-extraction
-  calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   if intervention-on? [
     if facilitator-repression? [ calc-correction-for-non-facilitators ]
   ]
@@ -1778,10 +1779,6 @@ to-report the-families
     set components nw:weak-component-clusters
   ]
   report components
-end
-
-to-report families-size-and-OC
-  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] the-families
 end
 
 to-report compare-edu-wealth-table
@@ -2168,7 +2165,7 @@ num-oc-persons
 2
 200
 30.0
-5
+1
 1
 NIL
 HORIZONTAL
