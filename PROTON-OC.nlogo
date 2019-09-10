@@ -781,7 +781,7 @@ to choose-intervention-setting
     set welfare-support "none"
     set OC-boss-repression? false
     set facilitator-repression? false
-    set targets-addressed-percent 100
+    set targets-addressed-percent 10
     set ticks-between-intervention 1
     set intervention-start 13
     set intervention-end 9999
@@ -803,8 +803,8 @@ to choose-intervention-setting
     set welfare-support "none"
     set OC-boss-repression? false
     set facilitator-repression? false
-    set targets-addressed-percent 100
-    set ticks-between-intervention 1
+    set targets-addressed-percent 10
+    set ticks-between-intervention 12
     set intervention-start 13
     set intervention-end 9999
   ]
@@ -814,7 +814,7 @@ to choose-intervention-setting
     set welfare-support "none"
     set OC-boss-repression? false
     set facilitator-repression? true
-    set facilitator-repression-multiplier 20
+    set facilitator-repression-multiplier 2
     set targets-addressed-percent 10 ; not appliable
     set ticks-between-intervention 1
     set intervention-start 13
