@@ -1,3 +1,107 @@
+to choose-intervention-setting
+  if intervention = "baseline" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "preventive" [
+    set family-intervention "remove-if-OC-member"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "preventive-strong" [
+    set family-intervention "remove-if-OC-member"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 100
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "disruptive" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? true
+    set facilitator-repression? false
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+   if intervention = "disruptive-strong" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? true
+    set facilitator-repression? false
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ] 
+  if intervention = "students" [
+    set family-intervention "none"
+    set social-support "all"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 12
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "students-strong" [
+    set family-intervention "none"
+    set social-support "all"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 100
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+    if intervention = "facilitators" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? true
+    set facilitator-repression-multiplier 2
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+    if intervention = "facilitators-strong" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? true
+    set facilitator-repression-multiplier 20
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999    
+  ]
+end
+
 to-report o1
   ; number of current OC members
   report count all-persons with [ oc-member? ]

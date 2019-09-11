@@ -763,65 +763,6 @@ to setup-persons-and-friendship
   ]
 end
 
-to choose-intervention-setting
-  if intervention = "baseline" [
-    set family-intervention "none"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? false
-    set targets-addressed-percent 10
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-  if intervention = "preventive" [
-    set family-intervention "remove-if-OC-member"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? false
-    set targets-addressed-percent 10
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-  if intervention = "disruptive" [
-    set family-intervention "none"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? true
-    set facilitator-repression? false
-    set targets-addressed-percent 10 ; not appliable
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-  if intervention = "students" [
-    set family-intervention "none"
-    set social-support "all"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? false
-    set targets-addressed-percent 10
-    set ticks-between-intervention 12
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-    if intervention = "facilitators" [
-    set family-intervention "none"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? true
-    set facilitator-repression-multiplier 2
-    set targets-addressed-percent 10 ; not appliable
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-end
-
 to-report up-to-n-of-other-with [ n p ]
   let result []
   ask other persons [
@@ -955,7 +896,6 @@ end
 to make-baby
   ifelse constant-population? [
     let breeding-target num-persons - count all-persons
-    show breeding-target
     if breeding-target > 0 [
       let breeding-pool n-of (breeding-target * 10) persons with [ not male? and age >= 14 and age <= 50 ]
       ask rnd:weighted-n-of breeding-target breeding-pool [ p-fertility ] [ init-baby ]
@@ -2238,7 +2178,7 @@ CHOOSER
 social-support
 social-support
 "none" "educational" "psychological" "more friends" "all"
-4
+0
 
 CHOOSER
 15
@@ -2443,7 +2383,7 @@ CHOOSER
 750
 intervention
 intervention
-"use current values" "baseline" "preventive" "disruptive" "students" "facilitators"
+"use current values" "baseline" "preventive" "disruptive" "students" "facilitators" "preventive-strong" "disruptive-strong" "students-strong" "facilitators-strong"
 0
 
 MONITOR
