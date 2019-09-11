@@ -927,51 +927,64 @@ to init-person-empty ; person command
 end
 
 to let-migrants-in
-  ; calculate the difference between deaths and birth
-  let to-replace max list 0 (num-persons - count all-persons)
-  let free-jobs jobs with [ my-worker = nobody ]
-  let num-to-add min (list to-replace count free-jobs)
-  set number-migrants number-migrants + num-to-add
-  ask n-of num-to-add free-jobs [
-    ; we do not care about education level and wealth of migrants, as those variables
-    ; exist only in order to generate the job position.
-    hatch-persons 1 [
-      init-person-empty
-      set my-job myself
-      ask my-job [ set my-worker myself ]
-      let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
-      let conn decide-conn-number employees 20
-      create-professional-links-with n-of conn other employees
-      set birth-tick ticks - (random 20 + 18) * ticks-per-year
-      set age calculate-age
-      set wealth-level [ job-level ] of myself
-      set migrant? true
+  if migration-on? [
+    ; calculate the difference between deaths and birth
+    let to-replace max list 0 (num-persons - count all-persons)
+    let free-jobs jobs with [ my-worker = nobody ]
+    let num-to-add min (list to-replace count free-jobs)
+    set number-migrants number-migrants + num-to-add
+    ask n-of num-to-add free-jobs [
+      ; we do not care about education level and wealth of migrants, as those variables
+      ; exist only in order to generate the job position.
+      hatch-persons 1 [
+        init-person-empty
+        set my-job myself
+        ask my-job [ set my-worker myself ]
+        let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
+        let conn decide-conn-number employees 20
+        create-professional-links-with n-of conn other employees
+        set birth-tick ticks - (random 20 + 18) * ticks-per-year
+        set age calculate-age
+        set wealth-level [ job-level ] of myself
+        set migrant? true
+      ]
     ]
   ]
 end
 
 to make-baby
-  ask persons with [ not male? and age >= 14 and age <= 50 ] [
-    if random-float 1 < p-fertility [
-      ; we stop counting after 2 because probability stays the same
-      set number-of-children number-of-children + 1
-      set number-born number-born + 1
-      hatch-persons 1 [
-        set wealth-level [ wealth-level ] of myself
-        set birth-tick ticks
-        init-person-empty
-        ask [ offspring-link-neighbors ] of myself [
-          create-sibling-links-with other [ offspring-link-neighbors ] of myself
-        ]
-        create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
-        create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
-        let dad one-of in-offspring-link-neighbors with [ male? ]
-        set max-education-level ifelse-value (any? turtle-set dad) [
-          [ max-education-level ] of dad
-        ][
-          [ max-education-level ] of myself
-        ]
-      ]
+  ifelse constant-population? [
+    let breeding-target num-persons - count all-persons
+    show breeding-target
+    if breeding-target > 0 [
+      let breeding-pool n-of (breeding-target * 10) persons with [ not male? and age >= 14 and age <= 50 ]
+      ask rnd:weighted-n-of breeding-target breeding-pool [ p-fertility ] [ init-baby ]
+    ]
+  ] [
+    ask persons with [ not male? and age >= 14 and age <= 50 ] [
+      if random-float 1 < p-fertility [ init-baby ]
+    ]
+  ]
+end
+
+to init-baby ; person procedure
+  ; we stop counting after 2 because probability stays the same
+  set number-of-children number-of-children + 1
+  set number-born number-born + 1
+  hatch-persons 1 [
+    set wealth-level [ wealth-level ] of myself
+    set birth-tick ticks
+    init-person-empty
+    ask [ offspring-link-neighbors ] of myself [
+      create-sibling-links-with other [ offspring-link-neighbors ] of myself
+    ]
+    create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
+    create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
+    let dad one-of in-offspring-link-neighbors with [ male? ]
+    set max-education-level ifelse-value (any? turtle-set dad) [
+      [ max-education-level ] of dad
+    ][
+      [ max-education-level ] of myself
     ]
   ]
 end
@@ -2246,7 +2259,7 @@ targets-addressed-percent
 targets-addressed-percent
 0
 100
-100.0
+10.0
 1
 1
 NIL
@@ -2261,7 +2274,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-1.0
+12.0
 1
 1
 NIL
@@ -2431,7 +2444,7 @@ CHOOSER
 intervention
 intervention
 "use current values" "baseline" "preventive" "disruptive" "students" "facilitators"
-4
+0
 
 MONITOR
 268
@@ -2639,6 +2652,28 @@ facilitator-repression-multiplier
 1
 NIL
 HORIZONTAL
+
+SWITCH
+865
+865
+1035
+898
+migration-on?
+migration-on?
+0
+1
+-1000
+
+SWITCH
+865
+905
+1052
+938
+constant-population?
+constant-population?
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?

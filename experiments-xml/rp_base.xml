@@ -56,6 +56,7 @@
         <metric>count prisoners</metric>
         <metric>count persons with [ migrant? ]</metric>
         <metric>number-deceased</metric>
+        <metric>number-born</metric>
         <metric>sum [ num-crimes-committed ] of persons</metric>
         <metric>count persons with [ my-job != nobody ]</metric>
         <metric>count jobs with [ my-worker != nobody  ]</metric>
