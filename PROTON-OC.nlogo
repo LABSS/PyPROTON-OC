@@ -1914,8 +1914,8 @@ SLIDER
 298
 max-accomplice-radius
 max-accomplice-radius
-0
-5
+1
+4
 2.0
 1
 1
@@ -1930,7 +1930,7 @@ SLIDER
 oc-embeddedness-radius
 oc-embeddedness-radius
 1
-5
+4
 2.0
 1
 1
