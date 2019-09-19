@@ -1,0 +1,172 @@
+<experiments>
+  <experiment name="rp0.7p_15_0.5_baseline" repetitions="3" runMetricsEveryStep="true">
+    <setup>setup</setup>
+  <go>go</go>
+  <final>show (word "Time elapsed:" timer)
+        </final>
+  <timeLimit steps="360" />
+  <metric>o1</metric>
+  <metric>o2</metric>
+  <metric>o3</metric>
+  <metric>o4</metric>
+  <metric>o5</metric>
+  <metric>o5a</metric>
+  <metric>o6</metric>
+  <metric>o6a</metric>
+  <metric>o7a</metric>
+  <metric>o7b</metric>
+  <metric>o7c</metric>
+  <metric>o8a</metric>
+  <metric>o8b</metric>
+  <metric>o8c</metric>
+  <metric>o9a</metric>
+  <metric>o9b</metric>
+  <metric>o9c</metric>
+  <metric>o10a</metric>
+  <metric>o10b</metric>
+  <metric>o10c</metric>
+  <metric>o11</metric>
+  <metric>o12</metric>
+  <metric>o13</metric>
+  <metric>o14</metric>
+  <metric>o15</metric>
+  <metric>o16</metric>
+  <metric>count persons</metric>
+  <metric>count links</metric>
+  <metric>count prisoners</metric>
+  <metric>count persons with [ migrant? ]</metric>
+  <metric>number-deceased</metric>
+  <metric>number-born</metric>
+  <metric>sum [ num-crimes-committed ] of persons</metric>
+  <metric>count persons with [ my-job != nobody ]</metric>
+  <metric>count jobs with [ my-worker != nobody  ]</metric>
+  <metric>crime-size-fails</metric>
+  <metric>count persons with [facilitator?]</metric>
+  <metric>facilitator-fails</metric>
+  <metric>facilitator-crimes</metric>
+  <metric>count household-links </metric>
+  <metric>count partner-links</metric>
+  <metric>count sibling-links</metric>
+  <metric>count offspring-links</metric>
+  <metric>count friendship-links</metric>
+  <metric>count criminal-links</metric>
+  <metric>count professional-links</metric>
+  <metric>count school-links</metric>
+  <metric>count meta-links</metric>
+  <metric>sum [ count my-students ] of schools</metric>
+  <metric>count jobs</metric>
+  <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
+  <metric>count all-persons with [ my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ] / count all-persons with [my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ]</metric>
+  <metric>people-jailed</metric>
+  <metric>count all-persons with [ my-school != nobody ]</metric>
+  <metric>count all-persons with [ my-job != nobody ]</metric>
+  <metric>kids-intervention-counter</metric>
+  <metric>mean [ count link-neighbors ] of all-persons with [oc-member?]</metric>
+  <metric>mean [ count link-neighbors ] of all-persons</metric>
+  <enumeratedValueSet variable="intervention">
+      <value value="&quot;baseline&quot;" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="num-oc-persons">
+      <value value="15" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="num-oc-families">
+      <value value="6" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="data-folder">
+      <value value="&quot;inputs/palermo/data/&quot;" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="number-crimes-yearly-per10k">
+      <value value="1000" />
+    <value value="2000" />
+    <value value="3000" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="unemployment-multiplier">
+      <value value="0.5" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="education-rate">
+      <value value="1" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="number-arrests-per-year">
+      <value value="15" />
+    <value value="30" />
+    <value value="45" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="punishment-length">
+      <value value="0.5" />
+    <value value="1.0" />
+    <value value="1.5" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="num-persons">
+      <value value="3000" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="welfare-support">
+      <value value="&quot;none&quot;" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="output?">
+      <value value="false" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="intervention-start">
+      <value value="13" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="social-support">
+      <value value="&quot;none&quot;" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="intervention-end">
+      <value value="36" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="nat-propensity-threshold">
+      <value value="1" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="oc-embeddedness-radius">
+      <value value="2" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="threshold-use-facilitators">
+      <value value="4" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="ticks-per-year">
+      <value value="12" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="percentage-of-facilitators">
+      <value value="0.005" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="nat-propensity-sigma">
+      <value value="0.25" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="targets-addressed-percent">
+      <value value="10" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="nat-propensity-m">
+      <value value="1" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="OC-members-scrutinize?">
+      <value value="false" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="family-intervention">
+      <value value="&quot;none&quot;" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="max-accomplice-radius">
+      <value value="2" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="ticks-between-intervention">
+      <value value="1" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="retirement-age">
+      <value value="65" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="OC-boss-repression?">
+      <value value="false" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="constant-population?">
+      <value value="false" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="migration-on?">
+      <value value="true" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="facilitator-repression?">
+      <value value="false" />
+    </enumeratedValueSet>
+  <enumeratedValueSet variable="facilitator-repression-multiplier">
+      <value value="2" />
+    </enumeratedValueSet>
+  </experiment>
+</experiments>

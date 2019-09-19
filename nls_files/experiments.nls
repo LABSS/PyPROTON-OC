@@ -6,7 +6,7 @@ to choose-intervention-setting
     set OC-boss-repression? false
     set facilitator-repression? false
     set targets-addressed-percent 10
-    set ticks-between-intervention 1
+    set ticks-between-intervention 12
     set intervention-start 13
     set intervention-end 9999
   ]
@@ -124,7 +124,7 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  report make-histo [ -> criminal-tendency ] 7 -2 5 all-persons
+  report make-histo [ -> criminal-tendency ] 7 -2 7 all-persons
 end
 
 to-report make-histo [ citizen-reporter bins min-v max-v the-set ]

@@ -17,7 +17,7 @@ for ocmembers in ['15', '30', '45']:
             al = tree.find('.//experiment')
             al.set('repetitions', str(3))
 
-            experiment = "_".join([version, ocmembers, employmentrate, intervention])
+            experiment = "_".join([version, ocmembers, employmentrate.replace('"', ''), intervention.replace('"', '')])
             al = tree.find('.//experiment')
             al.set('name', experiment)
             al = tree.find('.//enumeratedValueSet[@variable="num-oc-persons"]')

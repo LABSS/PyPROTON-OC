@@ -248,7 +248,7 @@ to setup
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   set removed-fatherships []
   calc-correction-for-non-facilitators
-  show word "Setup complete in " timer
+  show (word "Setup complete in " timer " s.")
 end
 
 to setup-facilitators
@@ -394,8 +394,8 @@ to go
     if welfare-support     != "none"   [ welfare-intervene       ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
-    ; OC-ties-disruption? we don't yet have an implementation.
   ]
+  ; things we only update yearly
   if ((ticks mod ticks-per-year) = 0) [ ; this should be 11, probably, otherwise
     calculate-criminal-tendency
     calculate-crime-multiplier ; we should update it, if population change
@@ -558,6 +558,7 @@ to welfare-createjobs [ targets ]
           set my-employer myself
           ask my-employer [ set my-jobs (turtle-set my-jobs myself) ]
           set label self
+          if [ job-level ] of target < 2 [ ask target [ set  job-level 2 ] ]
           set job-level [ job-level ] of target
           set my-worker target
           ask target [
@@ -1816,7 +1817,7 @@ num-persons
 num-persons
 100
 10000
-1000.0
+550.0
 100
 1
 NIL
@@ -2339,7 +2340,7 @@ CHOOSER
 intervention
 intervention
 "use current values" "baseline" "preventive" "disruptive" "students" "facilitators" "preventive-strong" "disruptive-strong" "students-strong" "facilitators-strong"
-0
+1
 
 MONITOR
 810
