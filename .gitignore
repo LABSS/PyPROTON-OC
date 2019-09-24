@@ -4,6 +4,7 @@
 *.csv#
 *.doc#
 *.docx#
+*.ods#
 .DS_Store
 *.icloud
 *.graphml
