@@ -261,7 +261,7 @@ end
 
 to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "../../palermo/data/initial_fertility_rates"
+  set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
   set mortality-table group-by-first-two-items read-csv "../../palermo/data/initial_mortality_rates"
   set edu group-by-first-of-three read-csv "../../palermo/data/edu"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "../../palermo/data/edu_by_wealth_lvl"

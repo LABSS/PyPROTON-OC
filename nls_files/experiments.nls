@@ -82,7 +82,7 @@ to choose-intervention-setting
     set welfare-support "none"
     set OC-boss-repression? false
     set facilitator-repression? true
-    set facilitator-repression-multiplier 2
+    set facilitator-repression-multiplier 3
     set targets-addressed-percent 10 ; not applicable
     set ticks-between-intervention 1
     set intervention-start 13
