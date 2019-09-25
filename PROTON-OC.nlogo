@@ -2429,8 +2429,8 @@ CHOOSER
 175
 unemployment-multiplier
 unemployment-multiplier
-"base" 0.5 1.5
-0
+"base" 0.5 1.5 0.410067526089626 0.205033763044813 0.615101289134438
+3
 
 MONITOR
 540
