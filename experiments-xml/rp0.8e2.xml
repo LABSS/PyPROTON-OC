@@ -1,5 +1,5 @@
 <experiments>
-  <experiment name="rp0.7p_30_1.5_baseline" repetitions="3" runMetricsEveryStep="true">
+  <experiment name="rp0.8e2" repetitions="20" runMetricsEveryStep="true">
     <setup>setup</setup>
   <go>go</go>
   <final>show (word "Time elapsed:" timer)
@@ -63,38 +63,37 @@
   <metric>kids-intervention-counter</metric>
   <metric>mean [ count link-neighbors ] of all-persons with [oc-member?]</metric>
   <metric>mean [ count link-neighbors ] of all-persons</metric>
+  <metric>initial-random-seed</metric>
   <enumeratedValueSet variable="intervention">
       <value value="&quot;baseline&quot;" />
+      <value value="&quot;facilitators&quot;" />
+      <value value="&quot;students&quot;" />
+      <value value="&quot;disruptive&quot;" />
+      <value value="&quot;preventive&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="num-oc-persons">
-      <value value="30" />
+      <value value="15" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="num-oc-families">
-      <value value="8" />
+      <value value="4" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="data-folder">
-      <value value="&quot;inputs/palermo/data/&quot;" />
+      <value value="&quot;inputs/eindhoven/data/&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="number-crimes-yearly-per10k">
-      <value value="1000" />
-    <value value="2000" />
-    <value value="3000" />
+    <value value="3368" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="unemployment-multiplier">
-      <value value="1.5" />
+      <value value="0.410067526089626" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="education-rate">
       <value value="1" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="number-arrests-per-year">
-      <value value="15" />
-    <value value="30" />
-    <value value="45" />
+    <value value="15" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="punishment-length">
-      <value value="0.5" />
     <value value="1.0" />
-    <value value="1.5" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="num-persons">
       <value value="3000" />
@@ -166,7 +165,7 @@
       <value value="false" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="facilitator-repression-multiplier">
-      <value value="2" />
+      <value value="3" />
     </enumeratedValueSet>
   </experiment>
 </experiments>
