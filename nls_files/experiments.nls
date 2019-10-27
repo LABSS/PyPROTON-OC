@@ -1,3 +1,107 @@
+to choose-intervention-setting
+  if intervention = "baseline" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 12
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "preventive" [
+    set family-intervention "remove-if-OC-member"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "preventive-strong" [
+    set family-intervention "remove-if-OC-member"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 100
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "disruptive" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? true
+    set facilitator-repression? false
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+   if intervention = "disruptive-strong" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? true
+    set facilitator-repression? false
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ] 
+  if intervention = "students" [
+    set family-intervention "none"
+    set social-support "all"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 10
+    set ticks-between-intervention 12
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+  if intervention = "students-strong" [
+    set family-intervention "none"
+    set social-support "all"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? false
+    set targets-addressed-percent 100
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+    if intervention = "facilitators" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? true
+    set facilitator-repression-multiplier 3
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999
+  ]
+    if intervention = "facilitators-strong" [
+    set family-intervention "none"
+    set social-support "none"
+    set welfare-support "none"
+    set OC-boss-repression? false
+    set facilitator-repression? true
+    set facilitator-repression-multiplier 20
+    set targets-addressed-percent 10 ; not applicable
+    set ticks-between-intervention 1
+    set intervention-start 13
+    set intervention-end 9999    
+  ]
+end
+
 to-report o1
   ; number of current OC members
   report count all-persons with [ oc-member? ]
@@ -20,7 +124,7 @@ end
 
 to-report o5
   ; Distribution of C (which is the individual propensity towards crime commission)
-  report make-histo [ -> criminal-tendency ] 7 -2 5 all-persons
+  report make-histo [ -> criminal-tendency ] 7 -2 7 all-persons
 end
 
 to-report make-histo [ citizen-reporter bins min-v max-v the-set ]
@@ -66,8 +170,10 @@ end
 
 to-report o6a
   ; average of R (which is the individual embededdness into OC-prone local networks)
-  report mean [ oc-embeddedness ] of all-persons with [ oc-member? ]
+  let crims all-persons with [ oc-member? ]
+  report ifelse-value (any? crims) [ mean [ oc-embeddedness ] of crims ] [ 0 ]
 end
+
 
 to-report o7a
   ; Distribution of socio-demographic variables on new recruited individuals

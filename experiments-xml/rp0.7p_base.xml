@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <experiments>
-    <experiment name="rp0.4b" repetitions="20" runMetricsEveryStep="true">
+    <experiment name="base" repetitions="0" runMetricsEveryStep="true">
         <setup>setup</setup>
         <go>go</go>
         <final>show (word "Time elapsed:" timer)
-        dump-networks
         </final>
         <!--  30 years, 729 runs  -->
         <timeLimit steps="360"/>
@@ -56,6 +55,7 @@
         <metric>count prisoners</metric>
         <metric>count persons with [ migrant? ]</metric>
         <metric>number-deceased</metric>
+        <metric>number-born</metric>
         <metric>sum [ num-crimes-committed ] of persons</metric>
         <metric>count persons with [ my-job != nobody ]</metric>
         <metric>count jobs with [ my-worker != nobody  ]</metric>
@@ -77,26 +77,31 @@
         <metric>count all-persons with [ num-crimes-committed = 0 ]</metric>
         <metric>count all-persons with [ my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ] / count all-persons with [my-job = nobody and my-school = nobody and age &gt; 16 and age &lt; 65 ]</metric>
         <metric>people-jailed</metric>
+        <metric>count all-persons with [ my-school != nobody ]</metric>
+        <metric>count all-persons with [ my-job != nobody ]</metric>
+        <metric>kids-intervention-counter</metric>
+        <metric>mean [ count link-neighbors ] of all-persons with [oc-member?]</metric>
+        <metric>mean [ count link-neighbors ] of all-persons</metric>
         <!-- PARAMETERS -->
-        <enumeratedValueSet variable="intervention">
-            <value value="&quot;students&quot;"/>
-            <value value="&quot;facilitators&quot;"/>
+      <enumeratedValueSet variable="intervention">
         </enumeratedValueSet>
         <!-- 1. Number of OC members -->
         <enumeratedValueSet variable="num-oc-persons">
-            <value value="30"/>
         </enumeratedValueSet>
+        <enumeratedValueSet variable="num-oc-families">
+        </enumeratedValueSet>        
         <!-- PALERMO SETUP -->
         <enumeratedValueSet variable="data-folder">
             <value value="&quot;inputs/palermo/data/&quot;"/>
         </enumeratedValueSet>
         <!-- 2. Criminal rate -->
         <enumeratedValueSet variable="number-crimes-yearly-per10k">
+            <value value="1000"/>
             <value value="2000"/>
+            <value value="3000"/>
         </enumeratedValueSet>
         <!-- 3a. Employment rate -->
         <enumeratedValueSet variable="unemployment-multiplier">
-            <value value="&quot;base&quot;"/>
         </enumeratedValueSet>
         <!-- 3b. Education rate -->
         <enumeratedValueSet variable="education-rate">
@@ -104,18 +109,19 @@
         </enumeratedValueSet>
         <!-- 4. Law enforcement intervention rate -->
         <enumeratedValueSet variable="number-arrests-per-year">
+            <value value="15"/>
             <value value="30"/>
+            <value value="45"/>
         </enumeratedValueSet>
         <!-- 5. Punishment length -->
         <enumeratedValueSet variable="punishment-length">
+            <value value="0.5"/>
             <value value="1.0"/>
+            <value value="1.5"/>
         </enumeratedValueSet>
 <!-- FIXED parameters     -->
-        <enumeratedValueSet variable="num-oc-families">
-          <value value="8"/>
-        </enumeratedValueSet>
         <enumeratedValueSet variable="num-persons">
-          <value value="10000"/>
+          <value value="3000"/>
         </enumeratedValueSet>    
         <enumeratedValueSet variable="welfare-support">
           <value value="&quot;none&quot;"/> <!-- overriden by intervention -->
@@ -174,12 +180,18 @@
         <enumeratedValueSet variable="OC-boss-repression?">
           <value value="false"/> <!-- overriden by intervention -->
         </enumeratedValueSet> 
+        <enumeratedValueSet variable="constant-population?">
+          <value value="false"/> <!-- overriden by intervention -->
+        </enumeratedValueSet>         
+        <enumeratedValueSet variable="migration-on?">
+          <value value="true"/> <!-- overriden by intervention -->
+        </enumeratedValueSet> 
         <enumeratedValueSet variable="facilitator-repression?">
           <value value="false"/> <!-- overriden by intervention -->
-        </enumeratedValueSet> 
+        </enumeratedValueSet>         
         <enumeratedValueSet variable="facilitator-repression-multiplier">
           <value value="2"/> <!-- overriden by intervention -->
-        </enumeratedValueSet> 
+        </enumeratedValueSet>         
     </experiment>
 </experiments>
 

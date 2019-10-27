@@ -42,6 +42,7 @@ persons-own [
   criminal-tendency
   my-school
   target-of-intervention
+  arrest-weight
   ; WARNING: If you add any variable here, it needs to be added to `prisoners-own` as well!
 ]
 
@@ -59,6 +60,7 @@ prisoners-own [
   propensity
   oc-member?
   cached-oc-embeddedness
+  oc-embeddedness-fresh?
   partner                ; the person's significant other
   retired?
   number-of-children
@@ -70,6 +72,7 @@ prisoners-own [
   criminal-tendency
   my-school
   target-of-intervention
+  arrest-weight
 ]
 
 jobs-own [
@@ -138,7 +141,6 @@ globals [
   criminal-tendency-addme-for-weighted-extraction
   criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
-  degree-correction-for-bosses
   correction-for-non-facilitators
   number-protected-recruited-this-tick
   number-offspring-recruited-this-tick
@@ -146,6 +148,7 @@ globals [
   people-jailed
   number-crimes
   crime-multiplier
+  kids-intervention-counter
 ]
 
 to profile-setup
@@ -244,9 +247,8 @@ to setup
   set big-crime-from-small-fish 0  ; to add in behaviorspace reporters
   ask persons [set hobby random 5] ; hobby is used only in wedding procedure to compute wedding sim.
   set removed-fatherships []
-  calc-degree-correction-for-bosses
   calc-correction-for-non-facilitators
-  show word "Setup complete in " timer
+  show (word "Setup complete in " timer " s.")
 end
 
 to setup-facilitators
@@ -259,8 +261,8 @@ end
 
 to load-stats-tables
   set num-co-offenders-dist but-first csv:from-file "inputs/general/data/num_co_offenders_dist.csv"
-  set fertility-table group-by-first-two-items read-csv "../../palermo/data/initial_fertility_rates"
-  set mortality-table group-by-first-two-items read-csv "../../palermo/data/initial_mortality_rates"
+  set fertility-table group-by-first-two-items read-csv "initial_fertility_rates"
+  set mortality-table group-by-first-two-items read-csv "initial_mortality_rates"
   set edu group-by-first-of-three read-csv "../../palermo/data/edu"
   set edu_by_wealth_lvl group-couples-by-2-keys read-csv "../../palermo/data/edu_by_wealth_lvl"
   set work_status_by_edu_lvl group-couples-by-2-keys read-csv "../../palermo/data/work_status_by_edu_lvl"
@@ -392,10 +394,11 @@ to go
     if welfare-support     != "none"   [ welfare-intervene       ]
     ; OC-members-scrutiny works directly in factors-c
     ; OC-members-repression works in arrest-probability-with-intervention in commmit-crime
-    ; OC-ties-disruption? we don't yet have an implementation.
   ]
+  ; things we only update yearly
   if ((ticks mod ticks-per-year) = 0) [ ; this should be 11, probably, otherwise
     calculate-criminal-tendency
+    calculate-crime-multiplier ; we should update it, if population change
     graduate-and-enter-jobmarket
     ; updates neet status only when changing age range        (the age is a key of the table)
     ask persons with [ job-level < 2 and just-changed-age? and member? list age male? table:keys labour-status-range ] [
@@ -415,12 +418,15 @@ to go
     let-migrants-in
     return-kids
   ]
+  calc-criminal-tendency-addme-for-weighted-extraction
+  calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   wedding
   reset-oc-embeddedness
   commit-crimes
   retire-persons
   make-baby
   remove-excess-friends
+  remove-excess-professional-links
   make-friends
   ask prisoners [
     set sentence-countdown sentence-countdown - 1
@@ -445,8 +451,8 @@ to-report intervention-on?
 end
 
 to calculate-arrest-rate
-  ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year
-  set arrest-rate number-arrests-per-year / ticks-per-year / number-crimes-yearly-per10k
+  ; this gives the base probability of arrest, propotionally to the number of expected crimes in the first year.
+  set arrest-rate number-arrests-per-year / ticks-per-year / number-crimes-yearly-per10k / 10000 * count persons
 end
 
 to dump-networks
@@ -476,16 +482,14 @@ to socialization-intervene
   let targets rnd:weighted-n-of ceiling (targets-addressed-percent / 100 * count potential-targets) potential-targets [
     criminal-tendency + criminal-tendency-addme-for-weighted-extraction
   ]
-  ifelse social-support = "educational" or social-support = "all" [
+  if social-support = "educational" or social-support = "all" [
     soc-add-educational targets
-  ][
-    ifelse social-support = "psychological" or social-support = "all" [
-      soc-add-psychological targets
-    ][
-      if social-support = "more friends" or social-support = "all" [
-        soc-add-more-friends targets
-      ]
-    ]
+  ]
+  if social-support = "psychological" or social-support = "all" [
+    soc-add-psychological targets
+  ]
+  if social-support = "more friends" or social-support = "all" [
+    soc-add-more-friends targets
   ]
   if social-support = "all" [ ; also give a job to the mothers
     welfare-createjobs (turtle-set [ in-offspring-link-neighbors ] of targets) with [ not male? ]
@@ -500,12 +504,11 @@ to soc-add-psychological [ targets ]
   ; we use a random sample (arbitrarily set to 50 people size max) to avoid weighting sample from large populations
   ask targets [
     let support-set other persons with [
-      num-crimes-committed = 0
+      num-crimes-committed = 0 and age > [ age ] of myself
     ]
     if any? support-set [
-      create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
-        1 - (abs (age - [ age ] of myself ) / 120)
-      ]
+      let chosen rnd:weighted-one-of (limited-extraction support-set)  [ 1 - (abs (age - [ age ] of myself ) / 120) ]
+      create-friendship-link-with chosen
     ]
   ]
 end
@@ -555,6 +558,7 @@ to welfare-createjobs [ targets ]
           set my-employer myself
           ask my-employer [ set my-jobs (turtle-set my-jobs myself) ]
           set label self
+          if [ job-level ] of target < 2 [ ask target [ set  job-level 2 ] ]
           set job-level [ job-level ] of target
           set my-worker target
           ask target [
@@ -589,6 +593,7 @@ to family-intervene
   ]
   if any? kids-to-protect [
     ask n-of ceiling (targets-addressed-percent / 100 * count kids-to-protect) kids-to-protect [
+      set kids-intervention-counter kids-intervention-counter + 1
       ; notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
       ; gee but how comes that it increases with the nubmer of targets? We have to do better here
       let father one-of in-offspring-link-neighbors with [ male? and oc-member? ]
@@ -654,6 +659,15 @@ to remove-excess-friends
     let num-friends count my-friendship-links
     if num-friends > dunbar-number [
       ask n-of (num-friends - dunbar-number) my-friendship-links [ die ]
+    ]
+  ]
+end
+
+to remove-excess-professional-links
+  ask persons [
+    let num-friends count my-professional-links
+    if num-friends > 30 [
+      ask n-of (num-friends - 30) my-professional-links [ die ]
     ]
   ]
 end
@@ -747,65 +761,6 @@ to setup-persons-and-friendship
   ; http://jasss.soc.surrey.ac.uk/13/1/11.html instead.]
   nw:generate-watts-strogatz persons friendship-links num-persons 2 0.1 [
     init-person age-gender-dist
-  ]
-end
-
-to choose-intervention-setting
-  if intervention = "baseline" [
-    set family-intervention "none"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? false
-    set targets-addressed-percent 10
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-  if intervention = "preventive" [
-    set family-intervention "remove-if-caught-and-OC-member"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? false
-    set targets-addressed-percent 50
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-  if intervention = "disruptive" [
-    set family-intervention "none"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? true
-    set facilitator-repression? false
-    set targets-addressed-percent 10
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-  if intervention = "students" [
-    set family-intervention "none"
-    set social-support "all"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? false
-    set targets-addressed-percent 10
-    set ticks-between-intervention 12
-    set intervention-start 13
-    set intervention-end 9999
-  ]
-    if intervention = "facilitators" [
-    set family-intervention "none"
-    set social-support "none"
-    set welfare-support "none"
-    set OC-boss-repression? false
-    set facilitator-repression? true
-    set facilitator-repression-multiplier 2
-    set targets-addressed-percent 10
-    set ticks-between-intervention 1
-    set intervention-start 13
-    set intervention-end 9999
   ]
 end
 
@@ -910,54 +865,67 @@ to init-person-empty ; person command
   set age calculate-age
   set my-school nobody
   set target-of-intervention false
+  set new-recruit -2
 end
 
 to let-migrants-in
-  ; calculate the difference between deaths and birth
-  let to-replace max list 0 (num-persons - count all-persons)
-  let free-jobs jobs with [ my-worker = nobody ]
-  let num-to-add min (list to-replace count free-jobs)
-  set number-migrants number-migrants + num-to-add
-  ask n-of num-to-add free-jobs [
-    ; we do not care about education level and wealth of migrants, as those variables
-    ; exist only in order to generate the job position.
-    hatch-persons 1 [
-      init-person-empty
-      set my-job myself
-      ask my-job [ set my-worker myself ]
-      let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
-      let conn decide-conn-number employees 20
-      create-professional-links-with n-of conn other employees
-      set birth-tick ticks - (random 20 + 18) * ticks-per-year
-      set age calculate-age
-      set wealth-level [ job-level ] of myself
-      set migrant? true
+  if migration-on? [
+    ; calculate the difference between deaths and birth
+    let to-replace max list 0 (num-persons - count all-persons)
+    let free-jobs jobs with [ my-worker = nobody ]
+    let num-to-add min (list to-replace count free-jobs)
+    set number-migrants number-migrants + num-to-add
+    ask n-of num-to-add free-jobs [
+      ; we do not care about education level and wealth of migrants, as those variables
+      ; exist only in order to generate the job position.
+      hatch-persons 1 [
+        init-person-empty
+        set my-job myself
+        ask my-job [ set my-worker myself ]
+        let employees turtle-set [ current-employees ] of [ my-employer ] of my-job
+        let conn decide-conn-number employees 20
+        create-professional-links-with n-of conn other employees
+        set birth-tick ticks - (random 20 + 18) * ticks-per-year
+        set age calculate-age
+        set wealth-level [ job-level ] of myself
+        set migrant? true
+      ]
     ]
   ]
 end
 
 to make-baby
-  ask persons with [ not male? and age >= 14 and age <= 50 ] [
-    if random-float 1 < p-fertility [
-      ; we stop counting after 2 because probability stays the same
-      set number-of-children number-of-children + 1
-      set number-born number-born + 1
-      hatch-persons 1 [
-        set wealth-level [ wealth-level ] of myself
-        set birth-tick ticks
-        init-person-empty
-        ask [ offspring-link-neighbors ] of myself [
-          create-sibling-links-with other [ offspring-link-neighbors ] of myself
-        ]
-        create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
-        create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
-        let dad one-of in-offspring-link-neighbors with [ male? ]
-        set max-education-level ifelse-value (any? turtle-set dad) [
-          [ max-education-level ] of dad
-        ][
-          [ max-education-level ] of myself
-        ]
-      ]
+  ifelse constant-population? [
+    let breeding-target num-persons - count all-persons
+    if breeding-target > 0 [
+      let breeding-pool n-of (breeding-target * 10) persons with [ not male? and age >= 14 and age <= 50 ]
+      ask rnd:weighted-n-of breeding-target breeding-pool [ p-fertility ] [ init-baby ]
+    ]
+  ] [
+    ask persons with [ not male? and age >= 14 and age <= 50 ] [
+      if random-float 1 < p-fertility [ init-baby ]
+    ]
+  ]
+end
+
+to init-baby ; person procedure
+  ; we stop counting after 2 because probability stays the same
+  set number-of-children number-of-children + 1
+  set number-born number-born + 1
+  hatch-persons 1 [
+    set wealth-level [ wealth-level ] of myself
+    set birth-tick ticks
+    init-person-empty
+    ask [ offspring-link-neighbors ] of myself [
+      create-sibling-links-with other [ offspring-link-neighbors ] of myself
+    ]
+    create-household-links-with (turtle-set myself [ household-link-neighbors ] of myself)
+    create-offspring-links-from (turtle-set myself [ partner-link-neighbors ] of myself)
+    let dad one-of in-offspring-link-neighbors with [ male? ]
+    set max-education-level ifelse-value (any? turtle-set dad) [
+      [ max-education-level ] of dad
+    ][
+      [ max-education-level ] of myself
     ]
   ]
 end
@@ -1237,9 +1205,21 @@ to commit-crimes
       ]
     ]
   ]
-  foreach co-offender-groups [ co-offenders ->
-    if random-float 1 < (arrest-probability-with-intervention co-offenders) [ get-caught co-offenders ]
+  let criminals (turtle-set co-offender-groups)
+  if-else (intervention-on? and facilitator-repression?) [
+    ask criminals [ set arrest-weight ifelse-value (facilitator?) [ facilitator-repression-multiplier ] [ 1 ] ]
+  ] [
+    if-else (intervention-on? and OC-boss-repression? and any? criminals with [ oc-member? ]) [
+      ask criminals with [ not oc-member? ] [ set arrest-weight 1 ]
+      calc-OC-status criminals with [ oc-member? ]
+    ] [ ; no intervention active
+      ask criminals [ set arrest-weight 1 ]
+    ]
   ]
+  let target-n-of-arrests number-arrests-per-year / ticks-per-year / 10000 * count persons
+  ; if I don't add some 1, for low levels of arrests and few agents nobody ever will be arrested.
+  set target-n-of-arrests floor target-n-of-arrests + ifelse-value (random-float 1 < (target-n-of-arrests - floor target-n-of-arrests)) [ 1 ] [ 0 ]
+  ask rnd:weighted-n-of target-n-of-arrests criminals [ arrest-weight ] [ get-caught ]
 end
 
 to-report make-co-offending-histo [ co-offender-groups ]
@@ -1252,28 +1232,23 @@ to-report make-co-offending-histo [ co-offender-groups ]
   report counts
 end
 
-to-report arrest-probability-with-intervention [ group ]
-  ; the OC intervention self-compensates (bosses more likely, lackeys less
-  if-else (intervention-on? and OC-boss-repression? and any? group with [ oc-member? ]) [
-    report count group * OC-repression-prob group
-  ][
-    ; the facilitator intervention needs to compensate with everybody, including the non-facilitators
-    if-else (intervention-on? and facilitator-repression?) [
-      report ifelse-value any? group with [ facilitator? ] [
-        count group * arrest-rate * facilitator-repression-multiplier
-      ][
-        count group * arrest-rate * correction-for-non-facilitators
-      ]
-    ][
-      report count group * arrest-rate
+; of a group of criminals
+to calc-OC-status [ oc-offenders ]
+  ask oc-offenders [ set arrest-weight calc-OC-member-position ]
+  let min-score min [ arrest-weight ] of oc-offenders
+  let divide-score mean [ arrest-weight - min-score ] of oc-offenders
+  ask oc-offenders [ set arrest-weight ifelse-value (divide-score = 0) [
+      1
+    ] [
+      (arrest-weight - min-score) / divide-score
     ]
   ]
 end
 
-to-report OC-repression-prob [ a-group ]
-  let representative one-of a-group with [ OC-member? ]
-  let n [ count person-link-neighbors with [ OC-member? ] ] of representative
-  report (n / (n + 1)) ^ 2 * degree-correction-for-bosses
+to-report calc-OC-member-position
+  let n count my-links with [ [oc-member?] of other-end ]
+  let myOCcrim my-criminal-links with [ [ oc-member? ] of other-end ]
+  report n + sum [ num-co-offenses ] of myOCcrim - count myOCcrim ; subtracting the ones already counted above
 end
 
 to retire-persons
@@ -1339,26 +1314,24 @@ to commit-crime [ co-offenders ] ; observer command
   ask criminal-links with [ co-off-flag = 2 ] [ set num-co-offenses num-co-offenses + 1 ]
 end
 
-to get-caught [ co-offenders ]
-  ask co-offenders [
-    set number-law-interventions-this-tick number-law-interventions-this-tick + 1
-    set people-jailed people-jailed + 1
-    set breed prisoners
-    set shape "face sad"
-    ifelse male?
-    [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list   [ [ p ] -> last p ] ]
-    [ set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [ [ p ] -> last p ] ]
-    set sentence-countdown sentence-countdown * punishment-length
-    if my-job != nobody [
-      ask my-job [ set my-worker nobody ]
-      set my-job nobody
-      set job-level 1
-    ]
-    if my-school != nobody [ leave-school ]
-    ask my-professional-links [ die ]
-    ask my-school-links [ die ]
-    ; we keep the friendship links and the family links
+to get-caught
+  set number-law-interventions-this-tick number-law-interventions-this-tick + 1
+  set people-jailed people-jailed + 1
+  set breed prisoners
+  set shape "face sad"
+  ifelse male?
+  [ set sentence-countdown item 0 rnd:weighted-one-of-list male-punishment-length-list   [ [ p ] -> last p ] ]
+  [ set sentence-countdown item 0 rnd:weighted-one-of-list female-punishment-length-list [ [ p ] -> last p ] ]
+  set sentence-countdown sentence-countdown * punishment-length
+  if my-job != nobody [
+    ask my-job [ set my-worker nobody ]
+    set my-job nobody
+    set job-level 1
   ]
+  if my-school != nobody [ leave-school ]
+  ask my-professional-links [ die ]
+  ask my-school-links [ die ]
+  ; we keep the friendship links and the family links
 end
 
 ; this is what in the paper is called r - this is r
@@ -1373,9 +1346,10 @@ end
 
 to calculate-criminal-tendency
   foreach table:keys c-range-by-age-and-sex [ genderage ->
-    let subpop all-persons with [ age = item 1 genderage and male? = item 0 genderage ]
+    let top-and-value item 0 table:get c-range-by-age-and-sex genderage
+    let subpop all-persons with [ age >= item 1 genderage and age < item 0 top-and-value and male? = item 0 genderage ]
     if any? subpop [
-      let c item 1 item 0 table:get c-range-by-age-and-sex genderage
+      let c item 1 top-and-value
       ; c is the cell value. Now we calcolate criminal-tendency with the factors.
       ask subpop [
         set criminal-tendency c
@@ -1391,24 +1365,8 @@ to calculate-criminal-tendency
       assert [ -> abs (mean [ criminal-tendency ] of subpop - c) < 0.01 * c ]
     ]
   ]
-  calc-criminal-tendency-addme-for-weighted-extraction
-  calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   if intervention-on? [
-    if OC-boss-repression? [ calc-degree-correction-for-bosses ]
     if facilitator-repression? [ calc-correction-for-non-facilitators ]
-  ]
-end
-
-to calc-degree-correction-for-bosses
-  let gang persons with [ oc-member? ]
-  if any? gang [
-    let to-sum []
-    ask gang [
-      let n count person-link-neighbors with [ oc-member? ]
-      set to-sum lput (n ^ 2 / (n + 1) ^ 2) to-sum
-    ]
-    ; if the OC network is disconnected, the correction isn't needed - I use 1 but it will be multiplied by zero anyway
-    set degree-correction-for-bosses ifelse-value (sum to-sum = 0) [ arrest-rate ] [ arrest-rate / mean to-sum ]
   ]
 end
 
@@ -1503,7 +1461,7 @@ to-report number-of-accomplices
 end
 
 to update-meta-links [ agents ]
-  nw:with-context agents (link-set person-links criminal-links) [ ; limit the context to the agents in the radius of interest
+  nw:with-context agents person-links [ ; limit the context to the agents in the radius of interest
     ask agents [
       ask other (turtle-set nw:turtles-in-radius 1 nw:turtles-in-reverse-radius 1) [
         create-meta-link-with myself [ ; if that link already exists, it won't be re-created
@@ -1777,10 +1735,6 @@ to-report the-families
   report components
 end
 
-to-report families-size-and-OC
-  report map [ i -> (list count i mean [ oc-embeddedness ] of i) ] the-families
-end
-
 to-report compare-edu-wealth-table
   report reduce sentence
   map [    key ->
@@ -1811,13 +1765,13 @@ to-report just-changed-age?
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-400
-10
-1083
-694
+950
+605
+991
+647
 -1
 -1
-20.455
+1.0
 1
 10
 1
@@ -1838,10 +1792,10 @@ ticks
 30.0
 
 BUTTON
-16
-129
-131
-162
+330
+215
+445
+248
 NIL
 setup
 NIL
@@ -1855,25 +1809,25 @@ NIL
 1
 
 SLIDER
-15
-15
-260
-48
+0
+10
+245
+43
 num-persons
 num-persons
 100
 10000
-1000.0
-50
+550.0
+100
 1
 NIL
 HORIZONTAL
 
 MONITOR
-270
-185
-380
-230
+810
+110
+925
+155
 NIL
 count jobs
 17
@@ -1881,10 +1835,10 @@ count jobs
 11
 
 SWITCH
-265
-50
-388
-83
+0
+610
+245
+643
 output?
 output?
 1
@@ -1892,38 +1846,21 @@ output?
 -1000
 
 MONITOR
-270
-235
-380
-280
+810
+160
+925
+205
 NIL
 count links
 17
 1
 11
 
-BUTTON
-136
-129
-261
-162
-NIL
-profile-setup
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
 INPUTBOX
-1230
-60
-1345
-120
+0
+480
+245
+540
 ticks-per-year
 12.0
 1
@@ -1931,10 +1868,10 @@ ticks-per-year
 Number
 
 BUTTON
-16
-169
-71
-202
+330
+255
+385
+288
 go
 go
 NIL
@@ -1948,10 +1885,10 @@ NIL
 0
 
 BUTTON
-76
-169
-131
-202
+390
+255
+445
+288
 NIL
 go
 T
@@ -1963,40 +1900,23 @@ NIL
 NIL
 NIL
 0
-
-BUTTON
-136
-169
-261
-202
-NIL
-profile-go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
 
 OUTPUT
-1098
-409
-1345
-608
+270
+335
+517
+640
 10
 
 SLIDER
-1097
-159
-1342
-192
-max-accomplice-radius
-max-accomplice-radius
 0
-5
+265
+245
+298
+max-accomplice-radius
+max-accomplice-radius
+1
+4
 2.0
 1
 1
@@ -2004,14 +1924,14 @@ NIL
 HORIZONTAL
 
 SLIDER
-1097
-194
-1342
-227
+0
+300
+245
+333
 oc-embeddedness-radius
 oc-embeddedness-radius
 1
-5
+4
 2.0
 1
 1
@@ -2019,10 +1939,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1097
-229
-1342
-262
+0
+335
+245
+368
 retirement-age
 retirement-age
 0
@@ -2034,10 +1954,10 @@ years old
 HORIZONTAL
 
 SLIDER
-1097
-264
-1342
-297
+0
+150
+245
+183
 number-arrests-per-year
 number-arrests-per-year
 0
@@ -2049,10 +1969,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-270
-285
-380
-330
+810
+210
+925
+255
 NIL
 count prisoners
 17
@@ -2060,10 +1980,10 @@ count prisoners
 11
 
 PLOT
-15
-700
-390
-855
+945
+270
+1285
+425
 Age distribution
 age
 count
@@ -2078,10 +1998,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [ age ] of persons"
 
 MONITOR
-270
-335
-378
-380
+810
+260
+925
+305
 migrants
 count persons with [ migrant? ]
 17
@@ -2089,32 +2009,21 @@ count persons with [ migrant? ]
 11
 
 MONITOR
-270
-385
-380
-430
-NIL
+810
+310
+925
+355
+dead
 number-deceased
 17
 1
 11
 
-MONITOR
-270
-435
-380
-480
-crimes
-sum [ num-crimes-committed ] of persons
-17
-1
-11
-
 SLIDER
-1097
-299
-1342
-332
+0
+370
+245
+403
 nat-propensity-m
 nat-propensity-m
 0
@@ -2126,10 +2035,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1097
-334
-1342
-367
+0
+405
+245
+438
 nat-propensity-sigma
 nat-propensity-sigma
 0
@@ -2141,10 +2050,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-1097
-369
-1344
-402
+0
+440
+245
+473
 nat-propensity-threshold
 nat-propensity-threshold
 0
@@ -2156,10 +2065,10 @@ sd
 HORIZONTAL
 
 SLIDER
-16
-54
-261
-87
+0
+45
+245
+78
 num-oc-persons
 num-oc-persons
 2
@@ -2171,10 +2080,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-16
-89
-261
-122
+0
+80
+245
+113
 num-oc-families
 num-oc-families
 1
@@ -2186,10 +2095,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-270
-486
-382
-531
+810
+360
+925
+405
 NIL
 number-born
 17
@@ -2197,10 +2106,10 @@ number-born
 11
 
 MONITOR
-270
-136
-380
-181
+810
+61
+925
+106
 OC members
 count all-persons with [ oc-member? ]
 17
@@ -2208,40 +2117,40 @@ count all-persons with [ oc-member? ]
 11
 
 CHOOSER
-15
-210
-260
-255
+540
+200
+785
+245
 family-intervention
 family-intervention
 "none" "remove-if-caught" "remove-if-OC-member" "remove-if-caught-and-OC-member"
 0
 
 CHOOSER
-15
-260
-260
-305
+540
+245
+785
+290
 social-support
 social-support
 "none" "educational" "psychological" "more friends" "all"
 0
 
 CHOOSER
-15
-310
-260
-355
+540
+290
+785
+335
 welfare-support
 welfare-support
 "none" "job-mother" "job-child"
 0
 
 SLIDER
-15
-360
-260
-393
+540
+60
+785
+93
 targets-addressed-percent
 targets-addressed-percent
 0
@@ -2253,25 +2162,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-400
-260
-433
+540
+95
+785
+128
 ticks-between-intervention
 ticks-between-intervention
 1
 24
-1.0
+12.0
 1
 1
 NIL
 HORIZONTAL
 
 SWITCH
-1095
-615
-1340
-648
+540
+340
+785
+373
 OC-members-scrutinize?
 OC-members-scrutinize?
 1
@@ -2279,21 +2188,21 @@ OC-members-scrutinize?
 -1000
 
 SWITCH
-1095
-710
-1340
-743
+540
+375
+785
+408
 OC-boss-repression?
 OC-boss-repression?
-0
+1
 1
 -1000
 
 SLIDER
-15
-435
-260
-468
+540
+130
+785
+163
 intervention-start
 intervention-start
 0
@@ -2305,10 +2214,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-15
-470
-260
-503
+540
+165
+785
+198
 intervention-end
 intervention-end
 0
@@ -2320,10 +2229,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-405
-750
-565
-783
+0
+190
+245
+223
 percentage-of-facilitators
 percentage-of-facilitators
 0
@@ -2335,10 +2244,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-405
-780
-565
-813
+0
+225
+245
+258
 threshold-use-facilitators
 threshold-use-facilitators
 0
@@ -2350,10 +2259,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-570
-770
-640
-815
+945
+60
+1060
+105
 facilitators
 count persons with [facilitator?]
 0
@@ -2361,10 +2270,10 @@ count persons with [facilitator?]
 11
 
 MONITOR
-640
-770
-730
-815
+945
+110
+1060
+155
 NIL
 facilitator-fails
 17
@@ -2372,10 +2281,10 @@ facilitator-fails
 11
 
 MONITOR
-730
-770
-815
-815
+945
+160
+1060
+205
 NIL
 facilitator-crimes
 17
@@ -2383,10 +2292,10 @@ facilitator-crimes
 11
 
 MONITOR
-570
-705
-677
-750
+945
+10
+1060
+55
 NIL
 crime-size-fails
 17
@@ -2394,10 +2303,10 @@ crime-size-fails
 11
 
 SLIDER
-865
-735
-1047
-768
+270
+60
+515
+93
 education-rate
 education-rate
 0
@@ -2409,10 +2318,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-865
-825
-1037
-858
+270
+95
+515
+128
 punishment-length
 punishment-length
 0.5
@@ -2424,20 +2333,20 @@ NIL
 HORIZONTAL
 
 CHOOSER
-690
-705
-852
-750
+540
+10
+785
+55
 intervention
 intervention
-"use current values" "baseline" "preventive" "disruptive" "students" "facilitators"
-0
+"use current values" "baseline" "preventive" "disruptive" "students" "facilitators" "preventive-strong" "disruptive-strong" "students-strong" "facilitators-strong"
+1
 
 MONITOR
-268
-537
-383
-582
+810
+410
+925
+455
 employed
 count persons with [ my-job != nobody ]
 17
@@ -2445,10 +2354,10 @@ count persons with [ my-job != nobody ]
 11
 
 MONITOR
-268
-587
-383
-632
+810
+460
+925
+505
 open positions
 count jobs with [ my-worker = nobody ]
 17
@@ -2456,10 +2365,10 @@ count jobs with [ my-worker = nobody ]
 11
 
 MONITOR
-270
-85
-380
-130
+810
+10
+925
+55
 people
 count all-persons
 17
@@ -2467,10 +2376,10 @@ count all-persons
 11
 
 MONITOR
-270
-635
-385
-680
+810
+509
+925
+554
 NIL
 number-weddings
 17
@@ -2478,10 +2387,10 @@ number-weddings
 11
 
 PLOT
-19
-864
-220
-1014
+1085
+10
+1286
+130
 c
 tick
 mean c
@@ -2493,14 +2402,14 @@ true
 false
 "" ""
 PENS
-"c-pen" 1.0 0 -16777216 true "" "plot  mean [ criminal-tendency ] of all-persons"
+"c-pen" 1.0 0 -16777216 true "" "if any? all-persons [ plot  mean [ criminal-tendency ] of all-persons ]"
 
 PLOT
+1085
+140
+1286
 260
-869
-461
-1019
-education
+mean education
 tick
 mean education
 0.0
@@ -2511,34 +2420,23 @@ true
 false
 "" ""
 PENS
-"edu-pen" 1.0 0 -16777216 true "" "plot mean [ education-level ] of all-persons"
+"edu-pen" 1.0 0 -16777216 true "" "if any? all-persons [ plot mean [ education-level ] of all-persons ]"
 
 CHOOSER
-865
-775
-1047
-820
+270
+130
+515
+175
 unemployment-multiplier
 unemployment-multiplier
-"base" 0.5 1.5
-0
-
-MONITOR
-15
-555
-160
-600
-unemployed rate (link)
-count all-persons with [ my-job = nobody and my-school = nobody and age > 16 and age < 65 ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ]
+"base" 0.5 1.5 0.410067526089626 0.205033763044813 0.615101289134438
 3
-1
-11
 
 MONITOR
-1095
-830
-1305
-875
+540
+495
+750
+540
 unemployed rate (level, percent)
 count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2546,21 +2444,21 @@ count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school =
 11
 
 MONITOR
-16
-509
-141
-554
-assignment errors
+810
+559
+925
+604
+job mismatch
 count all-persons with [ my-job = nobody and job-level > 1 and my-school = nobody and age > 16 and age < 65 ]
 17
 1
 11
 
 MONITOR
-165
-510
-260
-555
+810
+609
+925
+654
 NIL
 number-crimes
 3
@@ -2568,10 +2466,10 @@ number-crimes
 11
 
 SLIDER
-1095
-655
-1347
-688
+0
+115
+245
+148
 number-crimes-yearly-per10k
 number-crimes-yearly-per10k
 0
@@ -2583,10 +2481,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-1095
-880
-1305
-925
+540
+545
+750
+590
 Not looking for work (percent)
 count all-persons with [ job-level = 0 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2594,10 +2492,10 @@ count all-persons with [ job-level = 0 and age > 16 and age < 65 and my-school =
 11
 
 MONITOR
-1095
-930
-1305
-975
+540
+595
+750
+640
 occupied (level, percent)
 count all-persons with [ job-level > 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2605,20 +2503,20 @@ count all-persons with [ job-level > 1 and age > 16 and age < 65 and my-school =
 11
 
 CHOOSER
-1090
+270
 10
-1287
+515
 55
 data-folder
 data-folder
 "inputs/palermo/data/" "inputs/eindhoven/data/"
-1
+0
 
 SWITCH
-1095
-750
-1340
-783
+540
+410
+785
+443
 facilitator-repression?
 facilitator-repression?
 1
@@ -2626,10 +2524,10 @@ facilitator-repression?
 -1000
 
 SLIDER
-1095
+540
+445
 785
-1342
-818
+478
 facilitator-repression-multiplier
 facilitator-repression-multiplier
 1
@@ -2639,6 +2537,46 @@ facilitator-repression-multiplier
 1
 NIL
 HORIZONTAL
+
+SWITCH
+0
+540
+245
+573
+migration-on?
+migration-on?
+0
+1
+-1000
+
+SWITCH
+0
+575
+245
+608
+constant-population?
+constant-population?
+1
+1
+-1000
+
+PLOT
+945
+435
+1285
+585
+OC members
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "let _w (all-persons with [ oc-member? ]) if (any? _w) [ plot count _w ]"
 
 @#$#@#$#@
 ## WHAT IS IT?
