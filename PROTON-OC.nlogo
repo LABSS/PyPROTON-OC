@@ -2581,12 +2581,48 @@ PENS
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+This is a model of recruitment to terrorist groups, initially created for the PROTON (https://www.projectproton.eu/) project. The model represent social activities in an idealized city as the diving mechanism of opinion dynamics about topics relevant for radicalization. Radicalized agents can then be recruited.
+
+## CALIBRATION
+
+The model can be calibrated with data extracted from official sources (surveys, national statistics, etc.). The model together with the PROTON calibration can be downloaded from the git repository: https://github.com/LABSS/PROTON-OC/. 
+Instructions for calibration and running are available at https://www.projectproton.eu/wp-content/uploads/2019/10/D5.2-PROTON-Wizard-Manual-User-Guide-Report.pdf. Without the calibration files, the model runs with simplified assumptions.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
 
+## RESULTS
+
+Results obtained during the PROTON project are reported here: https://www.projectproton.eu/wp-content/uploads/2019/10/D5.1-PROTON-Simulator-Report.pdf
+
+
+## HOW TO USE IT
+
+(how to use the model, including a description of each of the items in the Interface tab)
+
+## THINGS TO NOTICE
+
+(suggested things for the user to notice while running the model)
+
+## THINGS TO TRY
+
+(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+
+## EXTENDING THE MODEL
+
+(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+
+## NETLOGO FEATURES
+
+(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+
+## RELATED MODELS
+
+(models in the NetLogo Models Library and elsewhere which are of related interest)
+
+## CREDITS AND REFERENCES
+
+(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
 ## HOW TO USE IT
 
 (how to use the model, including a description of each of the items in the Interface tab)
@@ -2936,7 +2972,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.4
+NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
