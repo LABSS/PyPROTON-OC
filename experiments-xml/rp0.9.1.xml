@@ -82,7 +82,6 @@
     </enumeratedValueSet>
   <enumeratedValueSet variable="unemployment-multiplier">
       <value value="&quot;base&quot;" />
-      <value value="&quot;1.0&quot;" />
     </enumeratedValueSet>
   <enumeratedValueSet variable="education-rate">
       <value value="1" />
