@@ -1,14 +1,25 @@
 # -*- coding: utf-8 -*-
 from mesa import Agent, Model
-import uuid
-from mesaPATAgent   import PATAgent
 import random
+from extra import *
 
 class Person(Agent):
-    pid
-    persons        
+    pid = 0
+    #https://stackoverflow.com/questions/12101958/how-to-keep-track-of-class-instances
+    persons = [] 
+    network_names = [    
+        'sibling',
+        'offspring',
+        'partner',
+        'household',
+        'friendship',
+        'criminal',
+        'professional',
+        'school']      
     
-    def __init__(self, model):
+    def __init__(self):
+        # networks
+        self.networks_init()
         self.sentence_countdown = 0
         self.num_crimes_committed = 0
         self.num_crimes_committed_this_tick = 0
@@ -35,89 +46,44 @@ class Person(Agent):
         self.my_school = 0
         self.target_of_intervention = 0
         self.arrest_weight = 0
-        super().__init__(self.unique_id, model)
-        Person.pid = Person.pid + 1        
+        #super().__init__(self.unique_id, model)
+        self.pid = Person.pid
+        Person.pid = Person.pid + 1
+        Person.persons.append(self)        
         
-    def random_init(self) :          
-        personality = Pp.Create_personas()
-        personality_mix = personality.Get_personas()
-        general_attributes_A = { 'uuid': self.unique_id,
-                                'type': 'A',
-                                'name': self.name,
-                                'token_wallet': {"reputation": 0},
-                                'activity': 0,
-                                'own_PATs': 0}
-        general_attributes_A.update(personality_mix)
-        general_attributes_A.update(personality_mix)
-        self.attrib = general_attributes_A
-        # print("------------random agent---------------")
-        # print(general_attributes_A)
-        # print("---------------------------")
+#    def random_init(self) : 
 
+    def networks_init(self):
+        self.neighbors = {i: set() for i in Person.network_names}
+            
+    def neighbors_range(self, netname, dist):
+        return find_neighb(netname, dist, set(), {self}) - {self}
+    
+    def step(self):
+            pass
+#            self.claim()
 
-        
-    def custom_init(self, claimer_intention, compliance, voter, creator_intention, creator_design):
-        general_atr_A = {'uuid': self.unique_id,
-                                'type': 'A',
-                                'name': self.name,
-                                'token_wallet': {"reputation": 0},
-                                'activity': 0,
-                                'own_PATs': 0}
-        custom_persona= {'claimer': compliance,
-                             'claimer_PAT_intention': claimer_intention,
-                             'voter': voter,
-                             'creator_intention': creator_intention,
-                             'creator_design': creator_design}
-
-        self.attrib = (lambda d: d.update(custom_persona) or d)(general_atr_A)
-        # print("-----------custom agent----------------")
-        # print(self.attrib)
-        # print("---------------------------")
-
-    def claim(self):
-        # here I claim just one token. Should I instead claim as many as possible?
-        pats = PATAgent.pats
-        if self.attrib['compliance'] == 'compliant' :
-            pat = random.choice(pats)
-            act = True
-        elif self.attrib['compliance'] == 'opportunistic' :
-            pat = random.choice(pats)
-            if pat.attrib['design'] == 'careful' :
-                act = True
-            else :
-                act = random.choice([True, False])
-        elif self.attrib['compliance'] == 'cheater' :
-            pat = random.choice(filter(lambda x: x.attrib['design'] == 'careless', pats) )
-            act = False
-        if act :
-            self.attrib['activity'] = self.attrib['activity'] + 1
-            pat.attrib['activity'] =  pat.attrib['activity'] + 1
-        self.attrib['token_wallet'] = self.attrib.get('token_wallet', 0) + 1
-        
-    def create_pat(self):
-        #if s['timestep'] > 0 and s['timestep'] % creation_frequency == 0:
-        #creator_name = random.randrange(len(agents))
-        #print ("creator_name: ", creator_name)
-        p = PATAgent()
-        p.custom_init(self.attrib['creator_intention'], 
-                      self.attrib['creator_design'], 
-                      self.attrib['name'])
-        
-        def step(self):
-            self.claim()
-
+    def randomfriends(self):
+        self.neighbors.get('friendship').add(random.choice(Person.persons))
+        self.neighbors.get('friendship').add(random.choice(Person.persons))
 
 class Prisoner(Person):
-      sentence-countdown
+    sentence_countdown = 0
 
-    def __init__(self, model):
+    def __init__(self):
         self.sentence_countdown = 0
-        super().__init__(self.unique_id, model)
+        #super().__init__(self.unique_id, model)
         
 if __name__ == "__main__":
-    m = Model()        
-    a = HumanAgent(m)
-    a.random_init()
-    
-    b = HumanAgent(m)
-    b.custom_init(1,2,3,4,5)
+    # testing link exploration
+    links = [[4,5],[2,3],[1],[1,8],[0,6,5,7],[4,0],[4],[4,8],[9,3,8],[8]]
+    for i in range(0,10): 
+        p = Person()
+    for i in range(0,10): 
+        for l in links[i]: Person.persons[i].neighbors.get('friendship').add(Person.persons[l])
+    #for i in range(0,10): 
+        #print([x.pid for x in Person.persons[i].neighbors.get('friendship')])
+    ne = Person.persons[5].neighbors_range('friendship', 3 )
+    print([x.pid for x in ne]) # should be [ 4, 7, 8, 0, 6]
+
+
