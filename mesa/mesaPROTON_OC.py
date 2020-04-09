@@ -5,6 +5,8 @@ import random
 import Person
 import pandas as pd
 import numpy as np
+from extra import *
+from Person import *
 #import os.chdir
 
 class MesaPROTON_OC(Model):
@@ -48,7 +50,7 @@ class MesaPROTON_OC(Model):
         self.number_born = 0
         self.number_migrants = 0
         self.number_weddings = 0
-        self.number_weddings_mean = 0
+        self.number_weddings_mean = 100
         self.number_weddings_sd = 0
         self.removed_fatherships = 0
         self.criminal_tendency_addme_for_weighted_extraction = 0
@@ -63,13 +65,25 @@ class MesaPROTON_OC(Model):
         self.crime_multiplier = 0
         self.kids_intervention_counter = 0        
         self.schedule = RandomActivation(self)
+
         # from graphical interface
+        self.initial_agents = 100
+        self.max_accomplice_radius = 2
+        
+        # loading data from tables
         self.data_folder = "../inputs/palermo/data/"
         self.load_stats_tables()
         # self.datacollector = DataCollector(
         #     model_reporters={"Gini": compute_gini},
         #     agent_reporters={"Wealth": "wealth"}
         # )
+        
+        # agents initialization
+        for i in range(0,self.initial_agents):
+            a = Person(self)
+            self.schedule.add(a)
+            a.random_init()
+ 
         # Create agents(
         #mesaConfigCreateAgents.configAgents(self)
         #print(MesaFin4.creation_frequency)
@@ -78,19 +92,20 @@ class MesaPROTON_OC(Model):
 
     def step(self):
         self.schedule.step()
+        self.wedding()
         # collect data
         #self.datacollector.collect(self)
 
     def run_model(self, n):
-        for i in range(n):
-            print(i)
+        for self.current_step in range(n):
+            print("step: " + str(self.current_step))
             self.step()
             #if i % MesaFin4.creation_frequency == 0:
             #random.choice(self.schedule.agents).create_pat()
             
             
     def fix_unemployment(self, correction):
-        available =  [x for x in Person.persons if x.age > 16 and x.age < 65 and x.my_school == None]
+        available =  [x for x in Person.persons if x.age()> 16 and x.age()< 65 and x.my_school == None]
         unemployed = [x for x in available if x.job_level == 1]
         occupied =   [x for x in available if x.job_level >  1]
         notlooking = [x for x in available if x.job_level == 0]
@@ -112,7 +127,7 @@ class MesaPROTON_OC(Model):
 
     def setup_facilitators(self) :
        for x in Person.persons :
-           x.facilitator = True if not x.oc_member and          x.age > 18 and           (random.uniform(0,1) < self.percentage_of_facilitators) else False
+           x.facilitator = True if not x.oc_member and            x.age()> 18 and                 (random.uniform(0,1) < self.percentage_of_facilitators) else False
 
     def read_csv(self, filename):
         return pd.read_csv( self.data_folder + filename + ".csv")            
@@ -140,50 +155,64 @@ class MesaPROTON_OC(Model):
         # further sources:
         # schools.csv table goes into education_levels
         marr =  pd.read_csv("../inputs/general/data/marriages_stats.csv")
-        self.number_weddings_mean =  marr['mean_marriages']
-        self.number_weddings_sd =  marr['std_marriages']
+        self.number_weddings_mean =  marr['mean_marriages'][0]
+        self.number_weddings_sd =  marr['std_marriages'][0]
 
-        def wedding(self):
-            updated_weddings_mean =  (number_weddings_mean * len(Person.persons) / 1000) / 12
-            num_wedding_this_month =  np.random.poisson(updated_weddings_mean)
+
+
+
+    def wedding(self):
+        corrected_weddings_mean = (self.number_weddings_mean * len(Person.persons) / 1000) / 12
+        print(corrected_weddings_mean)
+        corrected_weddings_mean = 10
+        num_wedding_this_month = np.random.poisson(corrected_weddings_mean) #   if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
  
-            maritable = [x for x in Person.persons if x.age > 25 and x.age < 55 and x.partner == None]
+        maritable = [x for x in Person.persons if x.age() > 25 and x.age() < 55 and x.partner == None]
+        print("marit size: " + str(len(maritable)))
+        while num_wedding_this_month > 0 and len(maritable)>1:
+            ego =  random.choice(maritable) 
+            poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(maritable)
+            poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & set(maritable)
+            pool = [x for x in (poolp | poolf) if 
+                    x.gender != ego.gender and
+                    (x.age() - ego.age()) < 8 and
+                    x not in ego.neigh("sibling") and
+                    x not in ego.neigh("offspring") and ego not in x.neigh("offspring") # directed network
+                    ]
+            if pool:   #https://www.python-course.eu/weighted_choice_and_sample.php
+                partner = np.random.choice(pool, 
+                                p=wedding_proximity_with(ego, pool), 
+                                size=(1,),
+                                replace=False)
+                self.conclude_wedding(ego,partner)
+                maritable.remove(partner)
+                self.num_wedding_this_month -= 1
+                self.number_weddings += 1                
+            maritable.remove(ego) # removed in both cases, if married or if can't find a partner                   
 
-            while num_wedding_this_month > 0 and len(maritable)>1:
-                ego =  random.choice(maritable)
-                poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & maritable
-                poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & maritable
-                pool = poolp | poolf
-                if pool:
-                    partner = np.random.choice(pool, 
-                                    p=wedding_proximity_with(pool), 
-                                    size=(1,),
-                                    replace=False)
-                    
-                    
-                    
+
+    def conclude_wedding(ego, partner):
+        for x in [ego, partner]:
+            for y in x.neighbor["household"]:
+                y.neighbor["household"].remove(x)
+        ego.neighbor["household"] = {partner}
+        partner.neighbor["household"] = {ego}
+        ego.partner = partner
+        partner.partner = ego
+       
+
+
+
+                                 
                     
 
-n = 100000
-orange_counter = 0
-for i in range(n):
-    if "orange" in np.random.choice(candies, 
-                                    p=weights, 
-                                    size=(1),
-                                    replace=False)
-        orange_counter += 1
-        
-                    
-      ifelse not any pool
-      [ ego =  one_of maritable ]
-      [ my_partner =  rnd:weighted_one_of pool [ wedding_proximity_with myself ]
-        ask my_partner [ maritable =  other maritable ]
-        num_wedding_this_month =  num_wedding_this_month _ 1
-        number_weddings =  number_weddings + 1
-        conclude_wedding pool my_partner ]
-    ]
-  ]
 
 if __name__ == "__main__":
         num_co_offenders_dist =  pd.read_csv("../inputs/general/data/num_co_offenders_dist.csv")     
         m = MesaPROTON_OC()
+        #print(Person.persons)
+        l = Person.NumberOfLinks()
+        print(l)
+        m.run_model(300)
+        print(Person.NumberOfLinks()-l)
+        
