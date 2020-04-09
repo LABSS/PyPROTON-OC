@@ -67,8 +67,8 @@ class MesaPROTON_OC(Model):
         self.schedule = RandomActivation(self)
 
         # from graphical interface
-        self.initial_agents = 100
-        self.max_accomplice_radius = 2
+        self.initial_agents = 1000
+        self.max_accomplice_radius = 4
         
         # loading data from tables
         self.data_folder = "../inputs/palermo/data/"
@@ -182,23 +182,26 @@ class MesaPROTON_OC(Model):
             if pool:   #https://www.python-course.eu/weighted_choice_and_sample.php
                 partner = np.random.choice(pool, 
                                 p=wedding_proximity_with(ego, pool), 
-                                size=(1,),
-                                replace=False)
-                self.conclude_wedding(ego,partner)
+                                size=1,
+                                replace=False)[0]
+                conclude_wedding(ego,partner)
                 maritable.remove(partner)
-                self.num_wedding_this_month -= 1
+                num_wedding_this_month -= 1
                 self.number_weddings += 1                
             maritable.remove(ego) # removed in both cases, if married or if can't find a partner                   
 
 
-    def conclude_wedding(ego, partner):
-        for x in [ego, partner]:
-            for y in x.neighbor["household"]:
-                y.neighbor["household"].remove(x)
-        ego.neighbor["household"] = {partner}
-        partner.neighbor["household"] = {ego}
-        ego.partner = partner
-        partner.partner = ego
+# end class. From here, static methods
+
+def conclude_wedding(ego, partner):
+    for x in [ego, partner]:
+        for y in x.neighbors["household"]:
+            y.neighbors["household"].discard(x) #shoudl be remove(x) once we finish tests
+    ego.neighbors["household"] = {partner}
+    partner.neighbors["household"] = {ego}
+    ego.partner = partner
+    partner.partner = ego
+staticmethod(conclude_wedding)
        
 
 
@@ -213,6 +216,6 @@ if __name__ == "__main__":
         #print(Person.persons)
         l = Person.NumberOfLinks()
         print(l)
-        m.run_model(300)
+        m.run_model(50)
         print(Person.NumberOfLinks()-l)
         

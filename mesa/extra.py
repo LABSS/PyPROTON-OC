@@ -6,6 +6,7 @@ Created on Tue Apr  7 19:05:04 2020
 @author: paolucci
 """
 import Person
+import numpy as np
 
 
 # basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
@@ -30,10 +31,10 @@ def find_neighb(netname, togo, found, border):
 # utility functions
 
 def wedding_proximity_with(ego, pool): # returns a list of proximities with ego. Careful not to shuffle it!
-    l = [
+    l = np.array([
         (social_proximity(ego,x) + 
          (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool
-        ]
+        ])
     l /= l.sum()
     return l
 
