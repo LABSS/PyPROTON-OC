@@ -5,10 +5,9 @@
         <setup>setup</setup>
         <go>go</go>
         <final>show (word "Time elapsed:" timer)
-        dump-networks
         </final>
         <!--  30 years, 729 runs  -->
-        <timeLimit steps="360"/>
+        <timeLimit steps="400"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->

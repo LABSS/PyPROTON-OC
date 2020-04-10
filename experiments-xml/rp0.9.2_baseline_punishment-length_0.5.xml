@@ -3,9 +3,8 @@
     <setup>setup</setup>
   <go>go</go>
   <final>show (word "Time elapsed:" timer)
-        dump-networks
         </final>
-  <timeLimit steps="360" />
+  <timeLimit steps="400" />
   <metric>o1</metric>
   <metric>o2</metric>
   <metric>o3</metric>
