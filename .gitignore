@@ -17,3 +17,4 @@ outputs/.ipynb_checkpoints
 *.~lock.*xls#
 ipynb_checkpoints
 *.pyc
+.spyproject
