@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from extra import *
 from Person import *
+import timeit
 #import os.chdir
 
 class MesaPROTON_OC(Model):
@@ -68,7 +69,7 @@ class MesaPROTON_OC(Model):
 
         # from graphical interface
         self.initial_agents = 1000
-        self.max_accomplice_radius = 4
+        self.max_accomplice_radius = 2
         
         # loading data from tables
         self.data_folder = "../inputs/palermo/data/"
@@ -100,6 +101,9 @@ class MesaPROTON_OC(Model):
         for self.current_step in range(n):
             print("step: " + str(self.current_step))
             self.step()
+        # timeit.timeit(
+        #    'print("step: " + str(self.current_step)); self.step()',
+        #    setup = 'gc.enable()', number=10)
             #if i % MesaFin4.creation_frequency == 0:
             #random.choice(self.schedule.agents).create_pat()
             
