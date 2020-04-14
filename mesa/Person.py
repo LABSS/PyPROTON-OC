@@ -56,7 +56,7 @@ class Person(Agent):
         self.m=m
     
     def age(self):
-        return math.floor(self.m.current_step - self.birth_tick) / 12
+        return math.floor(self.m.ticks - self.birth_tick) / 12
 
         
     def random_init(self):
@@ -87,7 +87,7 @@ class Person(Agent):
 
     def randomfriends(self):
         for net in Person.network_names:
-            for i in range(0,random.randint(0,max(len(Person.persons), 100))):
+            for i in range(0,random.randint(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(random.choice(Person.persons))
             self.neighbors.get(net).discard(self)
             
@@ -98,6 +98,10 @@ class Person(Agent):
                 ])
             for net in Person.network_names])
     staticmethod(NumberOfLinks)
+    
+    def makeFriends(self, asker: Person):
+        neighbors.add("friendship",self)
+        asker.neighbors.add(self)
                
 
 class Prisoner(Person):

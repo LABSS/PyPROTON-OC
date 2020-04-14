@@ -43,6 +43,8 @@ class MesaPROTON_OC(Model):
         self.c_range_by_age_and_sex = 0
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
+        
+
         # outputs
         self.number_deceased = 0
         self.facilitator_fails = 0
@@ -64,26 +66,38 @@ class MesaPROTON_OC(Model):
         self.people_jailed = 0
         self.number_crimes = 0
         self.crime_multiplier = 0
-        self.kids_intervention_counter = 0        
+        self.kids_intervention_counter = 0
+        
+
+        
         self.schedule = RandomActivation(self)
 
         # from graphical interface
-        self.initial_agents = 1000
+        self.initial_agents = 100
         self.max_accomplice_radius = 2
+        self.number_arrests_per_year = 30 
+        self.ticks_per_year = 12
+        self.number_crimes_yearly_per10k = 2000
         
-        # loading data from tables
+        # loading data from tables and making first calculations
         self.data_folder = "../inputs/palermo/data/"
         self.load_stats_tables()
         # self.datacollector = DataCollector(
         #     model_reporters={"Gini": compute_gini},
         #     agent_reporters={"Wealth": "wealth"}
         # )
+        # this gives the base probability of arrest, propotionally to the number of expected crimes in the first year.
+        self.arrest_rate = self.number_arrests_per_year / self.ticks_per_year / self.number_crimes_yearly_per10k / 10000 * self.initial_agents
         
-        # agents initialization
+        # --agents initialization--
         for i in range(0,self.initial_agents):
             a = Person(self)
             self.schedule.add(a)
             a.random_init()
+            
+        # calculations that need the agent number
+
+
  
         # Create agents(
         #mesaConfigCreateAgents.configAgents(self)
@@ -98,8 +112,8 @@ class MesaPROTON_OC(Model):
         #self.datacollector.collect(self)
 
     def run_model(self, n):
-        for self.current_step in range(n):
-            print("step: " + str(self.current_step))
+        for self.ticks in range(n):
+            print("step: " + str(self.ticks))
             self.step()
         # timeit.timeit(
         #    'print("step: " + str(self.current_step)); self.step()',
@@ -192,8 +206,39 @@ class MesaPROTON_OC(Model):
                 maritable.remove(partner)
                 num_wedding_this_month -= 1
                 self.number_weddings += 1                
-            maritable.remove(ego) # removed in both cases, if married or if can't find a partner                   
+            maritable.remove(ego) # removed in both cases, if married or if can't find a partner  
 
+    def intervention_on(self):
+        return self.ticks % self.ticks_between_intervention == 0 and \
+             self.ticks >= intervention_start and \
+             self.ticks <  intervention_end
+           
+    def socialization_intervene(self):
+        potential_targets =  [x for x in schedule.agents if x.age() < 18 and x.age >=6 and x.my_school != None ]
+        targets = np.random.choice(potential_targets,
+                p=[x.criminal_tendency for x in potential_targets],
+                size = math.ceil((targets_addressed_percent / 100 * len(potential_targets)) #    criminal_tendency + criminal_tendency_addme_for_weighted_extraction
+                                 )
+                )
+        if social_support == "educational" or social_support == "all": self.soc_add_educational(targets)
+        if social_support == "psychological" or social_support == "all": self.soc_add_psychological(targets)
+        if social_support == "more friends" or social_support == "all": 
+            self.soc_add_more_friends(targets)
+            welfare_createjobs({x for x in schedule.agents if x.gender=='female' and x.neighbors.get('offspring').intersection(set(targets))})
+            
+    def soc_add_educational(self, targets):
+        for x in targets: x.max_education_level =  min(max_education_level + 1, max(education_levels.keys()))          
+
+    def soc_add_psychological(self, targets ):
+        # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample from large populations
+        for x in targets:
+            support_set = limited.extraction([y for y in schedule.agents if y.num_crimes_committed == 0 and y.age() > x.age()])
+        if support_set:
+            chosen = np.random.choice(support_set, 
+                                      p = [(1 - (y.age() - x.age()) / 120) for y in support_set], 
+            size=1,
+            replace=False)[0]
+            chosen.makeFriends(x)
 
 # end class. From here, static methods
 
