@@ -582,7 +582,7 @@ to family-intervene
   ]
   let kids-to-protect persons with [
     age < 18 and age >= 12 and any? in-offspring-link-neighbors with [
-      male? and oc-member? and runresult the-condition
+      male? and runresult the-condition
     ]
   ]
   if any? kids-to-protect [
