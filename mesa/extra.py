@@ -7,6 +7,7 @@ Created on Tue Apr  7 19:05:04 2020
 """
 import Person
 import numpy as np
+import random
 
 
 # basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
@@ -49,4 +50,7 @@ def social_proximity(ego: Person, alter: Person):
     acc += 1 if [x for x in alter.neighbors.get("friendship") if 
                  (x in ego.neighbors.get("friendship")) 
                  ] else 0
-    return acc   
+    return acc
+
+def at_most(n, a):
+    return a if len(a) < n else random.sample(a,n)

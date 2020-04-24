@@ -13,6 +13,7 @@ class Person(Agent):
     network_names = [    
         'sibling',
         'offspring',
+        'parent'
         'partner',
         'household',
         'friendship',
@@ -20,7 +21,7 @@ class Person(Agent):
         'professional',
         'school']      
     
-    def __init__(self, m: mesaPROTON_OC.MesaPROTON_OC):
+    def __init__(self, m: mesaPROTON_OC):
         # networks
         self.networks_init()
         self.sentence_countdown = 0
@@ -33,6 +34,8 @@ class Person(Agent):
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = 0
         self.gender = 0
+        self.father = None
+        self.mother = None
         self.propensity = 0
         self.oc_member = 0
         self.cached_oc_embeddedness = 0
@@ -68,7 +71,6 @@ class Person(Agent):
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = -1 * random.choice(range(0,80*12))
         self.gender = random.choice([0,1])
-
         self.hobby = 0
 
 
@@ -83,7 +85,6 @@ class Person(Agent):
     
     def step(self):
             pass
-#            self.claim()
 
     def randomfriends(self):
         for net in Person.network_names:
@@ -100,9 +101,18 @@ class Person(Agent):
     staticmethod(NumberOfLinks)
     
     def makeFriends(self, asker: Person):
-        neighbors.add("friendship",self)
-        asker.neighbors.add(self)
-               
+        self.neighbors.get("friendship").add(asker)
+        asker.neighbors.get("friendship").add(self)
+
+    def makeProfessionalLinks(self, asker: Person):
+        self.neighbors.get("professional").add(asker)
+        asker.neighbors.get("professional").add(self)
+
+    def age_between(self, low, high):
+        return self.age() >= low and self.age() < high
+    
+    def family(self): # maybe add self?
+        return self.neighbors.get("sibling").add(self.neighbors.get("offspring")).add(self.neighbors.get("partner"))
 
 class Prisoner(Person):
     sentence_countdown = 0

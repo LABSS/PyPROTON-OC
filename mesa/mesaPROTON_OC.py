@@ -78,6 +78,7 @@ class MesaPROTON_OC(Model):
         self.number_arrests_per_year = 30 
         self.ticks_per_year = 12
         self.number_crimes_yearly_per10k = 2000
+        self.ticks = 0
         
         # loading data from tables and making first calculations
         self.data_folder = "../inputs/palermo/data/"
@@ -178,13 +179,9 @@ class MesaPROTON_OC(Model):
 
 
 
-
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(Person.persons) / 1000) / 12
-        print(corrected_weddings_mean)
-        corrected_weddings_mean = 10
-        num_wedding_this_month = np.random.poisson(corrected_weddings_mean) #   if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
- 
+        num_wedding_this_month = np.random.poisson(corrected_weddings_mean) #   if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ??? 
         maritable = [x for x in Person.persons if x.age() > 25 and x.age() < 55 and x.partner == None]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable)>1:
@@ -229,19 +226,91 @@ class MesaPROTON_OC(Model):
     def soc_add_educational(self, targets):
         for x in targets: x.max_education_level =  min(max_education_level + 1, max(education_levels.keys()))          
 
-    def soc_add_psychological(self, targets ):
+    def soc_add_psychological(self, targets):
         # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample from large populations
         for x in targets:
-            support_set = limited.extraction([y for y in schedule.agents if y.num_crimes_committed == 0 and y.age() > x.age()])
+            support_set = at_most(50,[y for y in schedule.agents if y.num_crimes_committed == 0 and y.age() > x.age()])
         if support_set:
             chosen = np.random.choice(support_set, 
                                       p = [(1 - (y.age() - x.age()) / 120) for y in support_set], 
             size=1,
             replace=False)[0]
             chosen.makeFriends(x)
+            
+    def soc_add_more_friends(self, targets):
+        for x in targets:
+            support_set = limited.extraction(schedule.agents.remove(x))
+            if support_set: 
+                x.makeFriends(random.choices(support_set, 
+                                        weights=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction - y.criminal_tendency for y in support_set],
+                              k=1))
+                
+        def welfare_intervene(self):
+            if welfare_support == "job_mother":
+                targets = [x for x in schedule.agents if 
+                                x.gender == 'female' and 
+                                not x.my_job and 
+                                (True if not x.partner else not x.partner.oc_member)
+                                ]
+            if welfare_support == "job_child":
+                targets = [x for x in schedule.agents if 
+                                x.age() > 16 and x.age()<24 and
+                                not x.my_school and
+                                not x.my_job and
+                                x.father.oc_member
+                                ]
+            if targets:
+                targets = random.sample(targets, math.ceil(targets_addressed_percent / 100 * len(targets)))
+                self.welfare_createjobs(targets)
+                
+        def welfare_createjobs(self, targets):
+            for x in targets:
+                the_employer = random.choice(self.employers)
+                the_level = x.job_level if x.job_level >= 2 else 2
+                the_employer.create_job(the_level, x)
+                for y in at_most(20,the_employer.employees):
+                    x.makeProfessionalLinks(y)
+                    
+
+
+  # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network? 
+  # for now I think I'll just add another network and keep the redundancy, then we'll see.                      
+        def family_intervene(self):
+            kids_to_protect = [x for x in schedule.agents if x.age_between(12,18)]
+            if family_intervention == "remove_if_caught":
+                kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner]
+            if family_intervention == "remove_if_OC_member":
+                kids_to_protect = [x for x in kids_to_protect if x.father.oc_member]
+            if family_intervention == "remove_if_caught_and_OC_member":
+                kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner and x.father.oc_member]
+            if kids_to_protect:
+                # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
+                # gee but how comes that it increases with the nubmer of targets We have to do better here
+                how_many = math.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect))
+                for x in random.sample(kids_to_protect, how_many):
+                    kids_intervention_counter += 1                
+                    # this also removes household links, leaving the household in an incoherent state.
+                    x.neighbor.get('parent').remove(x.father) 
+                    # maybe not needed?
+                    self.removed_fatherships.add( [((18 * ticks_per_year + birth_tick) - ticks), x.father, x])
+                    # at this point bad dad is out and we help the remaining with the whole package
+                    family = x.family().add(x)
+                    self.welfare_createjobs([y for y in family if y.age()>=16 and not y.job and not y.my_school])
+                    self.soc_add_educational([y for y in family if y.age()<18 and not y.job])
+                    self.soc_add_psychological(family)
+                    self.soc_add_more_friends(family)
+                    
+        def agents_where(self, reporter):
+            return [x for x in self.schedule.agents if eval(reporter)]
+        
+
+
+# NEXT: fix bugs in netlogo
+#THEN: devise tests!                                     
 
 # end class. From here, static methods
 
+#warning: for now we don't load up the partner in the partner network
 def conclude_wedding(ego, partner):
     for x in [ego, partner]:
         for y in x.neighbors["household"]:
@@ -251,20 +320,12 @@ def conclude_wedding(ego, partner):
     ego.partner = partner
     partner.partner = ego
 staticmethod(conclude_wedding)
-       
-
-
-
-                                 
-                    
-
-
+      
 if __name__ == "__main__":
-        num_co_offenders_dist =  pd.read_csv("../inputs/general/data/num_co_offenders_dist.csv")     
-        m = MesaPROTON_OC()
-        #print(Person.persons)
-        l = Person.NumberOfLinks()
-        print(l)
-        m.run_model(50)
-        print(Person.NumberOfLinks()-l)
+    num_co_offenders_dist =  pd.read_csv("../inputs/general/data/num_co_offenders_dist.csv")     
+
+    
+        
+
+
         
