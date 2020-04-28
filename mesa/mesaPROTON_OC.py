@@ -90,21 +90,18 @@ class MesaPROTON_OC(Model):
         # this gives the base probability of arrest, propotionally to the number of expected crimes in the first year.
         self.arrest_rate = self.number_arrests_per_year / self.ticks_per_year / self.number_crimes_yearly_per10k / 10000 * self.initial_agents
         
-        # --agents initialization--
-        for i in range(0,self.initial_agents):
-            a = Person(self)
-            self.schedule.add(a)
-            a.random_init()
-            
-        # calculations that need the agent number
-
-
  
         # Create agents(
         #mesaConfigCreateAgents.configAgents(self)
         #print(MesaFin4.creation_frequency)
         #self.running = True
         #self.datacollector.collect(self)
+        
+    def create_agents(self):
+        for i in range(0,self.initial_agents):
+            a = Person(self)
+            self.schedule.add(a)
+            a.random_init()        
 
     def step(self):
         self.schedule.step()
@@ -124,7 +121,7 @@ class MesaPROTON_OC(Model):
             
             
     def fix_unemployment(self, correction):
-        available =  [x for x in Person.persons if x.age()> 16 and x.age()< 65 and x.my_school == None]
+        available =  [x for x in self.schedule.agents if x.age()> 16 and x.age()< 65 and x.my_school == None]
         unemployed = [x for x in available if x.job_level == 1]
         occupied =   [x for x in available if x.job_level >  1]
         notlooking = [x for x in available if x.job_level == 0]
@@ -145,7 +142,7 @@ class MesaPROTON_OC(Model):
 
 
     def setup_facilitators(self) :
-       for x in Person.persons :
+       for x in self.schedule.agents :
            x.facilitator = True if not x.oc_member and            x.age()> 18 and                 (random.uniform(0,1) < self.percentage_of_facilitators) else False
 
     def read_csv(self, filename):
@@ -180,9 +177,9 @@ class MesaPROTON_OC(Model):
 
 
     def wedding(self):
-        corrected_weddings_mean = (self.number_weddings_mean * len(Person.persons) / 1000) / 12
+        corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = np.random.poisson(corrected_weddings_mean) #   if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ??? 
-        maritable = [x for x in Person.persons if x.age() > 25 and x.age() < 55 and x.partner == None]
+        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.partner == None]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable)>1:
             ego =  random.choice(maritable) 
@@ -245,68 +242,78 @@ class MesaPROTON_OC(Model):
                                         weights=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction - y.criminal_tendency for y in support_set],
                               k=1))
                 
-        def welfare_intervene(self):
-            if welfare_support == "job_mother":
-                targets = [x for x in schedule.agents if 
-                                x.gender == 'female' and 
-                                not x.my_job and 
-                                (True if not x.partner else not x.partner.oc_member)
-                                ]
-            if welfare_support == "job_child":
-                targets = [x for x in schedule.agents if 
-                                x.age() > 16 and x.age()<24 and
-                                not x.my_school and
-                                not x.my_job and
-                                x.father.oc_member
-                                ]
-            if targets:
-                targets = random.sample(targets, math.ceil(targets_addressed_percent / 100 * len(targets)))
-                self.welfare_createjobs(targets)
-                
-        def welfare_createjobs(self, targets):
-            for x in targets:
-                the_employer = random.choice(self.employers)
-                the_level = x.job_level if x.job_level >= 2 else 2
-                the_employer.create_job(the_level, x)
-                for y in at_most(20,the_employer.employees):
-                    x.makeProfessionalLinks(y)
+    def welfare_intervene(self):
+        if welfare_support == "job_mother":
+            targets = [x for x in schedule.agents if 
+                            x.gender == 'female' and 
+                            not x.my_job and 
+                            (True if not x.partner else not x.partner.oc_member)
+                            ]
+        if welfare_support == "job_child":
+            targets = [x for x in schedule.agents if 
+                            x.age() > 16 and x.age()<24 and
+                            not x.my_school and
+                            not x.my_job and
+                            x.father.oc_member
+                            ]
+        if targets:
+            targets = random.sample(targets, math.ceil(targets_addressed_percent / 100 * len(targets)))
+            self.welfare_createjobs(targets)
+            
+    def welfare_createjobs(self, targets):
+        for x in targets:
+            the_employer = random.choice(self.employers)
+            the_level = x.job_level if x.job_level >= 2 else 2
+            the_employer.create_job(the_level, x)
+            for y in at_most(20,the_employer.employees):
+                x.makeProfessionalLinks(y)
                     
 
 
-  # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network? 
-  # for now I think I'll just add another network and keep the redundancy, then we'll see.                      
-        def family_intervene(self):
-            kids_to_protect = [x for x in schedule.agents if x.age_between(12,18)]
-            if family_intervention == "remove_if_caught":
-                kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner]
-            if family_intervention == "remove_if_OC_member":
-                kids_to_protect = [x for x in kids_to_protect if x.father.oc_member]
-            if family_intervention == "remove_if_caught_and_OC_member":
-                kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner and x.father.oc_member]
-            if kids_to_protect:
-                # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
-                # gee but how comes that it increases with the nubmer of targets We have to do better here
-                how_many = math.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect))
-                for x in random.sample(kids_to_protect, how_many):
-                    kids_intervention_counter += 1                
-                    # this also removes household links, leaving the household in an incoherent state.
-                    x.neighbor.get('parent').remove(x.father) 
-                    # maybe not needed?
-                    self.removed_fatherships.add( [((18 * ticks_per_year + birth_tick) - ticks), x.father, x])
-                    # at this point bad dad is out and we help the remaining with the whole package
-                    family = x.family().add(x)
-                    self.welfare_createjobs([y for y in family if y.age()>=16 and not y.job and not y.my_school])
-                    self.soc_add_educational([y for y in family if y.age()<18 and not y.job])
-                    self.soc_add_psychological(family)
-                    self.soc_add_more_friends(family)
-                    
-        def agents_where(self, reporter):
-            return [x for x in self.schedule.agents if eval(reporter)]
-        
+# here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network? 
+# for now I think I'll just add another network and keep the redundancy, then we'll see.                      
+    def family_intervene(self):
+        kids_to_protect = [x for x in schedule.agents if x.age_between(12,18)]
+        if family_intervention == "remove_if_caught":
+            kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner]
+        if family_intervention == "remove_if_OC_member":
+            kids_to_protect = [x for x in kids_to_protect if x.father.oc_member]
+        if family_intervention == "remove_if_caught_and_OC_member":
+            kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner and x.father.oc_member]
+        if kids_to_protect:
+            # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
+            # gee but how comes that it increases with the nubmer of targets We have to do better here
+            how_many = math.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect))
+            for x in random.sample(kids_to_protect, how_many):
+                kids_intervention_counter += 1                
+                # this also removes household links, leaving the household in an incoherent state.
+                x.neighbor.get('parent').remove(x.father) 
+                # maybe not needed?
+                self.removed_fatherships.add( [((18 * ticks_per_year + birth_tick) - ticks), x.father, x])
+                # at this point bad dad is out and we help the remaining with the whole package
+                family = x.family().add(x)
+                self.welfare_createjobs([y for y in family if y.age()>=16 and not y.job and not y.my_school])
+                self.soc_add_educational([y for y in family if y.age()<18 and not y.job])
+                self.soc_add_psychological(family)
+                self.soc_add_more_friends(family)
+                      
+    def agents_where(self, reporter):
+        return [x for x in self.schedule.agents if eval(reporter)]
+    
+    def return_kids(self):
+        for a in removed-fatherships:
+            # list tick father son
+            if a[2].age() >= 18:
+                if random.random() < (6 / a[0]):
+                    #check for coherence. Need better offspring design.
+                    a[2].networks.get['parents'].add(a[1])
+                    a[2].father = a[1]
+                    removed.fatherships.remove(a)
+    
 
 
-# NEXT: fix bugs in netlogo
-#THEN: devise tests!                                     
+# 644 / 1700  
+# next: testing an intervention that removes kids and then returning them.                              
 
 # end class. From here, static methods
 

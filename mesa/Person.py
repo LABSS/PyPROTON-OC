@@ -6,7 +6,7 @@ import math
 import mesaPROTON_OC
 
 class Person(Agent):
-    pid = 0
+    max_id = 0
     #https://stackoverflow.com/questions/12101958/how-to-keep-track-of-class-instances
     # note that if we run multiple models, persons will be all the ones created in any of them
     persons = [] 
@@ -52,11 +52,12 @@ class Person(Agent):
         self.target_of_intervention = 0
         self.arrest_weight = 0
         #super().__init__(self.unique_id, model)
-        self.unique_id = Person.pid
-        Person.pid = Person.pid + 1
+        self.unique_id = Person.max_id
+        Person.max_id = Person.max_id + 1
         Person.persons.append(self)
         #print(m)
         self.m=m
+        #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.m)]))
     
     def age(self):
         return math.floor(self.m.ticks - self.birth_tick) / 12
@@ -100,11 +101,11 @@ class Person(Agent):
             for net in Person.network_names])
     staticmethod(NumberOfLinks)
     
-    def makeFriends(self, asker: Person):
+    def makeFriends(self, asker):
         self.neighbors.get("friendship").add(asker)
         asker.neighbors.get("friendship").add(self)
 
-    def makeProfessionalLinks(self, asker: Person):
+    def makeProfessionalLinks(self, asker):
         self.neighbors.get("professional").add(asker)
         asker.neighbors.get("professional").add(self)
 
@@ -113,7 +114,10 @@ class Person(Agent):
     
     def family(self): # maybe add self?
         return self.neighbors.get("sibling").add(self.neighbors.get("offspring")).add(self.neighbors.get("partner"))
-
+    
+    def potential_friends(self):
+        return self.family().add(self.neighbors.get("school")).add(self.neighbors.get("professional")) #minus self.. needed?
+    
 class Prisoner(Person):
     sentence_countdown = 0
 
@@ -122,15 +126,6 @@ class Prisoner(Person):
         #super().__init__(self.unique_id, model)
         
 if __name__ == "__main__":
-    # testing link exploration
-    links = [[4,5],[2,3],[1],[1,8],[0,6,5,7],[4,0],[4],[4,8],[9,3,8],[8]]
-    for i in range(0,10): 
-        p = Person(None)
-    for i in range(0,10): 
-        for l in links[i]: Person.persons[i].neighbors.get('friendship').add(Person.persons[l])
-    #for i in range(0,10): 
-        #print([x.pid for x in Person.persons[i].neighbors.get('friendship')])
-    ne = Person.persons[5].neighbors_range('friendship', 3 )
-    print([x.pid for x in ne]) # should be [ 4, 7, 8, 0, 6]
+    pass
 
 
