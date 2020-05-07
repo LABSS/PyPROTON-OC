@@ -108,6 +108,13 @@ class Person(Agent):
     def makeProfessionalLinks(self, asker):
         self.neighbors.get("professional").add(asker)
         asker.neighbors.get("professional").add(self)
+    
+    def remove_link(self, forlorn, kind):
+        self.neighbors.get(kind).discard(forlorn)
+        forlorn.neighbors.get(kind).discard(self)    
+    
+    def remove_friendship(self, forlorn): self.remove_link(self, forlorn, 'friendship')
+    def remove_professional(self, forlorn): self.remove_link(self, forlorn, 'professional')
 
     def age_between(self, low, high):
         return self.age() >= low and self.age() < high
@@ -116,7 +123,10 @@ class Person(Agent):
         return self.neighbors.get("sibling").add(self.neighbors.get("offspring")).add(self.neighbors.get("partner"))
     
     def potential_friends(self):
-        return self.family().add(self.neighbors.get("school")).add(self.neighbors.get("professional")) #minus self.. needed?
+        return self.family().add(self.neighbors.get("school")).add(self.neighbors.get("professional")).remove(self.neighbors.get("friendship")) #minus self.. needed?
+    
+    def dunbar_number(self):
+        return(150-abs(self.age()-30))
     
 class Prisoner(Person):
     sentence_countdown = 0

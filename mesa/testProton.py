@@ -44,6 +44,13 @@ class TestPROTON(unittest.TestCase):
         ne =  pp.Person.persons[5].neighbors_range('friendship', 3 )
         self.assertEqual(sorted([x.unique_id for x in ne]), [0, 4, 6, 7, 8])
         #print([x.unique_id for x in ne]) # should be [ 4, 7, 8, 0, 6]
+        
+        
+    def test_inflate_deflate_network(self):
+        random.seed(the_seed)
+        m = MesaPROTON_OC()
+        m.create_agents()
+        print(m.total_num_links())
 
 if __name__ == '__main__':
     the_seed = random.randint(0,1000000)

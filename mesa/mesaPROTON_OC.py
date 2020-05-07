@@ -310,10 +310,44 @@ class MesaPROTON_OC(Model):
                     a[2].father = a[1]
                     removed.fatherships.remove(a)
     
+    def make_friends(self):
+        for a in self.schedule.agents:
+            p_friends = a.potential_friends()
+            num_new_friends = min(len(reachable, np.random.poisson(3)))
+            chosen = np.random.choice(p_friends, 
+                                      p = [a.social_proximity(x) for x in p_friends], 
+                                      e=num_new_friends,
+                                      replace=False)
+            for c in chosen:
+                c.makeFriends(a)
+                                                
+                
+    def remove_excess_friends(self):
+        for a in self.schedule.agents:
+            friends = a.neighbors.get('friendship')
+            nf = len(friends)
+            if nf > a.dunbar_number():
+                for c in random.sample(friends,nf-a.dunbar_number()):
+                    c.remove_friendship(a)
+                    
+    def remove_excess_professional_links(self):
+        for a in self.schedule.agents:
+            friends = a.neighbors.get('friendship')
+            nf = len(friends)
+            if nf > 30:
+                for c in random.sample(friends, nf-30):
+                    c.remove_professional(a)  
+                    
+    def total_num_links(self):
+        return sum([
+            sum([len(a.neighbors.get(net))
+                for net in Person.network_names])
+            for a in self.schedule.agents]) / 2
 
+# 677 / 1700  
+# next: testing an intervention that removes kids and then returning them.   
 
-# 644 / 1700  
-# next: testing an intervention that removes kids and then returning them.                              
+# currently testint the make friends but there's an error in family (wtf?)                           
 
 # end class. From here, static methods
 
@@ -330,7 +364,10 @@ staticmethod(conclude_wedding)
       
 if __name__ == "__main__":
     num_co_offenders_dist =  pd.read_csv("../inputs/general/data/num_co_offenders_dist.csv")     
-
+    m = MesaPROTON_OC()
+    m.create_agents()
+    print(m.total_num_links())
+    m.make_friends()
     
         
 
