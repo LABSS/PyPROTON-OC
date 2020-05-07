@@ -5,4 +5,4 @@ while read p; do
   EXP=$p
   time "$NLOGO" --model PROTON-OC.nlogo --setup-file experiments-xml/$EXP --table $EXP.`hostname`.`git rev-parse --short HEAD`.csv > $EXP.`hostname`.`git rev-parse --short HEAD`.out 2>&1
   #sleep 1s
-done < experiments-xml/list_rp092_b
+done < experiments-xml/list_rp092
