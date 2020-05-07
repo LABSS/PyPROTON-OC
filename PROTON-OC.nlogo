@@ -1114,10 +1114,15 @@ end
 to-report link-color
   report [50 50 50 50]
 end
-
 to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality or age > 119 [
+      ;       list tick father son
+      foreach removed-fatherships [ a ->
+        if self = last but-last a or self = last a [ ; will never see each other again. So sad.
+          set removed-fatherships remove a removed-fatherships
+        ]
+      ]
       if facilitator? [
         let new-facilitator one-of other persons with [ not facilitator? and not oc-member? and age > 18 ]
         ask new-facilitator [ set facilitator? true ]
