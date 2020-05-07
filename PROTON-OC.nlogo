@@ -530,7 +530,7 @@ to welfare-intervene
   ][
     if welfare-support = "job-child" [
       set targets all-persons with [ age > 16 and age < 24
-        and not any? my-school-links
+        and my-school = nobody
         and any? in-offspring-link-neighbors with [ male? and oc-member? ]
         and my-job = nobody ]
     ]
@@ -582,7 +582,7 @@ to family-intervene
   ]
   let kids-to-protect persons with [
     age < 18 and age >= 12 and any? in-offspring-link-neighbors with [
-      male? and oc-member? and runresult the-condition
+      male? and runresult the-condition
     ]
   ]
   if any? kids-to-protect [
@@ -598,7 +598,7 @@ to family-intervene
       let family (turtle-set self family-link-neighbors)
       welfare-createjobs family with [
         my-job = nobody and age >= 16
-        and not any? my-school-links
+        and my-school = nobody
       ]
       soc-add-educational family with [
         my-job = nobody and age < 18
@@ -1813,7 +1813,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+500.0
 100
 1
 NIL
@@ -2166,7 +2166,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-12.0
+1.0
 1
 1
 NIL
