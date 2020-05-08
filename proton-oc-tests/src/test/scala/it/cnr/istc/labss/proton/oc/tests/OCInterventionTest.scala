@@ -36,7 +36,6 @@ class OCInterventionTest extends OCModelSuite {
       set targets-addressed-percent 100
       set family-intervention "remove-if-OC-member"
       calc-criminal-tendency-addme-for-weighted-extraction
-      calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
       family-intervene
       """)
     // the baby is (one-of persons with [ age = 0  and propensity = 0])
