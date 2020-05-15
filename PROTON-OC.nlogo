@@ -471,7 +471,7 @@ to calc-criminal-tendency-addme-for-weighted-extraction
   set criminal-tendency-addme-for-weighted-extraction ifelse-value (min [ criminal-tendency ] of persons < 0)
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
 end
-
+; 
 to calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   set criminal-tendency-subtractfromme-for-inverse-weighted-extraction ifelse-value (max [ criminal-tendency ] of persons > 0)
     [ max [ criminal-tendency ] of persons ] [ 0 ]

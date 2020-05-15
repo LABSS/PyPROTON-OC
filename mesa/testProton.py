@@ -51,6 +51,13 @@ class TestPROTON(unittest.TestCase):
         m = MesaPROTON_OC()
         m.create_agents()
         print(m.total_num_links())
+        
+    def test_oc_creation(self):
+        random.seed(the_seed)
+        m = MesaPROTON_OC()
+        m.create_agents()
+        m.setup_oc_groups()
+        print(m.total_num_links())        
 
 if __name__ == '__main__':
     the_seed = random.randint(0,1000000)

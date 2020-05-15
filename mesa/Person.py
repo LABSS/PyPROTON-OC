@@ -37,7 +37,7 @@ class Person(Agent):
         self.father = None
         self.mother = None
         self.propensity = 0
-        self.oc_member = 0
+        self.oc_member = False
         self.cached_oc_embeddedness = 0
         self.oc_embeddedness_fresh = 0
         self.partner = None       # the person's significant other
@@ -73,6 +73,7 @@ class Person(Agent):
         self.birth_tick = -1 * random.choice(range(0,80*12))
         self.gender = random.choice([0,1])
         self.hobby = 0
+        self.criminal_tendency = random.uniform(0, 1)
 
 
     def networks_init(self):
@@ -89,7 +90,7 @@ class Person(Agent):
 
     def randomfriends(self):
         for net in Person.network_names:
-            for i in range(0,random.randint(0,min(len(Person.persons), 100))):
+            for i in range(0,self.m.rng.randint(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(random.choice(Person.persons))
             self.neighbors.get(net).discard(self)
             
@@ -108,7 +109,18 @@ class Person(Agent):
     def makeProfessionalLinks(self, asker):
         self.neighbors.get("professional").add(asker)
         asker.neighbors.get("professional").add(self)
-    
+        
+    def addCriminalLink(self, asker):
+        weight = self.criminal_link_weight.get(asker)
+        if weight == None:
+            self.neighbors.get("criminal").add(asker)
+            self.criminal_link_weight[asker] = 1
+            asker.neighbors.get("criminal").add(self)
+            asker.criminal_link_weight[asker] = 1
+        else:
+            self.criminal_link_weight[asker]  += 1
+            asker.criminal_link_weight[asker] += 1 
+            
     def remove_link(self, forlorn, kind):
         self.neighbors.get(kind).discard(forlorn)
         forlorn.neighbors.get(kind).discard(self)    
