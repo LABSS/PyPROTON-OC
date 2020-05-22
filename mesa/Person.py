@@ -14,7 +14,7 @@ class Person(Agent):
         'sibling',
         'offspring',
         'parent'
-        'partner',
+        #'partner',
         'household',
         'friendship',
         'criminal',
@@ -90,7 +90,7 @@ class Person(Agent):
 
     def randomfriends(self):
         for net in Person.network_names:
-            for i in range(0,self.m.rng.randint(0,min(len(Person.persons), 100))):
+            for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(random.choice(Person.persons))
             self.neighbors.get(net).discard(self)
             
@@ -132,10 +132,10 @@ class Person(Agent):
         return self.age() >= low and self.age() < high
     
     def family(self): # maybe add self?
-        return self.neighbors.get("sibling").add(self.neighbors.get("offspring")).add(self.neighbors.get("partner"))
+        return self.neighbors.get("sibling").union(self.neighbors.get("offspring")).union(set(self.partner) if self.partner else set())
     
     def potential_friends(self):
-        return self.family().add(self.neighbors.get("school")).add(self.neighbors.get("professional")).remove(self.neighbors.get("friendship")) #minus self.. needed?
+        return self.family().union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(self.neighbors.get("friendship")) #minus self.. needed?
     
     def dunbar_number(self):
         return(150-abs(self.age()-30))
