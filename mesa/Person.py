@@ -140,6 +140,25 @@ class Person(Agent):
     def dunbar_number(self):
         return(150-abs(self.age()-30))
     
+    def init_person(self, age_gender_dist): # person command
+        row = weighted_one_of(age_gender_dist, lambda x: x[-1])  # select a row from our age_gender distribution
+        self.birth_tick =  0 - row[0] * ticks_per_year      # ...and age... = 
+        self.init_person_empty
+        self.male =  row[1]                            # ...and gender according to values in that row.
+        self.retired = self.age >= m.retirement_age                    # persons older than retirement_age are retired
+        # education level is chosen, job and wealth follow in a conditioned sequence
+        self.max_education_level = pick_from_pair_list(self.edu.get(self.male))
+        # apply model-wide education modifier
+        if (m.education_modifier == 1.0):
+            if m.rng.random() < abs(education_rate - 1):
+                self.max_education_level = self.max_education_level + (1 if (m.education-modifier > 1) else -1)
+                self.max_education_level = 4 if self.max_education_level > 4 else 1 if self.max_education_level < 1 else self.max_education_level
+        # limit education by age
+        # notice how this deforms a little the initial setup
+        for x in sort(m.education_levels.keys(), -1):
+            max_age = m.education_levels.get(x)[1]
+            if self.age < max_age: self.education_level = x - 1
+
 class Prisoner(Person):
     sentence_countdown = 0
 

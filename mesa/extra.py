@@ -54,3 +54,19 @@ def social_proximity(ego: Person, alter: Person):
 
 def at_most(n, a):
     return a if len(a) < n else random.sample(a,n)
+
+# must keep the random generator here? Or in the main function? In which case.. mmh..
+def weighted_n_of(n, agentset, weight_function):
+    # todo: check for positives
+    p = [float(weight_function(x)) for x in agentset]
+    sump = sum(p)
+    #minp = min(p)
+    #maxp = max(p)
+    p = [i/sump for i in p]
+    return  random.default_rng().choice(agentset, n, replace = False, p=p)
+
+def weighted_one_of(agentset, weight_function):
+    return random.default_rng().weighted_n_of(1, agentset, weight_function)
+
+def pick_from_pair_list(a_list_of_pairs):
+    return weighted_one_of(a_list_of_pairs, lambda x: x[-1])[0]

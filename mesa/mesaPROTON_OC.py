@@ -4,12 +4,13 @@ from mesa.datacollection import DataCollector
 import Person
 import pandas as pd
 import numpy as np
+import networkx as nx
 from numpy.random import default_rng
 # correct way of using numpy.random: https://numpy.org/devdocs/reference/random/index.html
 from extra import *
 from Person import *
 import timeit
-import testProton
+#import testProton
 from itertools import combinations
 #import os.chdir
 
@@ -85,6 +86,7 @@ class MesaPROTON_OC(Model):
         self.ticks = 0
         self.num_oc_persons = 30
         self.num_oc_families = 8
+        self.education_modifier = 1.0
         
         # loading data from tables and making first calculations
         self.data_folder = "../inputs/palermo/data/"
@@ -350,15 +352,6 @@ class MesaPROTON_OC(Model):
                 for net in Person.network_names])
             for a in self.schedule.agents]) / 2
     
-    def weighted_n_of(self, n, agentset, weight_function):
-        # todo: check for positives
-        p = [float(weight_function(x)) for x in agentset]
-        sump = sum(p)
-        #minp = min(p)
-        #maxp = max(p)
-        p = [i/sump for i in p]
-        return self.rng.choice(agentset, n, replace = False, p=p)
-    
     def setup_oc_groups(self):
         # OC members are scaled down if we don't have 10K agents
         scaled_num_oc_families = math.ceil(self.num_oc_families * self.initial_agents / 10000 * self.num_oc_persons / 30)
@@ -383,14 +376,35 @@ class MesaPROTON_OC(Model):
         # and now, the network with its weights..
         oc_members = [x for x in self.schedule.agents if x.oc_member]
         for (i,j) in combinations(oc_members,2): i.create_criminal_links_with(j)
-      
 
+    def reset_oc_embeddedness(self):
+        for x in self.schedule.agents: x.cached_oc_embeddedness = None
 
-# 709 / 1700  
+    def setup_persons_and_friendship(self):
+        age_gender_dist = self.read_csv("initial_age_gender_dist")
+        watts_strogatz = nx.watts_strogatz_graph(self.initial_agents,2,0.1)
+        print(watts_strogatz.nodes()) # Prints out the nodes  
+        for x in watts_strogatz.nodes():
+            a = Person(self)
+            self.schedule.add(a)
+            print(x)
+            print(type(x))
+            #g.nodes[nlrow['id']].update(nlrow[1:].to_dict())
+            watts_strogatz.nodes[x].update({'person':a})
+           # ['person'].update(2)
+        for x in list(watts_strogatz.nodes()): # where do I have seen this instruction before?
+            for y in list(watts_strogatz.neighbors(x)):
+                watts_strogatz.nodes[y]['person'].makeFriends(watts_strogatz.nodes[x]['person'])
+        #nx.draw(watts_strogatz, with_labels=True)
+        #plt.show()
+
+# 778 / 1700  
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
 
 # next code, needed to run: social proximity
+
+# next: repair the tests, stop pushing forward. Repair those tests!
 
 # end class. From here, static methods
 
@@ -406,14 +420,21 @@ def conclude_wedding(ego, partner):
 staticmethod(conclude_wedding)
 
 
+
+
       
 if __name__ == "__main__":
-    testProton.unittest.main()
+    #testProton.unittest.main()
     num_co_offenders_dist =  pd.read_csv("../inputs/general/data/num_co_offenders_dist.csv")     
     m = MesaPROTON_OC()
-    m.create_agents()
+    m.setup_persons_and_friendship()
+    print("num links:")
     print(m.total_num_links())
-    m.make_friends()
+
+    for net in Person.network_names:
+        print(net)
+        print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
+    #m.make_friends()
     
         
 
