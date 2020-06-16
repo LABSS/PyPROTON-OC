@@ -139,7 +139,6 @@ globals [
   number-weddings-sd
   removed-fatherships
   criminal-tendency-addme-for-weighted-extraction
-  criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   number-law-interventions-this-tick
   correction-for-non-facilitators
   number-protected-recruited-this-tick
@@ -419,7 +418,6 @@ to go
     return-kids
   ]
   calc-criminal-tendency-addme-for-weighted-extraction
-  calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
   wedding
   reset-oc-embeddedness
   commit-crimes
@@ -471,11 +469,6 @@ to calc-criminal-tendency-addme-for-weighted-extraction
   set criminal-tendency-addme-for-weighted-extraction ifelse-value (min [ criminal-tendency ] of persons < 0)
     [ -1 *  min [ criminal-tendency ] of persons ] [ 0 ]
 end
-; 
-to calc-criminal-tendency-subtractfromme-for-inverse-weighted-extraction
-  set criminal-tendency-subtractfromme-for-inverse-weighted-extraction ifelse-value (max [ criminal-tendency ] of persons > 0)
-    [ max [ criminal-tendency ] of persons ] [ 0 ]
-end
 
 to socialization-intervene
   let potential-targets all-persons with [ age <= 18 and age >= 6 and my-school != nobody ]
@@ -518,11 +511,12 @@ to-report limited-extraction [ the-set ]
 end
 
 to soc-add-more-friends [ targets ]
+  let mct max fput 0 [ criminal-tendency ] of persons
   ask targets [
     let support-set other persons
     if any? support-set [
       create-friendship-link-with rnd:weighted-one-of (limited-extraction support-set) [
-        criminal-tendency-subtractfromme-for-inverse-weighted-extraction - criminal-tendency
+        mct - criminal-tendency
       ]
     ]
   ]
@@ -536,7 +530,7 @@ to welfare-intervene
   ][
     if welfare-support = "job-child" [
       set targets all-persons with [ age > 16 and age < 24
-        and not any? my-school-links
+        and my-school = nobody
         and any? in-offspring-link-neighbors with [ male? and oc-member? ]
         and my-job = nobody ]
     ]
@@ -588,7 +582,7 @@ to family-intervene
   ]
   let kids-to-protect persons with [
     age < 18 and age >= 12 and any? in-offspring-link-neighbors with [
-      male? and oc-member? and runresult the-condition
+      male? and runresult the-condition
     ]
   ]
   if any? kids-to-protect [
@@ -604,7 +598,7 @@ to family-intervene
       let family (turtle-set self family-link-neighbors)
       welfare-createjobs family with [
         my-job = nobody and age >= 16
-        and not any? my-school-links
+        and my-school = nobody
       ]
       soc-add-educational family with [
         my-job = nobody and age < 18
@@ -1120,10 +1114,15 @@ end
 to-report link-color
   report [50 50 50 50]
 end
-
 to make-people-die
   ask all-persons [
     if random-float 1 < p-mortality or age > 119 [
+      ;       list tick father son
+      foreach removed-fatherships [ a ->
+        if self = last but-last a or self = last a [ ; will never see each other again. So sad.
+          set removed-fatherships remove a removed-fatherships
+        ]
+      ]
       if facilitator? [
         let new-facilitator one-of other persons with [ not facilitator? and not oc-member? and age > 18 ]
         ask new-facilitator [ set facilitator? true ]
@@ -1206,20 +1205,22 @@ to commit-crimes
     ]
   ]
   let criminals (turtle-set co-offender-groups)
-  if-else (intervention-on? and facilitator-repression?) [
-    ask criminals [ set arrest-weight ifelse-value (facilitator?) [ facilitator-repression-multiplier ] [ 1 ] ]
-  ] [
-    if-else (intervention-on? and OC-boss-repression? and any? criminals with [ oc-member? ]) [
-      ask criminals with [ not oc-member? ] [ set arrest-weight 1 ]
-      calc-OC-status criminals with [ oc-member? ]
-    ] [ ; no intervention active
-      ask criminals [ set arrest-weight 1 ]
+  if any? criminals [
+    if-else (intervention-on? and facilitator-repression?) [
+      ask criminals [ set arrest-weight ifelse-value (facilitator?) [ facilitator-repression-multiplier ] [ 1 ] ]
+    ] [
+      if-else (intervention-on? and OC-boss-repression? and any? criminals with [ oc-member? ]) [
+        ask criminals with [ not oc-member? ] [ set arrest-weight 1 ]
+        calc-OC-status criminals with [ oc-member? ]
+      ] [ ; no intervention active
+        ask criminals [ set arrest-weight 1 ]
+      ]
     ]
+    let target-n-of-arrests number-arrests-per-year / ticks-per-year / 10000 * count persons
+    ; if I don't add some 1, for low levels of arrests and few agents nobody ever will be arrested.
+    set target-n-of-arrests floor target-n-of-arrests + ifelse-value (random-float 1 < (target-n-of-arrests - floor target-n-of-arrests)) [ 1 ] [ 0 ]
+    ask rnd:weighted-n-of target-n-of-arrests criminals [ arrest-weight ] [ get-caught ]
   ]
-  let target-n-of-arrests number-arrests-per-year / ticks-per-year / 10000 * count persons
-  ; if I don't add some 1, for low levels of arrests and few agents nobody ever will be arrested.
-  set target-n-of-arrests floor target-n-of-arrests + ifelse-value (random-float 1 < (target-n-of-arrests - floor target-n-of-arrests)) [ 1 ] [ 0 ]
-  ask rnd:weighted-n-of target-n-of-arrests criminals [ arrest-weight ] [ get-caught ]
 end
 
 to-report make-co-offending-histo [ co-offender-groups ]
@@ -1817,7 +1818,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+500.0
 100
 1
 NIL
@@ -2170,7 +2171,7 @@ ticks-between-intervention
 ticks-between-intervention
 1
 24
-12.0
+1.0
 1
 1
 NIL

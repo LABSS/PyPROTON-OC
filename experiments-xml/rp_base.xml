@@ -5,10 +5,9 @@
         <setup>setup</setup>
         <go>go</go>
         <final>show (word "Time elapsed:" timer)
-        dump-networks
         </final>
         <!--  30 years, 729 runs  -->
-        <timeLimit steps="360"/>
+        <timeLimit steps="400"/>
         <!-- 1. Number of OC members per time unit (tentatively month) -->
         <metric>o1</metric>
         <!-- 2. Number of recruited individuals into OC per time unit -->
@@ -81,8 +80,10 @@
         <metric>count all-persons with [ my-school != nobody ]</metric>
         <metric>count all-persons with [ my-job != nobody ]</metric>
         <metric>kids-intervention-counter</metric>
-        <metric>mean [ count link-neighbors ] of all-persons with [oc-member?]</metric>
+        <metric>ifelse-value any? all-persons with [ oc-member? ] [ mean [ count link-neighbors ] of all-persons with [ oc-member? ] ] [ 0 ]
+</metric>
         <metric>mean [ count link-neighbors ] of all-persons</metric>
+        <metric>initial-random-seed</metric>
         <!-- PARAMETERS -->
       <enumeratedValueSet variable="intervention">
             <value value="&quot;baseline&quot;"/>
@@ -120,7 +121,7 @@
         </enumeratedValueSet>
 <!-- FIXED parameters     -->
         <enumeratedValueSet variable="num-persons">
-          <value value="10000"/>
+          <value value="3000"/>
         </enumeratedValueSet>    
         <enumeratedValueSet variable="welfare-support">
           <value value="&quot;none&quot;"/> <!-- overriden by intervention -->
