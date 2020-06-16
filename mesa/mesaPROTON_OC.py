@@ -387,8 +387,6 @@ class MesaPROTON_OC(Model):
         for x in watts_strogatz.nodes():
             a = Person(self)
             self.schedule.add(a)
-            print(x)
-            print(type(x))
             #g.nodes[nlrow['id']].update(nlrow[1:].to_dict())
             watts_strogatz.nodes[x].update({'person':a})
            # ['person'].update(2)
@@ -397,6 +395,36 @@ class MesaPROTON_OC(Model):
                 watts_strogatz.nodes[y]['person'].makeFriends(watts_strogatz.nodes[x]['person'])
         #nx.draw(watts_strogatz, with_labels=True)
         #plt.show()
+        
+        
+    def setup_siblings(self):
+        for p in [p for p in self.schedule.agents if p.neighbors.get('parent')]: # simulates people who left the original household.
+            num_siblings = self.rng().poisson(0.5) #the number of links is N^3 agents, so let's keep this low
+            # at this stage links with other persons are only relatives inside households and friends.
+            candidates = [c for c in self.schedule.agents if c.neighbors.get('parent') and not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
+            candidates = self.rng.choice(candidates, min(len(candidates), 50), False) 
+            # remove couples from candidates and their neighborhoods
+            while len(candidates)>0 and not incestous(p, candidates):
+                # trouble should exist, or incestous would be false.
+                trouble = self.rng.choice([
+                    x for x in candidates if x.partner or , 1)
+                trouble =  one_of candidates with [ any partner_link_neighbors or any turtle_set [ partner_link_neighbors ] of myself ]
+      ask trouble [ candidates =  other candidates ]
+    ]
+    targets =  (turtle_self =  n_of min (list count candidates num_siblings) candidates)
+    ask targets [ create_sibling_links_with other targets ]
+    other_targets =  (turtle_targets =  [ sibling_link_neighbors ] of targets)
+    ask turtle_set [ sibling_link_neighbors ] of targets [
+      create_sibling_links_with other other_targets
+    ]
+  ]
+end 
+
+    def incestous(self, ego, candidates):
+        all_potential_siblings = [p] + candidates + p.neighbors.get('sibling')] + [s for s in c.neighbors.get('siblings') for c in candidates]
+        return p.partner in all_potential_siblings
+        
+        
 
 # 778 / 1700  
 # next: testing an intervention that removes kids and then returning them.   
