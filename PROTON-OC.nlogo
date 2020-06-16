@@ -783,11 +783,13 @@ to setup-siblings
     ]
     while [ count candidates > 0 and runresult check-all-siblings ] [
       ; trouble should exist, or check-all-siblings would fail
-      let trouble one-of candidates with [ any? partner-link-neighbors or any? turtle-set [ partner-link-neighbors ] of myself ]
+      let trouble one-of candidates with [ any? partner-link-neighbors ]
       ask trouble [ set candidates other candidates ]
     ]
     let targets (turtle-set self n-of min (list count candidates num-siblings) candidates)
     ask targets [ create-sibling-links-with other targets ]
+    ; this is a good place to remind that the number of links in the sibling link neighbors is not the "number of brothers and sisters"
+    ; because, for example, 4 brothers = 6 links.
     let other-targets (turtle-set targets [ sibling-link-neighbors ] of targets)
     ask turtle-set [ sibling-link-neighbors ] of targets [
       create-sibling-links-with other other-targets
