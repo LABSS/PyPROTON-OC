@@ -5,7 +5,6 @@ from mesa.datacollection import DataCollector
 import pandas as pd
 import numpy as np
 import networkx as nx
-# correct way of using numpy.random: https://numpy.org/devdocs/reference/random/index.html
 from Person import *
 import timeit
 #import testProton
