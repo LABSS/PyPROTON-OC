@@ -85,6 +85,9 @@ class Person(Agent):
     def neighbors_range(self, netname, dist):
         return find_neighb(netname, dist, set(), {self}) - {self}
     
+    def isneighbor(self, other):
+        return any([other in self.neighbors[x] for x in Person.network_names]) or self.partner == other
+
     def step(self):
             pass
 
@@ -110,6 +113,11 @@ class Person(Agent):
         self.neighbors.get("professional").add(asker)
         asker.neighbors.get("professional").add(self)
         
+    def addSiblingLinks(self, targets):
+        for x in targets:
+            self.neighbors.get("sibling").add(x)
+            x.neighbors.get("sibling").add(self)
+
     def addCriminalLink(self, asker):
         weight = self.criminal_link_weight.get(asker)
         if weight == None:

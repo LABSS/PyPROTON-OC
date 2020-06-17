@@ -383,7 +383,6 @@ class MesaPROTON_OC(Model):
     def setup_persons_and_friendship(self):
         age_gender_dist = self.read_csv("initial_age_gender_dist")
         watts_strogatz = nx.watts_strogatz_graph(self.initial_agents,2,0.1)
-        print(watts_strogatz.nodes()) # Prints out the nodes  
         for x in watts_strogatz.nodes():
             a = Person(self)
             self.schedule.add(a)
@@ -396,35 +395,30 @@ class MesaPROTON_OC(Model):
         #nx.draw(watts_strogatz, with_labels=True)
         #plt.show()
         
+    def incestuos(self, ego, candidates):
+        all_potential_siblings = [ego] + candidates + list(ego.neighbors.get('sibling')) + [s for c in candidates for s in c.neighbors.get('sibling')]
+        return ego.partner in all_potential_siblings
         
     def setup_siblings(self):
         for p in [p for p in self.schedule.agents if p.neighbors.get('parent')]: # simulates people who left the original household.
-            num_siblings = self.rng().poisson(0.5) #the number of links is N^3 agents, so let's keep this low
+            num_siblings = self.rng.poisson(0.5) #0.5#the number of links is N^3 agents, so let's keep this low
             # at this stage links with other persons are only relatives inside households and friends.
             candidates = [c for c in self.schedule.agents if c.neighbors.get('parent') and not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
-            candidates = self.rng.choice(candidates, min(len(candidates), 50), False) 
+            candidates = [c for c in self.schedule.agents if not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
+            candidates = self.rng.choice(candidates, min(len(candidates), 5), False).tolist()
+            print("len cand:" + str(len(candidates)))
             # remove couples from candidates and their neighborhoods
-            while len(candidates)>0 and not incestous(p, candidates):
+            while len(candidates)>0 and not m.incestuos(p, candidates):
                 # trouble should exist, or incestous would be false.
-                trouble = self.rng.choice([
-                    x for x in candidates if x.partner or , 1)
-                trouble =  one_of candidates with [ any partner_link_neighbors or any turtle_set [ partner_link_neighbors ] of myself ]
-      ask trouble [ candidates =  other candidates ]
-    ]
-    targets =  (turtle_self =  n_of min (list count candidates num_siblings) candidates)
-    ask targets [ create_sibling_links_with other targets ]
-    other_targets =  (turtle_targets =  [ sibling_link_neighbors ] of targets)
-    ask turtle_set [ sibling_link_neighbors ] of targets [
-      create_sibling_links_with other other_targets
-    ]
-  ]
-end 
-
-    def incestous(self, ego, candidates):
-        all_potential_siblings = [p] + candidates + p.neighbors.get('sibling')] + [s for s in c.neighbors.get('siblings') for c in candidates]
-        return p.partner in all_potential_siblings
-        
-        
+                trouble = self.rng.choice(
+                    [x for x in candidates if x.partner],1).tolist()
+                candidates = cadidates.remove(trouble)
+            targets = p + self.rng.choice(candidates,
+                min(len(candidates, num_siblings))
+                )
+            targets = targets + set([x.neighbors.get("siblings") for x in targets])
+            for x in targets:
+                x.addSiblingLinks(p)
 
 # 778 / 1700  
 # next: testing an intervention that removes kids and then returning them.   
@@ -455,7 +449,11 @@ if __name__ == "__main__":
     #testProton.unittest.main()
     num_co_offenders_dist =  pd.read_csv("../inputs/general/data/num_co_offenders_dist.csv")     
     m = MesaPROTON_OC()
+    m.initial_agents = 200
     m.setup_persons_and_friendship()
+    print("num links:")
+    print(m.total_num_links())
+    m.setup_siblings()
     print("num links:")
     print(m.total_num_links())
 
