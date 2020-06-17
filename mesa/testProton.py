@@ -5,7 +5,6 @@ Created on Fri Apr 24 12:29:10 2020
 
 @author: paolucci
 """
-
 import unittest
 from mesaPROTON_OC import MesaPROTON_OC
 import Person as pp

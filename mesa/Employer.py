@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+from extra import *
 from mesa import Agent, Model
 import random
-from extra import *
 import math
 import mesaPROTON_OC
 import Jobs
@@ -22,7 +22,7 @@ class Employer():
     def employees(self):
         return [x.worker for x in my_jobs]
 
-vjob_level:int, my_employer: Employer, my_worker: Person, m: mesaPROTON_OC.MesaPROTON_OC
-schools-own [
-  diploma-level ; finishing this school provides the level here
-  my-students
+#vjob_level:int, my_employer: Employer, my_worker: Person, m: mesaPROTON_OC.MesaPROTON_OC
+#schools-own [
+  #diploma-level ; finishing this school provides the level here
+  #my-students

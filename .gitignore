@@ -19,3 +19,5 @@ ipynb_checkpoints
 *.pyc
 .spyproject
 mesa/fitting.py
+#Pycharm stuff
+/.idea
