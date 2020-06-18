@@ -82,6 +82,7 @@ class MesaPROTON_OC(Model):
         self.num_oc_families = 8
         self.education_modifier = 1.0
 
+        # todo: Adding a statement for city selection
         # Folders definition
         self.cwd = os.getcwd()
         self.input_directory = os.path.join(self.cwd, "inputs")
@@ -107,10 +108,10 @@ class MesaPROTON_OC(Model):
         # self.datacollector.collect(self)
 
     def create_agents(self):
-        for i in range(0, self.initial_agents):
-            a = Person(self)
-            self.schedule.add(a)
-            a.random_init()
+        for i_agent in range(0, self.initial_agents):
+            i_agent = Person(self)
+            self.schedule.add(i_agent)
+            i_agent.random_init()
 
     def step(self):
         self.schedule.step()
@@ -446,7 +447,6 @@ def conclude_wedding(ego, partner):
     ego.partner = partner
     partner.partner = ego
 staticmethod(conclude_wedding)
-
 
 
 if __name__ == "__main__":
