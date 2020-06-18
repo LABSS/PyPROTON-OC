@@ -7,7 +7,6 @@ Created on Tue Apr  7 19:05:04 2020
 """
 import Person
 import numpy as np
-import random
 from numpy.random import default_rng
 #The random generator used in all modules BitGenerator(PCG64)
 rng = default_rng(42) #If None, unpredictable entropy will be pulled from the OS.
@@ -31,7 +30,6 @@ def find_neighb(netname, togo, found, border):
         return find_neighb(netname, togo, found, nextlayer)
     
 # utility functions
-
 def wedding_proximity_with(ego, pool): # returns a list of proximities with ego. Careful not to shuffle it!
     l = np.array([
         (social_proximity(ego,x) + 
@@ -54,7 +52,7 @@ def social_proximity(ego:Person, alter:Person):
     return acc
 
 def at_most(n, a):
-    return a if len(a) < n else random.sample(a,n)
+    return a if len(a) < n else rng.choice(a,n)
 
 # must keep the random generator here? Or in the main function? In which case.. mmh..
 def weighted_n_of(n, agentset, weight_function):
@@ -64,10 +62,10 @@ def weighted_n_of(n, agentset, weight_function):
     #minp = min(p)
     #maxp = max(p)
     p = [i/sump for i in p]
-    return  random.default_rng().choice(agentset, n, replace = False, p=p)
+    return  rng.choice(agentset, n, replace = False, p=p)
 
 def weighted_one_of(agentset, weight_function):
-    return random.default_rng().weighted_n_of(1, agentset, weight_function)
+    return random.default_rng().weighted_n_of(1, agentset, weight_function) #Wrong declaration
 
 def pick_from_pair_list(a_list_of_pairs):
     return weighted_one_of(a_list_of_pairs, lambda x: x[-1])[0]
