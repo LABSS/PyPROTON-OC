@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+from extra import *
 from mesa import Agent, Model
 import random
-from extra import *
 import math
 import mesaPROTON_OC
 
@@ -21,7 +21,7 @@ class Person(Agent):
         'professional',
         'school']      
     
-    def __init__(self, m: mesaPROTON_OC):
+    def __init__(self, m:mesaPROTON_OC):
         # networks
         self.networks_init()
         self.sentence_countdown = 0
@@ -93,7 +93,7 @@ class Person(Agent):
 
     def randomfriends(self):
         for net in Person.network_names:
-            for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
+            for i in range(0,rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(random.choice(Person.persons))
             self.neighbors.get(net).discard(self)
             
@@ -158,7 +158,7 @@ class Person(Agent):
         self.max_education_level = pick_from_pair_list(self.edu.get(self.male))
         # apply model-wide education modifier
         if (m.education_modifier == 1.0):
-            if m.rng.random() < abs(education_rate - 1):
+            if rng.random() < abs(education_rate - 1):
                 self.max_education_level = self.max_education_level + (1 if (m.education-modifier > 1) else -1)
                 self.max_education_level = 4 if self.max_education_level > 4 else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age

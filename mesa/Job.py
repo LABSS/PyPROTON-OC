@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+from extra import *
 from mesa import Agent, Model
 import random
-from extra import *
 import math
 import mesaPROTON_OC
 import Employer

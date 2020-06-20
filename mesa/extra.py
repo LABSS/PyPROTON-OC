@@ -8,10 +8,11 @@ Created on Tue Apr  7 19:05:04 2020
 import Person
 import numpy as np
 import random
-
+from numpy.random import default_rng
+#The random generator used in all modules BitGenerator(PCG64)
+rng = default_rng(42) #If None, unpredictable entropy will be pulled from the OS.
 
 # basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
-    
 def print_id(p):
     print([x.pid for x in p])
     
@@ -39,7 +40,7 @@ def wedding_proximity_with(ego, pool): # returns a list of proximities with ego.
     l /= l.sum()
     return l
 
-def social_proximity(ego: Person, alter: Person):
+def social_proximity(ego:Person, alter:Person):
     acc = 0
     #normalization =  0
     # age
