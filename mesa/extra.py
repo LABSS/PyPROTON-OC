@@ -7,7 +7,6 @@ Created on Tue Apr  7 19:05:04 2020
 """
 import Person
 import numpy as np
-from mesaPROTON_OC import MesaPROTON_OC
 
 #todo: fix the rng here
 
@@ -51,18 +50,18 @@ def social_proximity(ego:Person, alter:Person):
                  ] else 0
     return acc
 
-def at_most(n, a):
-    return a if len(a) < n else self.m.rng.choice(a,n)
+def at_most(n, a, rng_istance):
+    return a if len(a) < n else rng_istance.choice(a,n)
 
 # must keep the random generator here? Or in the main function? In which case.. mmh..
-def weighted_n_of(n, agentset, weight_function):
+def weighted_n_of(n, agentset, weight_function, rng_istance):
     # todo: check for positives
     p = [float(weight_function(x)) for x in agentset]
     sump = sum(p)
     #minp = min(p)
     #maxp = max(p)
     p = [i/sump for i in p]
-    return  self.m.rng.choice(agentset, n, replace = False, p=p)
+    return  rng_istance.choice(agentset, n, replace = False, p=p)
 
 def weighted_one_of(agentset, weight_function):
     return weighted_n_of(1, agentset, weight_function)

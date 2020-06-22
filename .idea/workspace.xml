@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="5664aeac-eede-47df-bbe8-88c6045ded4b" name="Default Changelist" comment="" />
+    <list default="true" id="5664aeac-eede-47df-bbe8-88c6045ded4b" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.travis.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.travis.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mesa/extra.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/extra.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mesa/mesaPROTON_OC.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/mesaPROTON_OC.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -16,20 +21,22 @@
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="settings.editor.selected.configurable" value="preferences.general" />
+  </component>
+  <component name="PyConsoleOptionsProvider">
+    <option name="myUseExistingConsole" value="true" />
   </component>
   <component name="RunManager" selected="Python.mesaPROTON_OC">
     <configuration name="mesaPROTON_OC" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PROTON-OC" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/mesa" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -48,7 +55,7 @@
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/mesa" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -91,7 +98,8 @@
       <workItem from="1592574027052" duration="3931000" />
       <workItem from="1592638445958" duration="1699000" />
       <workItem from="1592814230575" duration="4122000" />
-      <workItem from="1592845105390" duration="770000" />
+      <workItem from="1592845105390" duration="3960000" />
+      <workItem from="1592849796195" duration="1344000" />
     </task>
     <servers />
   </component>
@@ -99,26 +107,26 @@
     <option name="version" value="2" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="223" y="72" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1592488103858">
+    <state x="223" y="72" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1592850389264">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state x="223" y="72" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1536.834@0.0.1536.834" timestamp="1592488103858" />
-    <state width="1493" height="265" key="GridCell.Tab.0.bottom" timestamp="1592488017384">
+    <state x="223" y="72" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1536.834@0.0.1536.834" timestamp="1592850389264" />
+    <state width="1493" height="409" key="GridCell.Tab.0.bottom" timestamp="1592850492799">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="265" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1592488017384" />
-    <state width="1493" height="265" key="GridCell.Tab.0.center" timestamp="1592488017384">
+    <state width="1493" height="409" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
+    <state width="1493" height="409" key="GridCell.Tab.0.center" timestamp="1592850492799">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="265" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1592488017384" />
-    <state width="1493" height="265" key="GridCell.Tab.0.left" timestamp="1592488017383">
+    <state width="1493" height="409" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
+    <state width="1493" height="409" key="GridCell.Tab.0.left" timestamp="1592850492799">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="265" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1592488017383" />
-    <state width="1493" height="265" key="GridCell.Tab.0.right" timestamp="1592488017384">
+    <state width="1493" height="409" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
+    <state width="1493" height="409" key="GridCell.Tab.0.right" timestamp="1592850492799">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="265" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1592488017384" />
+    <state width="1493" height="409" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
     <state width="1493" height="265" key="GridCell.Tab.1.bottom" timestamp="1592488017385">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
@@ -135,6 +143,10 @@
       <screen x="0" y="0" width="1536" height="834" />
     </state>
     <state width="1493" height="265" key="GridCell.Tab.1.right/0.0.1536.834@0.0.1536.834" timestamp="1592488017385" />
+    <state x="277" y="62" key="SettingsEditor" timestamp="1592850197964">
+      <screen x="0" y="0" width="1536" height="834" />
+    </state>
+    <state x="277" y="62" key="SettingsEditor/0.0.1536.834@0.0.1536.834" timestamp="1592850197964" />
     <state x="322" y="146" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2" timestamp="1592488011546">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
@@ -142,6 +154,6 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/PROTON_OC$mesaPROTON_OC.coverage" NAME="mesaPROTON_OC Coverage Results" MODIFIED="1592487990964" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/PROTON_OC$Unittests_in_testProton_py.coverage" NAME="Unittests in testProton.py Coverage Results" MODIFIED="1592467159667" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/PROTON_OC$Unittests_in_testProton_py.coverage" NAME="Unittests in testProton.py Coverage Results" MODIFIED="1592850475956" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/mesa" />
   </component>
 </project>

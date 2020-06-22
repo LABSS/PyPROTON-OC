@@ -11,6 +11,7 @@ import timeit
 from itertools import combinations
 import os
 from numpy.random import default_rng
+from pathlib import Path
 
 class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
@@ -87,7 +88,8 @@ class MesaPROTON_OC(Model):
         self.education_modifier = 1.0
 
         # Folders definition
-        self.cwd = os.getcwd()
+        self.dir = os.getcwd()
+        self.cwd = self.dir[:-5]
         self.input_directory = os.path.join(self.cwd, "inputs")
         self.palermo_inputs = os.path.join(self.input_directory, "palermo")
         self.eindhoven = os.path.join(self.input_directory, "eindhoven")
@@ -237,7 +239,7 @@ class MesaPROTON_OC(Model):
     def soc_add_psychological(self, targets):
         # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample from large populations
         for x in targets:
-            support_set = at_most(50, [y for y in schedule.agents if y.num_crimes_committed == 0 and y.age() > x.age()])
+            support_set = extra.at_most(50, [y for y in schedule.agents if y.num_crimes_committed == 0 and y.age() > x.age()], self.rng)
         if support_set:
             chosen = self.rng.choice(support_set,
                                       p=[(1 - (y.age() - x.age()) / 120) for y in support_set],
@@ -275,7 +277,7 @@ class MesaPROTON_OC(Model):
             the_employer = self.rng.choice(self.employers)
             the_level = x.job_level if x.job_level >= 2 else 2
             the_employer.create_job(the_level, x)
-            for y in at_most(20, the_employer.employees):
+            for y in extra.at_most(20, the_employer.employees, self.rng):
                 x.makeProfessionalLinks(y)
 
     # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network?
@@ -323,9 +325,9 @@ class MesaPROTON_OC(Model):
             p_friends = a.potential_friends()
             num_new_friends = min(len(p_friends), self.rng.poisson(3))
             chosen = self.rng.choice(p_friends,
-                                      p=[extra.social_proximity(x) for x in p_friends],
-                                      e=num_new_friends,
-                                      replace=False)
+                                        size=num_new_friends,
+                                        p=[extra.social_proximity(x) for x in p_friends],
+                                        replace=False)
             for c in chosen:
                 c.makeFriends(a)
 
@@ -359,20 +361,20 @@ class MesaPROTON_OC(Model):
         # families first. Note that it could extract the same family twice. This could be improved to force exactly the number of families needed.
         # we assume here that we'll never get a negative criminal tendency.
         oc_family_head = extra.weighted_n_of(scaled_num_oc_families,
-                                             self.schedule.agents, lambda x: x.criminal_tendency)
+                                             self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
         for x in oc_family_head: x.oc_member = True
         candidates_in_families = [y for y in x.neighbors.get('household') if y.age() >= 18 for x in oc_family_head]
         if len(
                 candidates_in_families) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families,
-                                                      candidates_in_families, lambda x: x.criminal_tendency)
+                                                      candidates_in_families, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
             for z in members_in_families: z.oc_member = True
         else:  # take more as needed (note that this modifies the count of families)
             for z in candidates_in_families: z.oc_member = True
             non_oc = [z for z in self.schedule.agents if not z.oc_member]
             extras = extra.weighted_n_of(scaled_num_oc_persons - len(candidates_in_families) - len(oc_family_head),
-                                         non_oc, lambda x: x.criminal_tendency)
+                                         non_oc, lambda x: x.criminal_tendency, self.rng)
             for x in extras: x.oc_member = True
         # and now, the network with its weights..
         oc_members = [x for x in self.schedule.agents if x.oc_member]
