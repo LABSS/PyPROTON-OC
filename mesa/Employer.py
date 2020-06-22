@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from extra import *
+import extra
 from mesa import Agent, Model
 import random
 import math

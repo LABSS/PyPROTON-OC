@@ -5,16 +5,16 @@ Created on Fri Apr 24 12:29:10 2020
 
 @author: paolucci
 """
+
 import unittest
 from mesaPROTON_OC import MesaPROTON_OC
 import Person as pp
-import random
 
 class TestPROTON(unittest.TestCase):
 
     # that's strange - at somepoint it always failed the first run after changing something, then no more
     def test_weddings(self):
-        random.seed(the_seed)
+        #random.seed(the_seed)
         m = MesaPROTON_OC()
         m.create_agents()
         print(len(m.schedule.agents)-len(pp.Person.persons))
@@ -29,7 +29,7 @@ class TestPROTON(unittest.TestCase):
         # coherent state of weddings
 
     def test_networks(self):
-        random.seed(the_seed)
+        #random.seed(the_seed)
         pp.persons = []
         # testing link exploration
         links = [[4,5],[2,3],[1],[1,8],[0,6,5,7],[4,0],[4],[4,8],[9,3,8],[8]]
@@ -46,19 +46,19 @@ class TestPROTON(unittest.TestCase):
         
         
     def test_inflate_deflate_network(self):
-        random.seed(the_seed)
+        #random.seed(the_seed)
         m = MesaPROTON_OC()
         m.create_agents()
         print(m.total_num_links())
         
     def test_oc_creation(self):
-        random.seed(the_seed)
+        #random.seed(the_seed)
         m = MesaPROTON_OC()
         m.create_agents()
         m.setup_oc_groups()
         print(m.total_num_links())        
 
 if __name__ == '__main__':
-    the_seed = random.randint(0,1000000)
+    #the_seed = random.randint(0,1000000)
     unittest.main()
-    print("the seed is: " + str(the_seed))
+    #print("the seed is: " + str(the_seed))

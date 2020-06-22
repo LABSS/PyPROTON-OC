@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from extra import *
+import extra
 from mesa import Agent, Model
 import random
 import math
@@ -83,7 +83,7 @@ class Person(Agent):
         return self.neighbors.get(netname)
 
     def neighbors_range(self, netname, dist):
-        return find_neighb(netname, dist, set(), {self}) - {self}
+        return extra.find_neighb(netname, dist, set(), {self}) - {self}
     
     def isneighbor(self, other):
         return any([other in self.neighbors[x] for x in Person.network_names]) or self.partner == other
@@ -93,7 +93,7 @@ class Person(Agent):
 
     def randomfriends(self):
         for net in Person.network_names:
-            for i in range(0,rng.integers(0,min(len(Person.persons), 100))):
+            for i in range(0,extra.rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(random.choice(Person.persons))
             self.neighbors.get(net).discard(self)
             
@@ -158,7 +158,7 @@ class Person(Agent):
         self.max_education_level = pick_from_pair_list(self.edu.get(self.male))
         # apply model-wide education modifier
         if (m.education_modifier == 1.0):
-            if rng.random() < abs(education_rate - 1):
+            if extra.rng.random() < abs(education_rate - 1):
                 self.max_education_level = self.max_education_level + (1 if (m.education-modifier > 1) else -1)
                 self.max_education_level = 4 if self.max_education_level > 4 else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
