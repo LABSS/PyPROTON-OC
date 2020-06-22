@@ -7,9 +7,9 @@ Created on Tue Apr  7 19:05:04 2020
 """
 import Person
 import numpy as np
-from numpy.random import default_rng
-#The random generator used in all modules BitGenerator(PCG64)
-rng = default_rng(42) #If None, unpredictable entropy will be pulled from the OS.
+from mesaPROTON_OC import MesaPROTON_OC
+
+#todo: fix the rng here
 
 # basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
 def print_id(p):
@@ -52,7 +52,7 @@ def social_proximity(ego:Person, alter:Person):
     return acc
 
 def at_most(n, a):
-    return a if len(a) < n else rng.choice(a,n)
+    return a if len(a) < n else self.m.rng.choice(a,n)
 
 # must keep the random generator here? Or in the main function? In which case.. mmh..
 def weighted_n_of(n, agentset, weight_function):
@@ -62,10 +62,10 @@ def weighted_n_of(n, agentset, weight_function):
     #minp = min(p)
     #maxp = max(p)
     p = [i/sump for i in p]
-    return  rng.choice(agentset, n, replace = False, p=p)
+    return  self.m.rng.choice(agentset, n, replace = False, p=p)
 
 def weighted_one_of(agentset, weight_function):
-    return random.default_rng().weighted_n_of(1, agentset, weight_function) #Wrong declaration
+    return weighted_n_of(1, agentset, weight_function)
 
 def pick_from_pair_list(a_list_of_pairs):
     return weighted_one_of(a_list_of_pairs, lambda x: x[-1])[0]

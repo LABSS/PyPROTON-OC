@@ -4,7 +4,7 @@ from mesa import Agent, Model
 import random
 import math
 import mesaPROTON_OC
-import Jobs
+import Job
 import Person
 
 class Employer():

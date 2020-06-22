@@ -10,13 +10,17 @@ import timeit
 # import testProton
 from itertools import combinations
 import os
-
+from numpy.random import default_rng
 
 class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
     """
 
-    def __init__(self):
+    def __init__(self, seed=None):
+        super().__init__(seed=seed)
+        # If None, unpredictable entropy will be pulled from the OS.
+        self.seed = seed
+        self.rng = default_rng(seed)
         # operation
         self.initial_random_seed = 0
         self.network_saving_interval = 0  # every how many we save networks structure
@@ -82,7 +86,6 @@ class MesaPROTON_OC(Model):
         self.num_oc_families = 8
         self.education_modifier = 1.0
 
-        # todo: Adding a statement for city selection
         # Folders definition
         self.cwd = os.getcwd()
         self.input_directory = os.path.join(self.cwd, "inputs")
@@ -137,22 +140,22 @@ class MesaPROTON_OC(Model):
         ratio_on = len(occupied) / (len(occupied) + len(notlooking))
         if correction > 1.0:
             # increase unemployment
-            for x in extra.rng.sample(
-                    occupied, ((correction - 1) * len(unemployed) * ratio_on)):
+            for x in self.rng.choice(
+                    occupied, ((correction - 1) * len(unemployed) * ratio_on), replace=False):
                 x.job_level = 1,  # no need to resciss job links as they haven't been created yet.
-            for x in extra.rng.sample(
-                    notlooking, ((correction - 1) * len(unemployed) * (1 - ratio_on))):
+            for x in self.rng.choice(
+                    notlooking, (correction - 1) * len(unemployed) * (1 - ratio_on), replace=False):
                 x.job_level = 1,  # no need to resciss job links as they haven't been created yet.
         else:
             # decrease unemployment
-            for x in extra.rng.sample(
-                    unemployed, ((1 - correction) * len(unemployed))):
-                x.job_level = 2 if extra.rng.uniform(0, 1) < ratio_on else 0
+            for x in self.rng.choice(
+                    unemployed, (1 - correction) * len(unemployed), replace=False):
+                x.job_level = 2 if self.rng.uniform(0, 1) < ratio_on else 0
 
     def setup_facilitators(self):
         for x in self.schedule.agents:
             x.facilitator = True if not x.oc_member and x.age() > 18 and (
-                        extra.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+                        self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
 
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
@@ -185,11 +188,11 @@ class MesaPROTON_OC(Model):
 
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
-        num_wedding_this_month = extra.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
+        num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
         maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.partner == None]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable) > 1:
-            ego = extra.rng.choice(maritable)
+            ego = self.rng.choice(maritable)
             poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(maritable)
             poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & set(maritable)
             pool = [x for x in (poolp | poolf) if
@@ -199,7 +202,7 @@ class MesaPROTON_OC(Model):
                     x not in ego.neigh("offspring") and ego not in x.neigh("offspring")  # directed network
                     ]
             if pool:  # https://www.python-course.eu/weighted_choice_and_sample.php
-                partner = extra.rng.choice(pool,
+                partner = self.rng.choice(pool,
                                            p=extra.wedding_proximity_with(ego, pool),
                                            size=1,
                                            replace=False)[0]
@@ -216,7 +219,7 @@ class MesaPROTON_OC(Model):
 
     def socialization_intervene(self):
         potential_targets = [x for x in schedule.agents if x.age() < 18 and x.age >= 6 and x.my_school != None]
-        targets = extra.rng.choice(potential_targets,
+        targets = self.rng.choice(potential_targets,
                                    p=[x.criminal_tendency for x in potential_targets],
                                    size=math.ceil((targets_addressed_percent / 100 * len(potential_targets))
                                                   # criminal_tendency + criminal_tendency_addme_for_weighted_extraction
@@ -236,7 +239,7 @@ class MesaPROTON_OC(Model):
         for x in targets:
             support_set = at_most(50, [y for y in schedule.agents if y.num_crimes_committed == 0 and y.age() > x.age()])
         if support_set:
-            chosen = extra.rng.choice(support_set,
+            chosen = self.rng.choice(support_set,
                                       p=[(1 - (y.age() - x.age()) / 120) for y in support_set],
                                       size=1,
                                       replace=False)[0]
@@ -246,11 +249,8 @@ class MesaPROTON_OC(Model):
         for x in targets:
             support_set = limited.extraction(schedule.agents.remove(x))
             if support_set:
-                x.makeFriends(random.choices(support_set,
-                                             weights=[
-                                                 self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction - y.criminal_tendency
-                                                 for y in support_set],
-                                             k=1))
+                x.makeFriends(self.rng.choice(support_set, size=1,
+                                             p=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction - y.criminal_tendency for y in support_set]))
 
     def welfare_intervene(self):
         if welfare_support == "job_mother":
@@ -267,12 +267,12 @@ class MesaPROTON_OC(Model):
                        x.father.oc_member
                        ]
         if targets:
-            targets = random.sample(targets, math.ceil(targets_addressed_percent / 100 * len(targets)))
+            targets = self.rng.choice(targets, math.ceil(targets_addressed_percent / 100 * len(targets)), replace=False)
             self.welfare_createjobs(targets)
 
     def welfare_createjobs(self, targets):
         for x in targets:
-            the_employer = random.choice(self.employers)
+            the_employer = self.rng.choice(self.employers)
             the_level = x.job_level if x.job_level >= 2 else 2
             the_employer.create_job(the_level, x)
             for y in at_most(20, the_employer.employees):
@@ -292,7 +292,7 @@ class MesaPROTON_OC(Model):
             # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
             # gee but how comes that it increases with the nubmer of targets We have to do better here
             how_many = math.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect))
-            for x in random.sample(kids_to_protect, how_many):
+            for x in self.rng.choice(kids_to_protect, how_many, replace=False):
                 kids_intervention_counter += 1
                 # this also removes household links, leaving the household in an incoherent state.
                 x.neighbor.get('parent').remove(x.father)
@@ -312,7 +312,7 @@ class MesaPROTON_OC(Model):
         for a in removed - fatherships:
             # list tick father son
             if a[2].age() >= 18:
-                if random.random() < (6 / a[0]):
+                if self.rng.random() < (6 / a[0]):
                     # check for coherence. Need better offspring design.
                     a[2].networks.get['parents'].add(a[1])
                     a[2].father = a[1]
@@ -321,10 +321,9 @@ class MesaPROTON_OC(Model):
     def make_friends(self):
         for a in self.schedule.agents:
             p_friends = a.potential_friends()
-            num_new_friends = min(len(p_friends), extra.rng.poisson(3))
-            chosen = extra.rng.choice(p_friends,
-                                      p=[a.social_proximity(x) for x in p_friends],
-                                      # Wrong declaration see the definition extra.social_proximity
+            num_new_friends = min(len(p_friends), self.rng.poisson(3))
+            chosen = self.rng.choice(p_friends,
+                                      p=[extra.social_proximity(x) for x in p_friends],
                                       e=num_new_friends,
                                       replace=False)
             for c in chosen:
@@ -335,7 +334,7 @@ class MesaPROTON_OC(Model):
             friends = a.neighbors.get('friendship')
             nf = len(friends)
             if nf > a.dunbar_number():
-                for c in random.sample(friends, nf - a.dunbar_number()):
+                for c in self.rng.choice(friends, nf - a.dunbar_number(), replace=False):
                     c.remove_friendship(a)
 
     def remove_excess_professional_links(self):
@@ -343,7 +342,7 @@ class MesaPROTON_OC(Model):
             friends = a.neighbors.get('friendship')
             nf = len(friends)
             if nf > 30:
-                for c in random.sample(friends, nf - 30):
+                for c in self.rng.choice(friends, nf - 30, replace=False):
                     c.remove_professional(a)
 
     def total_num_links(self):
@@ -406,20 +405,20 @@ class MesaPROTON_OC(Model):
     def setup_siblings(self):
         for p in [p for p in self.schedule.agents if
                   p.neighbors.get('parent')]:  # simulates people who left the original household.
-            num_siblings = extra.rng.poisson(0.5)  # 0.5 -> the number of links is N^3 agents, so let's keep this low
+            num_siblings = self.rng.poisson(0.5)  # 0.5 -> the number of links is N^3 agents, so let's keep this low
             # at this stage links with other persons are only relatives inside households and friends.
             candidates = [c for c in self.schedule.agents if
                           c.neighbors.get('parent') and not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
             candidates = [c for c in self.schedule.agents if not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
-            candidates = extra.rng.choice(candidates, min(len(candidates), 5), False).tolist()
+            candidates = self.rng.choice(candidates, min(len(candidates), 5), False).tolist()
             print("len cand:" + str(len(candidates)))
             # remove couples from candidates and their neighborhoods
             while len(candidates) > 0 and not m.incestuos(p, candidates):
                 # trouble should exist, or incestous would be false.
-                trouble = extra.rng.choice(
+                trouble = self.rng.choice(
                     [x for x in candidates if x.partner], 1).tolist()
                 candidates = cadidates.remove(trouble)
-            targets = p + extra.rng.choice(candidates,
+            targets = p + self.rng.choice(candidates,
                                            min(len(candidates, num_siblings))
                                            )
             targets = targets + set([x.neighbors.get("siblings") for x in targets])

@@ -9,6 +9,7 @@ Created on Fri Apr 24 12:29:10 2020
 import unittest
 from mesaPROTON_OC import MesaPROTON_OC
 import Person as pp
+import extra
 
 class TestPROTON(unittest.TestCase):
 
@@ -19,7 +20,7 @@ class TestPROTON(unittest.TestCase):
         m.create_agents()
         print(len(m.schedule.agents)-len(pp.Person.persons))
         print(m.number_weddings)
-        m.number_weddings_mean = 1000  
+        m.number_weddings_mean = 1000
         for i in range(1,5):
             m.wedding()
         #print(Person.NumberOfLinks()-l)
