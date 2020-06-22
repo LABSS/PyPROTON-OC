@@ -1,19 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="5664aeac-eede-47df-bbe8-88c6045ded4b" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/PROTON-OC.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mesa/Employer.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/Employer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mesa/Person.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/Person.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mesa/extra.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/extra.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mesa/mesaPROTON_OC.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/mesaPROTON_OC.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mesa/testProton.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/testProton.py" afterDir="false" />
-    </list>
+    <list default="true" id="5664aeac-eede-47df-bbe8-88c6045ded4b" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -103,6 +91,7 @@
       <workItem from="1592574027052" duration="3931000" />
       <workItem from="1592638445958" duration="1699000" />
       <workItem from="1592814230575" duration="4122000" />
+      <workItem from="1592845105390" duration="328000" />
     </task>
     <servers />
   </component>
