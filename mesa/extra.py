@@ -8,8 +8,6 @@ Created on Tue Apr  7 19:05:04 2020
 import Person
 import numpy as np
 
-#todo: fix the rng here
-
 # basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
 def print_id(p):
     print([x.pid for x in p])
@@ -32,8 +30,7 @@ def find_neighb(netname, togo, found, border):
 def wedding_proximity_with(ego, pool): # returns a list of proximities with ego. Careful not to shuffle it!
     l = np.array([
         (social_proximity(ego,x) + 
-         (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool
-        ])
+         (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool])
     l /= l.sum()
     return l
 
@@ -61,7 +58,7 @@ def weighted_n_of(n, agentset, weight_function, rng_istance):
     #minp = min(p)
     #maxp = max(p)
     p = [i/sump for i in p]
-    return  rng_istance.choice(agentset, n, replace = False, p=p)
+    return  rng_istance.choice(agentset, n, replace=False, p=p)
 
 def weighted_one_of(agentset, weight_function):
     return weighted_n_of(1, agentset, weight_function)

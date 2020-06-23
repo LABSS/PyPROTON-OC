@@ -148,7 +148,7 @@ class Person(Agent):
         return(150-abs(self.age()-30))
     
     def init_person(self, age_gender_dist): # person command
-        row = weighted_one_of(age_gender_dist, lambda x: x[-1])  # select a row from our age_gender distribution
+        row = extra.weighted_one_of(age_gender_dist, lambda x: x[-1])  # select a row from our age_gender distribution
         self.birth_tick =  0 - row[0] * ticks_per_year      # ...and age... = 
         self.init_person_empty
         self.male =  row[1]                            # ...and gender according to values in that row.

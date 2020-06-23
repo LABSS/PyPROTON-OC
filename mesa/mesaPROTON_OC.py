@@ -19,9 +19,9 @@ class MesaPROTON_OC(Model):
 
     def __init__(self, seed=None):
         super().__init__(seed=seed)
-        # If None, unpredictable entropy will be pulled from the OS.
         self.seed = seed
         self.rng = default_rng(seed)
+        self.check_random = [self.rng.random(), self.random.random()]
         # operation
         self.initial_random_seed = 0
         self.network_saving_interval = 0  # every how many we save networks structure
@@ -88,8 +88,8 @@ class MesaPROTON_OC(Model):
         self.education_modifier = 1.0
 
         # Folders definition
-        self.dir = os.getcwd()
-        self.cwd = self.dir[:-5]
+        self.mesa_dir = os.getcwd()
+        self.cwd = self.mesa_dir[:-5]
         self.input_directory = os.path.join(self.cwd, "inputs")
         self.palermo_inputs = os.path.join(self.input_directory, "palermo")
         self.eindhoven = os.path.join(self.input_directory, "eindhoven")
@@ -150,14 +150,12 @@ class MesaPROTON_OC(Model):
                 x.job_level = 1,  # no need to resciss job links as they haven't been created yet.
         else:
             # decrease unemployment
-            for x in self.rng.choice(
-                    unemployed, (1 - correction) * len(unemployed), replace=False):
+            for x in self.rng.choice(unemployed, (1 - correction) * len(unemployed), replace=False):
                 x.job_level = 2 if self.rng.uniform(0, 1) < ratio_on else 0
 
     def setup_facilitators(self):
         for x in self.schedule.agents:
-            x.facilitator = True if not x.oc_member and x.age() > 18 and (
-                        self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+            x.facilitator = True if not x.oc_member and x.age() > 18 and (self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
 
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
@@ -450,21 +448,21 @@ def conclude_wedding(ego, partner):
 staticmethod(conclude_wedding)
 
 
-if __name__ == "__main__":
-    # testProton.unittest.main()
-    m = MesaPROTON_OC()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
-
-    for net in Person.network_names:
-        print(net)
-        print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
-    # m.make_friends()
+# if __name__ == "__main__":
+#     # testProton.unittest.main()
+#     m = MesaPROTON_OC()
+#     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+#     m.initial_agents = 200
+#     m.setup_persons_and_friendship()
+#     # Visualize network
+#     nx.draw(m.watts_strogatz)
+#     print("num links:")
+#     print(m.total_num_links())
+#     m.setup_siblings()
+#     print("num links:")
+#     print(m.total_num_links())
+#
+#     for net in Person.network_names:
+#         print(net)
+#         print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
+#     # m.make_friends()

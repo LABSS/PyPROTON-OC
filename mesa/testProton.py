@@ -38,7 +38,8 @@ class TestPROTON(unittest.TestCase):
         for i in range(0,10): 
             pp.Person(m)
         for i in range(0,10):
-            for l in links[i]: pp.Person.persons[i].neighbors.get('friendship').add(pp.Person.persons[l])
+            for l in links[i]:
+                pp.Person.persons[i].neighbors.get('friendship').add(pp.Person.persons[l])
         # for i in range(0,10): 
         #     print([x.unique_id for x in pp.Person.persons[i].neighbors.get('friendship')])
         ne =  pp.Person.persons[5].neighbors_range('friendship', 3 )
@@ -57,7 +58,37 @@ class TestPROTON(unittest.TestCase):
         m = MesaPROTON_OC()
         m.create_agents()
         m.setup_oc_groups()
-        print(m.total_num_links())        
+        print(m.total_num_links())
+
+    def test_big_crimes_for_small_fish(self):
+        m = MesaPROTON_OC()
+        m.initial_agents = 500
+        m.max_accomplice_radius = 6
+        m.create_agents()
+        m.num_co_offenders_dist = [[5, 0.5], [6, 0.5], [10, 0.5]]
+        for tick in range(1,20):
+            m.step()
+        self.assertTrue(m.big_crime_from_small_fish < 0, msg=None)
+
+    def test_random(self):
+        m = MesaPROTON_OC(seed=42)
+        self.assertEqual(m.check_random, [0.7739560485559633, 0.6394267984578837])
+
+    def test_oc_crime_net_init(self):
+        m = MesaPROTON_OC()
+        m.create_agents()
+        pass
+
+    def test_population_generator(self):
+        m = MesaPROTON_OC()
+        m.initial_agents = 2000
+        m.load_stats_tables()
+        m.facilitator_fails = 0
+        m.facilitator_crimes = 0
+        m.setup_persons_and_friendship()
+        pass
+
+
 
 if __name__ == '__main__':
     #the_seed = random.randint(0,1000000)

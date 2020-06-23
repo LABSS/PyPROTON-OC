@@ -3,9 +3,10 @@
   <component name="ChangeListManager">
     <list default="true" id="5664aeac-eede-47df-bbe8-88c6045ded4b" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.travis.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.travis.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mesa/Person.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/Person.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mesa/extra.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/extra.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mesa/mesaPROTON_OC.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/mesaPROTON_OC.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mesa/testProton.py" beforeDir="false" afterPath="$PROJECT_DIR$/mesa/testProton.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,7 +31,7 @@
   <component name="PyConsoleOptionsProvider">
     <option name="myUseExistingConsole" value="true" />
   </component>
-  <component name="RunManager" selected="Python.mesaPROTON_OC">
+  <component name="RunManager" selected="Python tests.Unittests in testProton.py">
     <configuration name="mesaPROTON_OC" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="PROTON-OC" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -72,8 +73,8 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.mesaPROTON_OC" />
         <item itemvalue="Python tests.Unittests in testProton.py" />
+        <item itemvalue="Python.mesaPROTON_OC" />
       </list>
     </recent_temporary>
   </component>
@@ -99,7 +100,8 @@
       <workItem from="1592638445958" duration="1699000" />
       <workItem from="1592814230575" duration="4122000" />
       <workItem from="1592845105390" duration="3960000" />
-      <workItem from="1592849796195" duration="1344000" />
+      <workItem from="1592849796195" duration="1934000" />
+      <workItem from="1592892273745" duration="7991000" />
     </task>
     <servers />
   </component>
@@ -111,22 +113,22 @@
       <screen x="0" y="0" width="1536" height="834" />
     </state>
     <state x="223" y="72" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1536.834@0.0.1536.834" timestamp="1592850389264" />
-    <state width="1493" height="409" key="GridCell.Tab.0.bottom" timestamp="1592850492799">
+    <state width="1493" height="369" key="GridCell.Tab.0.bottom" timestamp="1592900616976">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="409" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
-    <state width="1493" height="409" key="GridCell.Tab.0.center" timestamp="1592850492799">
+    <state width="1493" height="369" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1592900616976" />
+    <state width="1493" height="369" key="GridCell.Tab.0.center" timestamp="1592900616976">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="409" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
-    <state width="1493" height="409" key="GridCell.Tab.0.left" timestamp="1592850492799">
+    <state width="1493" height="369" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1592900616976" />
+    <state width="1493" height="369" key="GridCell.Tab.0.left" timestamp="1592900616975">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="409" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
-    <state width="1493" height="409" key="GridCell.Tab.0.right" timestamp="1592850492799">
+    <state width="1493" height="369" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1592900616975" />
+    <state width="1493" height="369" key="GridCell.Tab.0.right" timestamp="1592900616976">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="409" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1592850492799" />
+    <state width="1493" height="369" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1592900616976" />
     <state width="1493" height="265" key="GridCell.Tab.1.bottom" timestamp="1592488017385">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
@@ -151,9 +153,13 @@
       <screen x="0" y="0" width="1536" height="834" />
     </state>
     <state x="322" y="146" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2/0.0.1536.834@0.0.1536.834" timestamp="1592488011546" />
+    <state x="431" y="155" width="672" height="678" key="search.everywhere.popup" timestamp="1592892423077">
+      <screen x="0" y="0" width="1536" height="834" />
+    </state>
+    <state x="431" y="155" width="672" height="678" key="search.everywhere.popup/0.0.1536.834@0.0.1536.834" timestamp="1592892423077" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/PROTON_OC$mesaPROTON_OC.coverage" NAME="mesaPROTON_OC Coverage Results" MODIFIED="1592487990964" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/PROTON_OC$Unittests_in_testProton_py.coverage" NAME="Unittests in testProton.py Coverage Results" MODIFIED="1592850475956" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/mesa" />
+    <SUITE FILE_PATH="coverage/PROTON_OC$Unittests_in_testProton_py.coverage" NAME="Unittests in testProton.py Coverage Results" MODIFIED="1592900486811" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/mesa" />
   </component>
 </project>
