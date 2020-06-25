@@ -38,8 +38,7 @@ class TestPROTON(unittest.TestCase):
         for i in range(0,10): 
             pp.Person(m)
         for i in range(0,10):
-            for l in links[i]:
-                pp.Person.persons[i].neighbors.get('friendship').add(pp.Person.persons[l])
+            for l in links[i]: pp.Person.persons[i].neighbors.get('friendship').add(pp.Person.persons[l])
         # for i in range(0,10): 
         #     print([x.unique_id for x in pp.Person.persons[i].neighbors.get('friendship')])
         ne =  pp.Person.persons[5].neighbors_range('friendship', 3 )

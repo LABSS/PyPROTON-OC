@@ -30,7 +30,8 @@ def find_neighb(netname, togo, found, border):
 def wedding_proximity_with(ego, pool): # returns a list of proximities with ego. Careful not to shuffle it!
     l = np.array([
         (social_proximity(ego,x) + 
-         (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool])
+         (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool
+        ])
     l /= l.sum()
     return l
 
@@ -50,7 +51,7 @@ def social_proximity(ego:Person, alter:Person):
 def at_most(n, a, rng_istance):
     return a if len(a) < n else rng_istance.choice(a,n)
 
-# must keep the random generator here? Or in the main function? In which case.. mmh..
+
 def weighted_n_of(n, agentset, weight_function, rng_istance):
     # todo: check for positives
     p = [float(weight_function(x)) for x in agentset]
@@ -60,8 +61,8 @@ def weighted_n_of(n, agentset, weight_function, rng_istance):
     p = [i/sump for i in p]
     return  rng_istance.choice(agentset, n, replace=False, p=p)
 
-def weighted_one_of(agentset, weight_function):
-    return weighted_n_of(1, agentset, weight_function)
+def weighted_one_of(agentset, weight_function, rng_istance):
+    return weighted_n_of(1, agentset, weight_function, rng_istance)
 
 def pick_from_pair_list(a_list_of_pairs):
     return weighted_one_of(a_list_of_pairs, lambda x: x[-1])[0]

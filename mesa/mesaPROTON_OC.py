@@ -89,7 +89,7 @@ class MesaPROTON_OC(Model):
 
         # Folders definition
         self.mesa_dir = os.getcwd()
-        self.cwd = self.mesa_dir[:-5]
+        self.cwd = os.path.dirname(self.mesa_dir)
         self.input_directory = os.path.join(self.cwd, "inputs")
         self.palermo_inputs = os.path.join(self.input_directory, "palermo")
         self.eindhoven = os.path.join(self.input_directory, "eindhoven")
@@ -250,7 +250,8 @@ class MesaPROTON_OC(Model):
             support_set = limited.extraction(schedule.agents.remove(x))
             if support_set:
                 x.makeFriends(self.rng.choice(support_set, size=1,
-                                             p=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction - y.criminal_tendency for y in support_set]))
+                                             p=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction
+                                                - y.criminal_tendency for y in support_set]))
 
     def welfare_intervene(self):
         if welfare_support == "job_mother":
@@ -448,21 +449,21 @@ def conclude_wedding(ego, partner):
 staticmethod(conclude_wedding)
 
 
-# if __name__ == "__main__":
-#     # testProton.unittest.main()
-#     m = MesaPROTON_OC()
-#     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-#     m.initial_agents = 200
-#     m.setup_persons_and_friendship()
-#     # Visualize network
-#     nx.draw(m.watts_strogatz)
-#     print("num links:")
-#     print(m.total_num_links())
-#     m.setup_siblings()
-#     print("num links:")
-#     print(m.total_num_links())
-#
-#     for net in Person.network_names:
-#         print(net)
-#         print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
-#     # m.make_friends()
+if __name__ == "__main__":
+    # testProton.unittest.main()
+    m = MesaPROTON_OC()
+    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    m.initial_agents = 200
+    m.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(m.watts_strogatz)
+    print("num links:")
+    print(m.total_num_links())
+    m.setup_siblings()
+    print("num links:")
+    print(m.total_num_links())
+
+    for net in Person.network_names:
+        print(net)
+        print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
+    # m.make_friends()
