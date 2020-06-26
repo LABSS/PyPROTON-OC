@@ -64,5 +64,5 @@ def weighted_n_of(n, agentset, weight_function, rng_istance):
 def weighted_one_of(agentset, weight_function, rng_istance):
     return weighted_n_of(1, agentset, weight_function, rng_istance)
 
-def pick_from_pair_list(a_list_of_pairs):
-    return weighted_one_of(a_list_of_pairs, lambda x: x[-1])[0]
+def pick_from_pair_list(a_list_of_pairs, rng_istance):
+    return weighted_one_of(a_list_of_pairs, lambda x: x[-1], rng_istance)[0]
