@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import extra
 from mesa import Agent, Model
-import random
 import math
 import mesaPROTON_OC
 
@@ -65,15 +64,15 @@ class Person(Agent):
         
     def random_init(self):
         self.randomfriends()
-        self.education_level = random.choice(range(0,4))
+        self.education_level = self.m.rng.choice(range(0,4))
         self.max_education_level = self.education_level
-        self.wealth_level = random.choice(range(0,4))
-        self.job_level = random.choice(range(0,4))
+        self.wealth_level = self.m.rng.choice(range(0,4))
+        self.job_level = self.m.rng.choice(range(0,4))
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick = -1 * random.choice(range(0,80*12))
-        self.gender = random.choice([0,1])
+        self.birth_tick = -1 * self.m.rng.choice(range(0,80*12))
+        self.gender = self.m.rng.choice([0,1])
         self.hobby = 0
-        self.criminal_tendency = random.uniform(0, 1)
+        self.criminal_tendency = self.m.rng.uniform(0, 1)
 
 
     def networks_init(self):
@@ -93,8 +92,8 @@ class Person(Agent):
 
     def randomfriends(self):
         for net in Person.network_names:
-            for i in range(0,extra.rng.integers(0,min(len(Person.persons), 100))):
-                self.neighbors.get(net).add(random.choice(Person.persons))
+            for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
+                self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
             self.neighbors.get(net).discard(self)
             
     def NumberOfLinks():
@@ -149,7 +148,7 @@ class Person(Agent):
         return(150-abs(self.age()-30))
     
     def init_person(self, age_gender_dist): # person command
-        row = weighted_one_of(age_gender_dist, lambda x: x[-1])  # select a row from our age_gender distribution
+        row = extra.weighted_one_of(age_gender_dist, lambda x: x[-1])  # select a row from our age_gender distribution
         self.birth_tick =  0 - row[0] * ticks_per_year      # ...and age... = 
         self.init_person_empty
         self.male =  row[1]                            # ...and gender according to values in that row.
@@ -158,7 +157,7 @@ class Person(Agent):
         self.max_education_level = pick_from_pair_list(self.edu.get(self.male))
         # apply model-wide education modifier
         if (m.education_modifier == 1.0):
-            if extra.rng.random() < abs(education_rate - 1):
+            if self.m.rng.random() < abs(education_rate - 1):
                 self.max_education_level = self.max_education_level + (1 if (m.education-modifier > 1) else -1)
                 self.max_education_level = 4 if self.max_education_level > 4 else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
