@@ -11,7 +11,6 @@ import timeit
 from itertools import combinations
 import os
 from numpy.random import default_rng
-from pathlib import Path
 
 class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
