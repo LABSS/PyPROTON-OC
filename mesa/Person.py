@@ -95,14 +95,14 @@ class Person(Agent):
             for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
             self.neighbors.get(net).discard(self)
-            
+
+    @staticmethod
     def NumberOfLinks():
         return sum([ 
             sum([
                 len(x.neighbors.get(net)) for x in Person.persons 
                 ])
             for net in Person.network_names])
-    staticmethod(NumberOfLinks)
     
     def makeFriends(self, asker):
         self.neighbors.get("friendship").add(asker)
@@ -118,6 +118,7 @@ class Person(Agent):
             x.neighbors.get("sibling").add(self)
 
     def addCriminalLink(self, asker):
+        #todo: Links between people do not have the "criminal_link_weight" attribute
         weight = self.criminal_link_weight.get(asker)
         if weight == None:
             self.neighbors.get("criminal").add(asker)

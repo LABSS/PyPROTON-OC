@@ -361,9 +361,16 @@ class MesaPROTON_OC(Model):
         oc_family_head = extra.weighted_n_of(scaled_num_oc_families,
                                              self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
         for x in oc_family_head: x.oc_member = True
-        candidates_in_families = [y for y in x.neighbors.get('household') if y.age() >= 18 for x in oc_family_head]
-        if len(
-                candidates_in_families) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
+        candidates_in_families = list()
+
+        for head in oc_family_head:
+            if head.neighbors.get("household"):
+                for relatives in head.neighbors.get("household"):
+                    if relatives and relatives.age() >= 18:
+                        candidates_in_families.append(relatives)
+
+        # candidates_in_families = [y for y in x.neighbors.get('household') if y.age() >= 18 for x in oc_family_head]
+        if len(candidates_in_families) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families,
                                                       candidates_in_families, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
@@ -376,7 +383,7 @@ class MesaPROTON_OC(Model):
             for x in extras: x.oc_member = True
         # and now, the network with its weights..
         oc_members = [x for x in self.schedule.agents if x.oc_member]
-        for (i, j) in combinations(oc_members, 2): i.create_criminal_links_with(j)
+        for (i, j) in combinations(oc_members, 2): i.addCriminalLink(j)
 
     def reset_oc_embeddedness(self):
         for x in self.schedule.agents: x.cached_oc_embeddedness = None
@@ -413,7 +420,7 @@ class MesaPROTON_OC(Model):
             candidates = self.rng.choice(candidates, min(len(candidates), 5), False).tolist()
             print("len cand:" + str(len(candidates)))
             # remove couples from candidates and their neighborhoods
-            while len(candidates) > 0 and not m.incestuos(p, candidates):
+            while len(candidates) > 0 and not self.incestuos(p, candidates):
                 # trouble should exist, or incestous would be false.
                 trouble = self.rng.choice(
                     [x for x in candidates if x.partner], 1).tolist()
@@ -424,6 +431,11 @@ class MesaPROTON_OC(Model):
             targets = targets + set([x.neighbors.get("siblings") for x in targets])
             for x in targets:
                 x.addSiblingLinks(p)
+    #todo: finish writing this routine
+
+    def generate_households(self):
+        self.head_age_dist = self.read_csv_city("head_age_dist_by_household_size")
+        
 
 
 # 778 / 1700
@@ -438,9 +450,9 @@ class MesaPROTON_OC(Model):
 
 # warning: for now we don't load up the partner in the partner network
 def conclude_wedding(ego, partner):
-    for x in [ego, partner]:
-        for y in x.neighbors["household"]:
-            y.neighbors["household"].discard(x)  # shoudl be remove(x) once we finish tests
+    # for x in [ego, partner]:
+        # for y in x.neighbors["household"]:
+        #     y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
     ego.neighbors["household"] = {partner}
     partner.neighbors["household"] = {ego}
     ego.partner = partner
@@ -448,21 +460,21 @@ def conclude_wedding(ego, partner):
 staticmethod(conclude_wedding)
 
 
-if __name__ == "__main__":
-    # testProton.unittest.main()
-    m = MesaPROTON_OC()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
-
-    for net in Person.network_names:
-        print(net)
-        print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
-    # m.make_friends()
+# if __name__ == "__main__":
+#     # testProton.unittest.main()
+#     m = MesaPROTON_OC()
+#     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+#     m.initial_agents = 200
+#     m.setup_persons_and_friendship()
+#     # Visualize network
+#     nx.draw(m.watts_strogatz)
+#     print("num links:")
+#     print(m.total_num_links())
+#     m.setup_siblings()
+#     print("num links:")
+#     print(m.total_num_links())
+#
+#     for net in Person.network_names:
+#         print(net)
+#         print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
+#     # m.make_friends()
