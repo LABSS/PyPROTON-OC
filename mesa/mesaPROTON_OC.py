@@ -435,7 +435,52 @@ class MesaPROTON_OC(Model):
 
     def generate_households(self):
         self.head_age_dist = self.read_csv_city("head_age_dist_by_household_size")
-        
+        self.proportion_of_male_singles_by_age = self.read_csv_city("proportion_of_male_singles_by_age")
+        self.hh_type_dist = self.read_csv_city("household_type_dist_by_age")
+        self.partner_age_dist = self.read_csv_city("partner_age_dist")
+        self.children_age_dist = self.read_csv_city("children_age_dist")
+        self.p_single_father = self.read_csv_city("proportion_single_fathers")
+        self.population = 0 #todo: menage this list (population and geneder)
+        self.hh_size = self.household_sizes(self.initial_agents) #here calculate the size
+        self.complex_hh_sizes = list()
+        self.max_attempts_by_size = 50
+
+        for hh in self.hh_size:
+            success = False
+            nb_attempts = 0
+            while not success and nb_attempts < self.max_attempts_by_size:
+                nb_attempts += 1
+                head_age = 0
+                # todo: how to correctly load csv table
+
+    def household_sizes(self,size):
+        """
+        loads a .csv with a probability distribution of household size and calculates household based on initial agents
+        :param size: int, the population size, initial agents
+        :return: list, the sizes of household
+        """
+        self.hh_size_dist = self.read_csv_city("household_size_dist").values.tolist()
+        sizes = []
+        current_sum = 0
+        while current_sum < size:
+            hh_size = extra.pick_from_pair_list(self.hh_size_dist, self.rng)[0]
+            if current_sum + hh_size <= size:
+                sizes.append(hh_size)
+                current_sum += hh_size
+        sizes.sort(reverse=True)
+        return sizes
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # 778 / 1700
