@@ -454,9 +454,32 @@ class MesaPROTON_OC(Model):
                 if size == 1:
                     male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[self.proportion_of_male_singles_by_age["age"] == self.head_age]["p_male"].values)[0]
                     self.head = self.pick_from_population_pool_by_age_and_gender(self.head_age, male_wanted)
+                    success = self.head != None
                 else:
                     self.hh_type = extra.pick_from_pair_list(self.hh_type_dist[self.hh_type_dist["age"] == self.head_age][["type","p"]].values.tolist(), self.rng)[0]
-                    self.male_head = 0
+                    if self.hh_type == "single parent":
+                        self.male_head = self.rng.random() < self.p_single_father.columns.to_list()[0]
+                    else:
+                        self.male_head = True
+                    if self.male_head:
+                        self.mother_age = extra.pick_from_pair_list(self.partner_age_dist[self.partner_age_dist["age_of_head"] == self.head_age][["age_of_partner", "p"]].values.tolist(),self.rng)[0]
+                    else:
+                        self.mother_age = self.head_age
+                    self.hh_members = list()
+                    self.hh_members.append(self.pick_from_population_pool_by_age_and_gender(self.head_age, self.male_head))
+                    print(self.hh_members)
+                    if self.hh_type == "couple":
+                        self.mother = self.pick_from_population_pool_by_age_and_gender(self.mother_age, False)
+                        self.hh_members.append(self.mother)
+                self.num_children = size - len(self.hh_members)
+                for child in range(1, self.num_children + 1):
+                    if child
+
+
+
+
+
+
 
 
     def household_sizes(self,size):
@@ -483,11 +506,10 @@ class MesaPROTON_OC(Model):
         if male_wanted == False:
             male_wanted = 0
         if age_wanted not in [x.age() for x in self.population]: #Maybe insert a np.floor here
-            return "nobody"
+            return None
         if male_wanted not in [x.gender for x in self.population]:
-            return "nobody"
+            return None
         self.picked_person = self.rng.choice([x for x in self.population if x.gender == male_wanted])
-        print(self.picked_person)
         self.population.remove(self.picked_person)
         return self.picked_person
 
@@ -525,9 +547,11 @@ def conclude_wedding(ego, partner):
 staticmethod(conclude_wedding)
 
 
-# if __name__ == "__main__":
-#     # testProton.unittest.main()
-#     m = MesaPROTON_OC()
+if __name__ == "__main__":
+
+    m = MesaPROTON_OC()
+    m.create_agents()
+    m.generate_households()
 #     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
 #     m.initial_agents = 200
 #     m.setup_persons_and_friendship()
