@@ -445,17 +445,19 @@ class MesaPROTON_OC(Model):
         self.complex_hh_sizes = list()
         self.max_attempts_by_size = 50
 
-        for h_size in self.hh_size:
+        for size in self.hh_size:
             success = False
             nb_attempts = 0
             while not success and nb_attempts < self.max_attempts_by_size:
                 nb_attempts += 1
-                self.head_age = extra.pick_from_pair_list(self.head_age_dist[self.head_age_dist["size"] == h_size][["age","p"]].values.tolist(), self.rng)[0]
-                if self.head_age == 1:
+                self.head_age = extra.pick_from_pair_list(self.head_age_dist[self.head_age_dist["size"] == size][["age","p"]].values.tolist(), self.rng)[0]
+                if size == 1:
                     male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[self.proportion_of_male_singles_by_age["age"] == self.head_age]["p_male"].values)[0]
                     self.head = self.pick_from_population_pool_by_age_and_gender(self.head_age, male_wanted)
                 else:
                     self.hh_type = extra.pick_from_pair_list(self.hh_type_dist[self.hh_type_dist["age"] == self.head_age][["type","p"]].values.tolist(), self.rng)[0]
+                    self.male_head = 0
+
 
     def household_sizes(self,size):
         """
@@ -474,6 +476,7 @@ class MesaPROTON_OC(Model):
         sizes.sort(reverse=True)
         return sizes
 
+
     def pick_from_population_pool_by_age_and_gender(self, age_wanted, male_wanted):
         if male_wanted == True:
             male_wanted = 1
@@ -483,9 +486,10 @@ class MesaPROTON_OC(Model):
             return "nobody"
         if male_wanted not in [x.gender for x in self.population]:
             return "nobody"
-        picked_person = self.rng.choice([x.gender == male_wanted for x in self.population])
-        self.population.remove(picked_person)
-        return picked_person
+        self.picked_person = self.rng.choice([x for x in self.population if x.gender == male_wanted])
+        print(self.picked_person)
+        self.population.remove(self.picked_person)
+        return self.picked_person
 
 
 
