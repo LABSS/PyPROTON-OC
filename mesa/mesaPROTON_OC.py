@@ -440,18 +440,22 @@ class MesaPROTON_OC(Model):
         self.partner_age_dist = self.read_csv_city("partner_age_dist")
         self.children_age_dist = self.read_csv_city("children_age_dist")
         self.p_single_father = self.read_csv_city("proportion_single_fathers")
-        self.population = 0 #todo: menage this list (population and geneder)
+        self.population = self.schedule.agents
         self.hh_size = self.household_sizes(self.initial_agents) #here calculate the size
         self.complex_hh_sizes = list()
         self.max_attempts_by_size = 50
 
-        for hh in self.hh_size:
+        for h_size in self.hh_size:
             success = False
             nb_attempts = 0
             while not success and nb_attempts < self.max_attempts_by_size:
                 nb_attempts += 1
-                head_age = 0
-                # todo: how to correctly load csv table
+                self.head_age = extra.pick_from_pair_list(self.head_age_dist[self.head_age_dist["size"] == h_size][["age","p"]].values.tolist(), self.rng)[0]
+                if self.head_age == 1:
+                    male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[self.proportion_of_male_singles_by_age["age"] == self.head_age]["p_male"].values)[0]
+                    self.head = self.pick_from_population_pool_by_age_and_gender(self.head_age, male_wanted)
+                else:
+                    self.hh_type = extra.pick_from_pair_list(self.hh_type_dist[self.hh_type_dist["age"] == self.head_age][["type","p"]].values.tolist(), self.rng)[0]
 
     def household_sizes(self,size):
         """
@@ -470,6 +474,18 @@ class MesaPROTON_OC(Model):
         sizes.sort(reverse=True)
         return sizes
 
+    def pick_from_population_pool_by_age_and_gender(self, age_wanted, male_wanted):
+        if male_wanted == True:
+            male_wanted = 1
+        if male_wanted == False:
+            male_wanted = 0
+        if age_wanted not in [x.age() for x in self.population]: #Maybe insert a np.floor here
+            return "nobody"
+        if male_wanted not in [x.gender for x in self.population]:
+            return "nobody"
+        picked_person = self.rng.choice([x.gender == male_wanted for x in self.population])
+        self.population.remove(picked_person)
+        return picked_person
 
 
 
