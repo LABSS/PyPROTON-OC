@@ -467,14 +467,19 @@ class MesaPROTON_OC(Model):
                         self.mother_age = self.head_age
                     self.hh_members = list()
                     self.hh_members.append(self.pick_from_population_pool_by_age_and_gender(self.head_age, self.male_head))
-                    print(self.hh_members)
                     if self.hh_type == "couple":
                         self.mother = self.pick_from_population_pool_by_age_and_gender(self.mother_age, False)
                         self.hh_members.append(self.mother)
                 self.num_children = size - len(self.hh_members)
-                for child in range(1, self.num_children + 1):
-                    if child
-
+                for child in range(1, int(self.num_children) + 1):
+                    self.sub_num_child = self.children_age_dist[self.children_age_dist["child_number"] == self.num_children]
+                    if self.num_children in self.sub_num_child["child_number"] and self.mother_age in self.sub_num_child["age_of_mother"]:
+                        self.child_age = extra.pick_from_pair_list(self.sub_num_child[self.sub_num_child["age_of_mother"] == self.mother_age][["age_of_child","p"]].values.tolist(),self.rng)[0]
+                        self.child = self.pick_from_population_pool_by_age(self.child_age)
+                        self.hh_members.append(self.child)
+                    else:
+                        self.hh_members.append(None)
+                print(self.hh_members)
 
 
 
@@ -513,6 +518,11 @@ class MesaPROTON_OC(Model):
         self.population.remove(self.picked_person)
         return self.picked_person
 
+    def pick_from_population_pool_by_age(self, age_wanted):
+        self.picked_person = self.rng.choice([x for x in self.population if x.age() == age_wanted])
+        self.population.remove(self.picked_person)
+        return self.picked_person
+        pass
 
 
 
