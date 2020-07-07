@@ -445,7 +445,14 @@ class MesaPROTON_OC(Model):
         self.complex_hh_sizes = list()
         self.max_attempts_by_size = 50
 
+        max = len(self.hh_size) #Remove
+        counter = 0 #Remove
+
         for size in self.hh_size:
+            self.hh_members = list()
+            counter += 1 #Remove
+            print(counter) #Remove
+            print(max) #Remove
             success = False
             nb_attempts = 0
             while not success and nb_attempts < self.max_attempts_by_size:
@@ -465,24 +472,36 @@ class MesaPROTON_OC(Model):
                         self.mother_age = extra.pick_from_pair_list(self.partner_age_dist[self.partner_age_dist["age_of_head"] == self.head_age][["age_of_partner", "p"]].values.tolist(),self.rng)[0]
                     else:
                         self.mother_age = self.head_age
-                    self.hh_members = list()
                     self.hh_members.append(self.pick_from_population_pool_by_age_and_gender(self.head_age, self.male_head))
                     if self.hh_type == "couple":
                         self.mother = self.pick_from_population_pool_by_age_and_gender(self.mother_age, False)
                         self.hh_members.append(self.mother)
-                self.num_children = size - len(self.hh_members)
-                for child in range(1, int(self.num_children) + 1):
-                    self.sub_num_child = self.children_age_dist[self.children_age_dist["child_number"] == self.num_children]
-                    if self.num_children in self.sub_num_child["child_number"] and self.mother_age in self.sub_num_child["age_of_mother"]:
-                        self.child_age = extra.pick_from_pair_list(self.sub_num_child[self.sub_num_child["age_of_mother"] == self.mother_age][["age_of_child","p"]].values.tolist(),self.rng)[0]
-                        self.child = self.pick_from_population_pool_by_age(self.child_age)
-                        self.hh_members.append(self.child)
-                    else:
-                        self.hh_members.append(None)
-                print(self.hh_members)
+                    self.num_children = size - len(self.hh_members)
+                    for child in range(1, int(self.num_children) + 1):
+                        self.sub_num_child = self.children_age_dist[self.children_age_dist["child_number"] == self.num_children]
+                        if self.num_children in self.sub_num_child["child_number"] and self.mother_age in self.sub_num_child["age_of_mother"]:
+                            self.child_age = extra.pick_from_pair_list(self.sub_num_child[self.sub_num_child["age_of_mother"] == self.mother_age][["age_of_child","p"]].values.tolist(),self.rng)[0]
+                            self.child = self.pick_from_population_pool_by_age(self.child_age) #Here could happen that no childs are available
+                            self.hh_members.append(self.child)
+                        else:
+                            self.hh_members.append(None)
+                    self.hh_members = [x for x in self.hh_members if x != None]
+                    if len(self.hh_members) == size:
+                        success = True
+                        
 
 
 
+
+
+            if len(self.hh_members) == size: #Remove
+                print("Correct") #Remove
+            else: #Remove
+                print("Missing " + str(size-len(self.hh_members))) #Remove
+            print(self.hh_members) #Remove
+            print(self.hh_type) #Remove
+            print([x.age() for x in self.hh_members]) #Remove
+            print() #Remove
 
 
 
@@ -504,22 +523,32 @@ class MesaPROTON_OC(Model):
         sizes.sort(reverse=True)
         return sizes
 
-
     def pick_from_population_pool_by_age_and_gender(self, age_wanted, male_wanted):
+        """
+        Pick an agent with specific age and sex, None otherwise
+        :param age_wanted: int, age wanted
+        :param male_wanted: bool,
+        :return: agent, or None
+        """
         if male_wanted == True:
             male_wanted = 1
         if male_wanted == False:
             male_wanted = 0
-        if age_wanted not in [x.age() for x in self.population]: #Maybe insert a np.floor here
+        if not [x for x in self.population if x.gender == male_wanted and np.floor(x.age()) == age_wanted]:
             return None
-        if male_wanted not in [x.gender for x in self.population]:
-            return None
-        self.picked_person = self.rng.choice([x for x in self.population if x.gender == male_wanted])
+        self.picked_person = self.rng.choice([x for x in self.population if x.gender == male_wanted and np.floor(x.age()) == age_wanted])
         self.population.remove(self.picked_person)
         return self.picked_person
 
     def pick_from_population_pool_by_age(self, age_wanted):
-        self.picked_person = self.rng.choice([x for x in self.population if x.age() == age_wanted])
+        """
+        Pick an agent with specific age form population, None otherwise
+        :param age_wanted: int, age wanted
+        :return: agent or None
+        """
+        if age_wanted not in [np.floor(x.age()) for x in self.population]:
+            return None
+        self.picked_person = self.rng.choice([x for x in self.population if np.floor(x.age()) == age_wanted])
         self.population.remove(self.picked_person)
         return self.picked_person
         pass
@@ -547,6 +576,7 @@ class MesaPROTON_OC(Model):
 
 # warning: for now we don't load up the partner in the partner network
 def conclude_wedding(ego, partner):
+    #For now we leave this commented
     # for x in [ego, partner]:
         # for y in x.neighbors["household"]:
         #     y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
@@ -560,6 +590,7 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
+    m.initial_agents = 100
     m.create_agents()
     m.generate_households()
 #     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
