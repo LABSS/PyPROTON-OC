@@ -445,29 +445,26 @@ class MesaPROTON_OC(Model):
         self.complex_hh_sizes = list()
         self.max_attempts_by_size = 50
 
-        max = len(self.hh_size) #Remove
-        counter = 0 #Remove
 
         for size in self.hh_size:
-            self.hh_members = list()
-            counter += 1 #Remove
-            print(counter) #Remove
-            print(max) #Remove
             success = False
             nb_attempts = 0
             while not success and nb_attempts < self.max_attempts_by_size:
+                self.hh_members = list()
                 nb_attempts += 1
                 self.head_age = extra.pick_from_pair_list(self.head_age_dist[self.head_age_dist["size"] == size][["age","p"]].values.tolist(), self.rng)[0]
                 if size == 1:
                     male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[self.proportion_of_male_singles_by_age["age"] == self.head_age]["p_male"].values)[0]
                     self.head = self.pick_from_population_pool_by_age_and_gender(self.head_age, male_wanted)
-                    success = self.head != None
+                    if self.head:
+                        success = True
                 else:
                     self.hh_type = extra.pick_from_pair_list(self.hh_type_dist[self.hh_type_dist["age"] == self.head_age][["type","p"]].values.tolist(), self.rng)[0]
-                    if self.hh_type == "single parent":
-                        self.male_head = self.rng.random() < self.p_single_father.columns.to_list()[0]
+                    if self.hh_type == "single_parent":
+                        self.male_head = self.rng.random() < float(self.p_single_father.columns.to_list()[0])
                     else:
                         self.male_head = True
+
                     if self.male_head:
                         self.mother_age = extra.pick_from_pair_list(self.partner_age_dist[self.partner_age_dist["age_of_head"] == self.head_age][["age_of_partner", "p"]].values.tolist(),self.rng)[0]
                     else:
@@ -481,27 +478,29 @@ class MesaPROTON_OC(Model):
                         self.sub_num_child = self.children_age_dist[self.children_age_dist["child_number"] == self.num_children]
                         if self.num_children in self.sub_num_child["child_number"] and self.mother_age in self.sub_num_child["age_of_mother"]:
                             self.child_age = extra.pick_from_pair_list(self.sub_num_child[self.sub_num_child["age_of_mother"] == self.mother_age][["age_of_child","p"]].values.tolist(),self.rng)[0]
-                            self.child = self.pick_from_population_pool_by_age(self.child_age) #Here could happen that no childs are available
+                            self.child = self.pick_from_population_pool_by_age(self.child_age)
                             self.hh_members.append(self.child)
                         else:
                             self.hh_members.append(None)
                     self.hh_members = [x for x in self.hh_members if x != None]
                     if len(self.hh_members) == size:
                         success = True
-                        
+                        family_wealth_level = self.hh_members[0].wealth_level
+                        if self.hh_type == "couple":
+                            pass
+                    else:
+                        pass
 
 
-
-
-
-            if len(self.hh_members) == size: #Remove
-                print("Correct") #Remove
-            else: #Remove
-                print("Missing " + str(size-len(self.hh_members))) #Remove
-            print(self.hh_members) #Remove
-            print(self.hh_type) #Remove
-            print([x.age() for x in self.hh_members]) #Remove
-            print() #Remove
+            # if len(self.hh_members) == size: #Remove
+            #     print("Correct") #Remove
+            # else: #Remove
+            #     print("Missing " + str(size-len(self.hh_members))) #Remove
+            # print(self.hh_members) #Remove
+            # print(self.hh_type) #Remove
+            # print([x.age() for x in self.hh_members]) #Remove
+            # print("head age: " + str(self.head_age))
+            # print() #Remove
 
 
 
@@ -590,7 +589,7 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 100
+    m.initial_agents = 1000
     m.create_agents()
     m.generate_households()
 #     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
@@ -608,3 +607,4 @@ if __name__ == "__main__":
 #         print(net)
 #         print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
 #     # m.make_friends()
+

@@ -43,6 +43,13 @@ def test_inflate_deflate_network():
     tot_links = m.total_num_links()
     assert tot_links
 
+def test_generate_households():
+    #For now we only check for errors
+    m = MesaPROTON_OC(seed=42)
+    m.initial_agents = 1000
+    m.create_agents()
+    m.generate_households()
+
 def test_oc_creation():
     m = MesaPROTON_OC()
     m.initial_agents = 500

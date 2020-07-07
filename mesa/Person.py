@@ -13,7 +13,7 @@ class Person(Agent):
         'sibling',
         'offspring',
         'parent'
-        #'partner',
+        'partner',
         'household',
         'friendship',
         'criminal',
@@ -32,7 +32,7 @@ class Person(Agent):
         self.job_level = 0
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = 0
-        self.gender = 0
+        self.gender = 0 #1 male 0 female
         self.father = None
         self.mother = None
         self.propensity = 0
