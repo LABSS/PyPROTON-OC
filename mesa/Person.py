@@ -12,7 +12,7 @@ class Person(Agent):
     network_names = [    
         'sibling',
         'offspring',
-        'parent'
+        'parent',
         'partner',
         'household',
         'friendship',
@@ -57,6 +57,10 @@ class Person(Agent):
         #print(m)
         self.m=m
         #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.m)]))
+
+    def __repr__(self):
+        return "Agent " + str(self.unique_id)
+
     
     def age(self):
         return math.floor(self.m.ticks - self.birth_tick) / 12
@@ -91,10 +95,14 @@ class Person(Agent):
             pass
 
     def randomfriends(self):
-        for net in Person.network_names:
-            for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
-                self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
-            self.neighbors.get(net).discard(self)
+        """
+        Caution: Use only in test phase. This function generates blood relations and not, randomly
+        """
+        # for net in Person.network_names:
+        #     for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
+        #         self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
+        #     self.neighbors.get(net).discard(self)
+        pass
 
     @staticmethod
     def NumberOfLinks():
@@ -105,17 +113,47 @@ class Person(Agent):
             for net in Person.network_names])
     
     def makeFriends(self, asker):
+        """
+        Create a two-way friend links in-place
+        :param asker: agent
+        :return: None
+        """
         self.neighbors.get("friendship").add(asker)
         asker.neighbors.get("friendship").add(self)
 
     def makeProfessionalLinks(self, asker):
+        """
+        Create a two-way professional links in-palce
+        :param asker: agent
+        :return: None
+        """
         self.neighbors.get("professional").add(asker)
         asker.neighbors.get("professional").add(self)
         
     def addSiblingLinks(self, targets):
         for x in targets:
-            self.neighbors.get("sibling").add(x)
-            x.neighbors.get("sibling").add(self)
+            if x != self:
+                self.neighbors.get("sibling").add(x)
+                x.neighbors.get("sibling").add(self)
+
+    def makeHouseholdLinks(self, targets):
+        for x in targets:
+            if x != self:
+                self.neighbors.get("household").add(x)
+                x.neighbors.get("household").add(self)
+
+    def makePartnerLinks(self,asker):
+        self.neighbors.get("partner").add(asker)
+        asker.neighbors.get("partner").add(self)
+
+    def makeParent_OffspringsLinks(self, asker):
+        if type(asker) == list:
+            for person in asker:
+                self.neighbors.get("offspring").add(person)
+                person.neighbors.get("parent").add(self)
+        else:
+            self.neighbors.get("offspring").add(asker)
+            asker.neighbors.get("parent").add(self)
 
     def addCriminalLink(self, asker):
         #todo: Links between people do not have the "criminal_link_weight" attribute

@@ -111,11 +111,12 @@ class MesaPROTON_OC(Model):
         # self.running = True
         # self.datacollector.collect(self)
 
-    def create_agents(self):
+    def create_agents(self, random_relationships=False):
         for i_agent in range(0, self.initial_agents):
             i_agent = Person(self)
             self.schedule.add(i_agent)
-            i_agent.random_init()
+            if random_relationships == True:
+                i_agent.random_init()
 
     def step(self):
         self.schedule.step()
@@ -434,6 +435,7 @@ class MesaPROTON_OC(Model):
     #todo: finish writing this routine
 
     def generate_households(self):
+        self.families = list()
         self.head_age_dist = self.read_csv_city("head_age_dist_by_household_size")
         self.proportion_of_male_singles_by_age = self.read_csv_city("proportion_of_male_singles_by_age")
         self.hh_type_dist = self.read_csv_city("household_type_dist_by_age")
@@ -484,23 +486,40 @@ class MesaPROTON_OC(Model):
                             self.hh_members.append(None)
                     self.hh_members = [x for x in self.hh_members if x != None]
                     if len(self.hh_members) == size:
+                        self.families.append(self.hh_members)
                         success = True
                         family_wealth_level = self.hh_members[0].wealth_level
                         if self.hh_type == "couple":
-                            pass
+                            self.hh_members[0].makePartnerLinks(self.hh_members[1])
+                            couple = self.hh_members[0:2]
+                            offsprings = self.hh_members[2:]
+                            for partner in couple:
+                                partner.makeParent_OffspringsLinks(offsprings)
+                            for sibling in offsprings:
+                                sibling.addSiblingLinks(offsprings)
+                        for member in self.hh_members:
+                            member.makeHouseholdLinks(self.hh_members)
+                            member.wealth_level = family_wealth_level
                     else:
-                        pass
+                        for member in self.hh_members:
+                            self.population.append(member)
+            if not success:
+                self.complex_hh_sizes.append(size)
+                # todo: all the household are a complex why?!
+        print("Complex size: " + str(len(self.complex_hh_sizes)) + str("/") + str(len(self.hh_size)))
+        for hh_size in self.complex_hh_sizes:
+            hh_size = int(min(hh_size, len(self.population)))
+            hh_members = self.population[0:hh_size]
+            max_age_index = [x.age() for x in hh_members].index(max([x.age() for x in hh_members]))
+            family_wealth_level = hh_members[max_age_index].wealth_level
+            for member in hh_members:
+                self.population.remove(member)
+                member.makeHouseholdLinks(hh_members)
+                member.wealth_level = family_wealth_level
 
 
-            # if len(self.hh_members) == size: #Remove
-            #     print("Correct") #Remove
-            # else: #Remove
-            #     print("Missing " + str(size-len(self.hh_members))) #Remove
-            # print(self.hh_members) #Remove
-            # print(self.hh_type) #Remove
-            # print([x.age() for x in self.hh_members]) #Remove
-            # print("head age: " + str(self.head_age))
-            # print() #Remove
+
+
 
 
 
@@ -589,7 +608,7 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 1000
+    m.initial_agents = 2000
     m.create_agents()
     m.generate_households()
 #     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
