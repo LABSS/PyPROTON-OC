@@ -66,8 +66,7 @@ class Person(Agent):
         return math.floor(self.m.ticks - self.birth_tick) / 12
 
         
-    def random_init(self):
-        self.randomfriends()
+    def random_init(self, random_relationships = False):
         self.education_level = self.m.rng.choice(range(0,4))
         self.max_education_level = self.education_level
         self.wealth_level = self.m.rng.choice(range(0,4))
@@ -77,6 +76,8 @@ class Person(Agent):
         self.gender = self.m.rng.choice([0,1])
         self.hobby = 0
         self.criminal_tendency = self.m.rng.uniform(0, 1)
+        if random_relationships == True:
+            self.randomfriends()
 
 
     def networks_init(self):
@@ -98,10 +99,10 @@ class Person(Agent):
         """
         Caution: Use only in test phase. This function generates blood relations and not, randomly
         """
-        # for net in Person.network_names:
-        #     for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
-        #         self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
-        #     self.neighbors.get(net).discard(self)
+        for net in Person.network_names:
+            for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
+                self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
+            self.neighbors.get(net).discard(self)
         pass
 
     @staticmethod

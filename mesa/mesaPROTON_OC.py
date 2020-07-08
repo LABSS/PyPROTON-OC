@@ -115,8 +115,7 @@ class MesaPROTON_OC(Model):
         for i_agent in range(0, self.initial_agents):
             i_agent = Person(self)
             self.schedule.add(i_agent)
-            if random_relationships == True:
-                i_agent.random_init()
+            i_agent.random_init(random_relationships)
 
     def step(self):
         self.schedule.step()
@@ -505,7 +504,6 @@ class MesaPROTON_OC(Model):
                             self.population.append(member)
             if not success:
                 self.complex_hh_sizes.append(size)
-                # todo: all the household are a complex why?!
         print("Complex size: " + str(len(self.complex_hh_sizes)) + str("/") + str(len(self.hh_size)))
         for hh_size in self.complex_hh_sizes:
             hh_size = int(min(hh_size, len(self.population)))
@@ -608,9 +606,9 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 2000
-    m.create_agents()
-    m.generate_households()
+    m.initial_agents = 100
+    # m.create_agents()
+    # m.generate_households()
 #     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
 #     m.initial_agents = 200
 #     m.setup_persons_and_friendship()
