@@ -434,79 +434,87 @@ class MesaPROTON_OC(Model):
 
     def generate_households(self):
         self.families = list()
-        self.head_age_dist = self.read_csv_city("head_age_dist_by_household_size")
-        self.proportion_of_male_singles_by_age = self.read_csv_city("proportion_of_male_singles_by_age")
-        self.hh_type_dist = self.read_csv_city("household_type_dist_by_age")
-        self.partner_age_dist = self.read_csv_city("partner_age_dist")
-        self.children_age_dist = self.read_csv_city("children_age_dist")
-        self.p_single_father = self.read_csv_city("proportion_single_fathers")
+        head_age_dist = self.read_csv_city("head_age_dist_by_household_size")
+        proportion_of_male_singles_by_age = self.read_csv_city("proportion_of_male_singles_by_age")
+        hh_type_dist = self.read_csv_city("household_type_dist_by_age")
+        partner_age_dist = self.read_csv_city("partner_age_dist")
+        children_age_dist = self.read_csv_city("children_age_dist")
+        p_single_father = self.read_csv_city("proportion_single_fathers")
         self.population = self.schedule.agents
-        self.hh_size = self.household_sizes(self.initial_agents) #here calculate the size
+        self.hh_size = self.household_sizes(self.initial_agents)
         self.complex_hh_sizes = list()
-        self.max_attempts_by_size = 50
-
+        max_attempts_by_size = 50
 
         for size in self.hh_size:
             success = False
             nb_attempts = 0
-            while not success and nb_attempts < self.max_attempts_by_size:
-                self.hh_members = list()
+            while not success and nb_attempts < max_attempts_by_size:
+                hh_members = list()
                 nb_attempts += 1
-                self.head_age = extra.pick_from_pair_list(self.head_age_dist[self.head_age_dist["size"] == size][["age","p"]].values.tolist(), self.rng)[0]
+                head_age = \
+                extra.pick_from_pair_list(head_age_dist[head_age_dist["size"] == size][["age", "p"]].values.tolist(),
+                                          self.rng)[0]
                 if size == 1:
-                    male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[self.proportion_of_male_singles_by_age["age"] == self.head_age]["p_male"].values)[0]
-                    self.head = self.pick_from_population_pool_by_age_and_gender(self.head_age, male_wanted)
-                    if self.head:
+                    male_wanted = (self.rng.random() < proportion_of_male_singles_by_age[
+                        proportion_of_male_singles_by_age["age"] == head_age]["p_male"].values)[0]
+                    head = self.pick_from_population_pool_by_age_and_gender(head_age, male_wanted)
+                    if head:
                         success = True
                 else:
-                    self.hh_type = extra.pick_from_pair_list(self.hh_type_dist[self.hh_type_dist["age"] == self.head_age][["type","p"]].values.tolist(), self.rng)[0]
-                    if self.hh_type == "single_parent":
-                        self.male_head = self.rng.random() < float(self.p_single_father.columns.to_list()[0])
+                    hh_type = extra.pick_from_pair_list(
+                        hh_type_dist[hh_type_dist["age"] == head_age][["type", "p"]].values.tolist(), self.rng)[0]
+                    if hh_type == "single_parent":
+                        male_head = self.rng.random() < float(p_single_father.columns.to_list()[0])
                     else:
-                        self.male_head = True
+                        male_head = True
 
-                    if self.male_head:
-                        self.mother_age = extra.pick_from_pair_list(self.partner_age_dist[self.partner_age_dist["age_of_head"] == self.head_age][["age_of_partner", "p"]].values.tolist(),self.rng)[0]
+                    if male_head:
+                        mother_age = extra.pick_from_pair_list(
+                            partner_age_dist[partner_age_dist["age_of_head"] == head_age][
+                                ["age_of_partner", "p"]].values.tolist(), self.rng)[0]
                     else:
-                        self.mother_age = self.head_age
-                    self.hh_members.append(self.pick_from_population_pool_by_age_and_gender(self.head_age, self.male_head))
-                    if self.hh_type == "couple":
-                        self.mother = self.pick_from_population_pool_by_age_and_gender(self.mother_age, False)
-                        self.hh_members.append(self.mother)
-                    self.num_children = size - len(self.hh_members)
-                    for child in range(1, int(self.num_children) + 1):
-                        self.sub_num_child = self.children_age_dist[self.children_age_dist["child_number"] == self.num_children]
-                        if self.num_children in self.sub_num_child["child_number"] and self.mother_age in self.sub_num_child["age_of_mother"]:
-                            self.child_age = extra.pick_from_pair_list(self.sub_num_child[self.sub_num_child["age_of_mother"] == self.mother_age][["age_of_child","p"]].values.tolist(),self.rng)[0]
-                            self.child = self.pick_from_population_pool_by_age(self.child_age)
-                            self.hh_members.append(self.child)
+                        mother_age = head_age
+                    hh_members.append(self.pick_from_population_pool_by_age_and_gender(head_age, male_head))
+                    if hh_type == "couple":
+                        mother = self.pick_from_population_pool_by_age_and_gender(mother_age, False)
+                        hh_members.append(mother)
+                    num_children = size - len(hh_members)
+                    for child in range(1, int(num_children) + 1):
+                        sub_num_child = children_age_dist[children_age_dist["child_number"] == num_children]
+                        if num_children in sub_num_child["child_number"] and mother_age in sub_num_child[
+                            "age_of_mother"]:
+                            child_age = extra.pick_from_pair_list(
+                                sub_num_child[sub_num_child["age_of_mother"] == mother_age][
+                                    ["age_of_child", "p"]].values.tolist(), self.rng)[0]
+                            child = self.pick_from_population_pool_by_age(child_age)
+                            hh_members.append(child)
                         else:
-                            self.hh_members.append(None)
-                    self.hh_members = [x for x in self.hh_members if x != None]
-                    if len(self.hh_members) == size:
+                            hh_members.append(None)
+                    hh_members = [x for x in hh_members if x != None]
+                    if len(hh_members) == size:
                         success = True
-                        family_wealth_level = self.hh_members[0].wealth_level
-                        if self.hh_type == "couple":
-                            self.hh_members[0].makePartnerLinks(self.hh_members[1])
-                            couple = self.hh_members[0:2]
-                            offsprings = self.hh_members[2:]
+                        family_wealth_level = hh_members[0].wealth_level
+                        if hh_type == "couple":
+                            hh_members[0].makePartnerLinks(hh_members[1])
+                            couple = hh_members[0:2]
+                            offsprings = hh_members[2:]
                             for partner in couple:
                                 partner.makeParent_OffspringsLinks(offsprings)
                             for sibling in offsprings:
                                 sibling.addSiblingLinks(offsprings)
-                        for member in self.hh_members:
-                            member.makeHouseholdLinks(self.hh_members)
+                        for member in hh_members:
+                            member.makeHouseholdLinks(hh_members)
                             member.wealth_level = family_wealth_level
-                        self.families.append(self.hh_members)
+                        self.families.append(hh_members)
                     else:
-                        for member in self.hh_members:
+                        for member in hh_members:
                             self.population.append(member)
             if not success:
                 self.complex_hh_sizes.append(size)
         print("Complex size: " + str(len(self.complex_hh_sizes)) + str("/") + str(len(self.hh_size)))
-        for hh_size in self.complex_hh_sizes:
-            hh_size = int(min(hh_size, len(self.population)))
-            complex_hh_members = self.population[0:hh_size]
+        for comp_hh_size in self.complex_hh_sizes:
+            comp_hh_size = int(min(comp_hh_size, len(self.population)))
+            complex_hh_members = self.population[0:comp_hh_size]
             max_age_index = [x.age() for x in complex_hh_members].index(max([x.age() for x in complex_hh_members]))
             family_wealth_level = complex_hh_members[max_age_index].wealth_level
             for member in complex_hh_members:
@@ -517,17 +525,17 @@ class MesaPROTON_OC(Model):
         print("Singles " + str(len([x for x in self.hh_size if x == 1])))
         print("Families " + str(len(self.families)))
 
-    def household_sizes(self,size):
+    def household_sizes(self, size):
         """
         loads a .csv with a probability distribution of household size and calculates household based on initial agents
         :param size: int, the population size, initial agents
         :return: list, the sizes of household
         """
-        self.hh_size_dist = self.read_csv_city("household_size_dist").values.tolist()
+        hh_size_dist = self.read_csv_city("household_size_dist").values.tolist()
         sizes = []
         current_sum = 0
         while current_sum < size:
-            hh_size = extra.pick_from_pair_list(self.hh_size_dist, self.rng)[0]
+            hh_size = extra.pick_from_pair_list(hh_size_dist, self.rng)[0]
             if current_sum + hh_size <= size:
                 sizes.append(hh_size)
                 current_sum += hh_size
@@ -547,9 +555,10 @@ class MesaPROTON_OC(Model):
             male_wanted = 0
         if not [x for x in self.population if x.gender == male_wanted and np.floor(x.age()) == age_wanted]:
             return None
-        self.picked_person = self.rng.choice([x for x in self.population if x.gender == male_wanted and np.floor(x.age()) == age_wanted])
-        self.population.remove(self.picked_person)
-        return self.picked_person
+        picked_person = self.rng.choice(
+            [x for x in self.population if x.gender == male_wanted and np.floor(x.age()) == age_wanted])
+        self.population.remove(picked_person)
+        return picked_person
 
     def pick_from_population_pool_by_age(self, age_wanted):
         """
@@ -559,9 +568,9 @@ class MesaPROTON_OC(Model):
         """
         if age_wanted not in [np.floor(x.age()) for x in self.population]:
             return None
-        self.picked_person = self.rng.choice([x for x in self.population if np.floor(x.age()) == age_wanted])
-        self.population.remove(self.picked_person)
-        return self.picked_person
+        picked_person = self.rng.choice([x for x in self.population if np.floor(x.age()) == age_wanted])
+        self.population.remove(picked_person)
+        return picked_person
         pass
 
 

@@ -58,8 +58,6 @@ def test_generate_households():
     else:
         assert test_simple_family[-1].neighbors["parent"] == set(test_simple_family[:2])
 
-
-
 def test_weddings():
     m = MesaPROTON_OC()
     m.create_agents(random_relationships=True)
