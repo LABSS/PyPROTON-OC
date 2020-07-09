@@ -124,7 +124,7 @@ class Person(Agent):
 
     def makeProfessionalLinks(self, asker):
         """
-        Create a two-way professional links in-palce
+        Create a two-way professional links in-place
         :param asker: agent
         :return: None
         """

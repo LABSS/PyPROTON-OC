@@ -600,22 +600,19 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 100
-    m.create_agents()
-    m.generate_households()
-#     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-#     m.initial_agents = 200
-#     m.setup_persons_and_friendship()
-#     # Visualize network
-#     nx.draw(m.watts_strogatz)
-#     print("num links:")
-#     print(m.total_num_links())
-#     m.setup_siblings()
-#     print("num links:")
-#     print(m.total_num_links())
-#
-#     for net in Person.network_names:
-#         print(net)
-#         print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
-#     # m.make_friends()
+    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    m.initial_agents = 200
+    m.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(m.watts_strogatz)
+    print("num links:")
+    print(m.total_num_links())
+    m.setup_siblings()
+    print("num links:")
+    print(m.total_num_links())
+
+    for net in Person.network_names:
+        print(net)
+        print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
+    # m.make_friends()
 

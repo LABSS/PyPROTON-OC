@@ -45,9 +45,8 @@ def test_generate_households():
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
     #3
-    for family in m.families[:5]:
-        if len(family) >= 3:
-            test_simple_family = family
+    for test_simple_family in m.families[:5]:
+        if len(test_simple_family) >= 3:
             break
     assert set(test_simple_family[1:]) == test_simple_family[0].neighbors["household"]
     assert test_simple_family[-1] in test_simple_family[0].neighbors["offspring"]
