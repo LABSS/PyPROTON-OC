@@ -361,15 +361,7 @@ class MesaPROTON_OC(Model):
         oc_family_head = extra.weighted_n_of(scaled_num_oc_families,
                                              self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
         for x in oc_family_head: x.oc_member = True
-        candidates_in_families = list()
-
-        for head in oc_family_head:
-            if head.neighbors.get("household"):
-                for relatives in head.neighbors.get("household"):
-                    if relatives and relatives.age() >= 18:
-                        candidates_in_families.append(relatives)
-
-        # candidates_in_families = [y for y in x.neighbors.get('household') if y.age() >= 18 for x in oc_family_head]
+        candidates_in_families = [y for y in x.neighbors.get('household') if y.age() >= 18 for x in oc_family_head]
         if len(candidates_in_families) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families,
                                                       candidates_in_families, lambda x: x.criminal_tendency, self.rng)
