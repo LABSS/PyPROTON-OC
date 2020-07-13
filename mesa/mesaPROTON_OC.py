@@ -425,6 +425,8 @@ class MesaPROTON_OC(Model):
                 x.addSiblingLinks(p)
 
     def generate_households(self):
+        # this mostly follows the third algorithm from Gargiulo et al. 2010
+        # (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
         self.families = list()
         head_age_dist = self.read_csv_city("head_age_dist_by_household_size")
         proportion_of_male_singles_by_age = self.read_csv_city("proportion_of_male_singles_by_age")
@@ -434,15 +436,17 @@ class MesaPROTON_OC(Model):
         p_single_father = self.read_csv_city("proportion_single_fathers")
         self.population = self.schedule.agents
         self.hh_size = self.household_sizes(self.initial_agents)
-        self.complex_hh_sizes = list()
+        self.complex_hh_sizes = list()  # will contain the sizes that we fail to generate: we'll reuse those for complex households
         max_attempts_by_size = 50
-
+        # We have two levels of iterating: the first level is the general attempts at generating a household
+        # and the second level is the attempts at generating a household of a particular size before giving up.
         for size in self.hh_size:
             success = False
             nb_attempts = 0
             while not success and nb_attempts < max_attempts_by_size:
                 hh_members = list()
                 nb_attempts += 1
+                # pick the age of the head according to the size of the household
                 head_age = \
                 extra.pick_from_pair_list(head_age_dist[head_age_dist["size"] == size][["age", "p"]].values.tolist(),
                                           self.rng)[0]
@@ -450,9 +454,12 @@ class MesaPROTON_OC(Model):
                     male_wanted = (self.rng.random() < proportion_of_male_singles_by_age[
                         proportion_of_male_singles_by_age["age"] == head_age]["p_male"].values)[0]
                     head = self.pick_from_population_pool_by_age_and_gender(head_age, male_wanted)
+                    # Note that we don't "do" anything with the picked head: the fact that it gets
+                    # removed from the population table when we pick it is sufficient for us.
                     if head:
                         success = True
                 else:
+                    # For household sizes greater than 1, pick a household type according to age of the head
                     hh_type = extra.pick_from_pair_list(
                         hh_type_dist[hh_type_dist["age"] == head_age][["type", "p"]].values.tolist(), self.rng)[0]
                     if hh_type == "single_parent":
@@ -481,11 +488,16 @@ class MesaPROTON_OC(Model):
                             child = self.pick_from_population_pool_by_age(child_age)
                             hh_members.append(child)
                         else:
+                            # We might not have an age distribution for some combinations of child no / mother age
+                            # (for example, no 18 year-old mother has 8 children), so we add `None` to our member
+                            # list in those case, to signal that the household generation has failed
                             hh_members.append(None)
-                    hh_members = [x for x in hh_members if x != None]
+                    hh_members = [x for x in hh_members if x != None] #exclude Nones
                     if len(hh_members) == size:
+                        # only generate the household if we got everyone we needed
                         success = True
                         family_wealth_level = hh_members[0].wealth_level
+                        # if it's a couple, partner up the first two members and set the others as offspring
                         if hh_type == "couple":
                             hh_members[0].makePartnerLinks(hh_members[1])
                             couple = hh_members[0:2]
@@ -499,6 +511,7 @@ class MesaPROTON_OC(Model):
                             member.wealth_level = family_wealth_level
                         self.families.append(hh_members)
                     else:
+                        # in case of failure, we need to put the selected members back in the population
                         for member in hh_members:
                             self.population.append(member)
             if not success:
@@ -506,12 +519,12 @@ class MesaPROTON_OC(Model):
         print("Complex size: " + str(len(self.complex_hh_sizes)) + str("/") + str(len(self.hh_size)))
         for comp_hh_size in self.complex_hh_sizes:
             comp_hh_size = int(min(comp_hh_size, len(self.population)))
-            complex_hh_members = self.population[0:comp_hh_size]
+            complex_hh_members = self.population[0:comp_hh_size] # grab the first persons in the list
             max_age_index = [x.age() for x in complex_hh_members].index(max([x.age() for x in complex_hh_members]))
             family_wealth_level = complex_hh_members[max_age_index].wealth_level
             for member in complex_hh_members:
-                self.population.remove(member)
-                member.makeHouseholdLinks(complex_hh_members)
+                self.population.remove(member) # remove persons from the population
+                member.makeHouseholdLinks(complex_hh_members) #and link them up.
                 member.wealth_level = family_wealth_level
             self.families.append(complex_hh_members)
         print("Singles " + str(len([x for x in self.hh_size if x == 1])))
