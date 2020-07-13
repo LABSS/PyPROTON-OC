@@ -77,7 +77,7 @@ class Person(Agent):
         self.hobby = 0
         self.criminal_tendency = self.m.rng.uniform(0, 1)
         if random_relationships == True:
-            self.randomfriends()
+            self.random_links()
 
 
     def networks_init(self):
@@ -95,7 +95,7 @@ class Person(Agent):
     def step(self):
             pass
 
-    def randomfriends(self):
+    def random_links(self):
         """
         Caution: Use only in test phase. This function generates blood relations and not, randomly
         """
