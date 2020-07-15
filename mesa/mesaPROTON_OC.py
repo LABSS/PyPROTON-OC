@@ -449,7 +449,7 @@ class MesaPROTON_OC(Model):
                 # pick the age of the head according to the size of the household
                 head_age = \
                 extra.pick_from_pair_list(head_age_dist[head_age_dist["size"] == size][["age", "p"]].values.tolist(),
-                                          self.rng)[0]
+                                          self.rng)
                 if size == 1:
                     male_wanted = (self.rng.random() < proportion_of_male_singles_by_age[
                         proportion_of_male_singles_by_age["age"] == head_age]["p_male"].values)[0]
@@ -461,16 +461,15 @@ class MesaPROTON_OC(Model):
                 else:
                     # For household sizes greater than 1, pick a household type according to age of the head
                     hh_type = extra.pick_from_pair_list(
-                        hh_type_dist[hh_type_dist["age"] == head_age][["type", "p"]].values.tolist(), self.rng)[0]
+                        hh_type_dist[hh_type_dist["age"] == head_age][["type", "p"]].values.tolist(), self.rng)
                     if hh_type == "single_parent":
                         male_head = self.rng.random() < float(p_single_father.columns.to_list()[0])
                     else:
                         male_head = True
-
                     if male_head:
                         mother_age = extra.pick_from_pair_list(
                             partner_age_dist[partner_age_dist["age_of_head"] == head_age][
-                                ["age_of_partner", "p"]].values.tolist(), self.rng)[0]
+                                ["age_of_partner", "p"]].values.tolist(), self.rng)
                     else:
                         mother_age = head_age
                     hh_members.append(self.pick_from_population_pool_by_age_and_gender(head_age, male_head))
@@ -484,14 +483,9 @@ class MesaPROTON_OC(Model):
                             "age_of_mother"]:
                             child_age = extra.pick_from_pair_list(
                                 sub_num_child[sub_num_child["age_of_mother"] == mother_age][
-                                    ["age_of_child", "p"]].values.tolist(), self.rng)[0]
+                                    ["age_of_child", "p"]].values.tolist(), self.rng)
                             child = self.pick_from_population_pool_by_age(child_age)
                             hh_members.append(child)
-                        # else:
-                            # We might not have an age distribution for some combinations of child no / mother age
-                            # (for example, no 18 year-old mother has 8 children), so we add `None` to our member
-                            # list in those case, to signal that the household generation has failed
-                            # hh_members.append(None)
                     hh_members = [x for x in hh_members if x != None] #exclude Nones
                     if len(hh_members) == size:
                         # only generate the household if we got everyone we needed
@@ -540,7 +534,7 @@ class MesaPROTON_OC(Model):
         sizes = []
         current_sum = 0
         while current_sum < size:
-            hh_size = extra.pick_from_pair_list(hh_size_dist, self.rng)[0]
+            hh_size = extra.pick_from_pair_list(hh_size_dist, self.rng)
             if current_sum + hh_size <= size:
                 sizes.append(hh_size)
                 current_sum += hh_size

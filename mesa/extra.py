@@ -65,4 +65,11 @@ def weighted_one_of(agentset, weight_function, rng_istance):
     return weighted_n_of(1, agentset, weight_function, rng_istance)
 
 def pick_from_pair_list(a_list_of_pairs, rng_istance):
-    return weighted_one_of(a_list_of_pairs, lambda x: x[-1], rng_istance)[0]
+    """
+    given a list of pairs, containing an object and a probability (e.g. [[object, p],[object, p]])
+    return an object based on the probability(p)
+    :param a_list_of_pairs:list, a list of pairs (e.g. [[object, p],[object, p]])
+    :param rng_istance: numpy.random instance,
+    :return: object
+    """
+    return weighted_one_of(a_list_of_pairs, lambda x: x[-1], rng_istance)[0][0]
