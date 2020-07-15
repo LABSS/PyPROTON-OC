@@ -40,7 +40,7 @@ def social_proximity(ego:Person, alter:Person):
     #normalization =  0
     # age
     acc += 1 - abs(alter.age() - ego.age()) / 18 if abs(alter.age() - ego.age()) < 18 else 0
-    acc += 1 if alter.gender == ego.gender else 0
+    acc += 1 if alter.gender_is_male == ego.gender_is_male else False
     acc += 1 if alter.wealth_level == ego.wealth_level else 0
     acc += 1 if alter.education_level == ego.education_level else 0    
     acc += 1 if [x for x in alter.neighbors.get("friendship") if 

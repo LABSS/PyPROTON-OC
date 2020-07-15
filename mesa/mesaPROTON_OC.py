@@ -195,7 +195,7 @@ class MesaPROTON_OC(Model):
             poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(maritable)
             poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & set(maritable)
             pool = [x for x in (poolp | poolf) if
-                    x.gender != ego.gender and
+                    x.gender_is_male != ego.gender_is_male and
                     (x.age() - ego.age()) < 8 and
                     x not in ego.neigh("sibling") and
                     x not in ego.neigh("offspring") and ego not in x.neigh("offspring")  # directed network
@@ -228,7 +228,7 @@ class MesaPROTON_OC(Model):
         if social_support == "psychological" or social_support == "all": self.soc_add_psychological(targets)
         if social_support == "more friends" or social_support == "all": self.soc_add_more_friends(targets)
         welfare_createjobs({x for x in schedule.agents if
-                            x.gender == 'female' and x.neighbors.get('offspring').intersection(set(targets))})
+                            x.gender_is_male == False and x.neighbors.get('offspring').intersection(set(targets))})
 
     def soc_add_educational(self, targets):
         for x in targets: x.max_education_level = min(max_education_level + 1, max(education_levels.keys()))
@@ -255,7 +255,7 @@ class MesaPROTON_OC(Model):
     def welfare_intervene(self):
         if welfare_support == "job_mother":
             targets = [x for x in schedule.agents if
-                       x.gender == 'female' and
+                       x.gender_is_male == False and
                        not x.my_job and
                        (True if not x.partner else not x.partner.oc_member)
                        ]
@@ -548,14 +548,10 @@ class MesaPROTON_OC(Model):
         :param male_wanted: bool,
         :return: agent, or None
         """
-        if male_wanted == True:
-            male_wanted = 1
-        if male_wanted == False:
-            male_wanted = 0
-        if not [x for x in self.population if x.gender == male_wanted and x.age() == age_wanted]:
+        if not [x for x in self.population if x.gender_is_male == male_wanted and x.age() == age_wanted]:
             return None
         picked_person = self.rng.choice(
-            [x for x in self.population if x.gender == male_wanted and x.age() == age_wanted])
+            [x for x in self.population if x.gender_is_male == male_wanted and x.age() == age_wanted])
         self.population.remove(picked_person)
         return picked_person
 

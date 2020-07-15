@@ -32,7 +32,7 @@ class Person(Agent):
         self.job_level = 0
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = 0
-        self.gender = 0 #1 male 0 female
+        self.gender_is_male = False #True male False female
         self.father = None
         self.mother = None
         self.propensity = 0
@@ -73,7 +73,7 @@ class Person(Agent):
         self.job_level = self.m.rng.choice(range(0,4))
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = -1 * self.m.rng.choice(range(0,80*12))
-        self.gender = self.m.rng.choice([0,1])
+        self.gender_is_male = self.m.rng.choice([True,False])
         self.hobby = 0
         self.criminal_tendency = self.m.rng.uniform(0, 1)
         if random_relationships == True:
