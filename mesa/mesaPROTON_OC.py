@@ -428,8 +428,8 @@ class MesaPROTON_OC(Model):
         # this mostly follows the third algorithm from Gargiulo et al. 2010
         # (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
         self.families = list()
-        head_age_dist = self.read_csv_city("head_age_dist_by_household_size")
-        proportion_of_male_singles_by_age = self.read_csv_city("proportion_of_male_singles_by_age")
+        head_age_dist = self.df_to_dict(self.read_csv_city("head_age_dist_by_household_size"))
+        self.proportion_of_male_singles_by_age = self.df_to_dict(self.read_csv_city("proportion_of_male_singles_by_age"))
         hh_type_dist = self.read_csv_city("household_type_dist_by_age")
         partner_age_dist = self.read_csv_city("partner_age_dist")
         children_age_dist = self.read_csv_city("children_age_dist")
@@ -447,12 +447,9 @@ class MesaPROTON_OC(Model):
                 hh_members = list()
                 nb_attempts += 1
                 # pick the age of the head according to the size of the household
-                head_age = \
-                extra.pick_from_pair_list(head_age_dist[head_age_dist["size"] == size][["age", "p"]].values.tolist(),
-                                          self.rng)
+                head_age = extra.pick_from_pair_list(head_age_dist[size],self.rng)
                 if size == 1:
-                    male_wanted = (self.rng.random() < proportion_of_male_singles_by_age[
-                        proportion_of_male_singles_by_age["age"] == head_age]["p_male"].values)[0]
+                    male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[head_age])
                     head = self.pick_from_population_pool_by_age_and_gender(head_age, male_wanted)
                     # Note that we don't "do" anything with the picked head: the fact that it gets
                     # removed from the population table when we pick it is sufficient for us.
@@ -567,7 +564,16 @@ class MesaPROTON_OC(Model):
         self.population.remove(picked_person)
         return picked_person
 
-
+    def df_to_dict(self, df):
+        dic = dict()
+        if len(df.columns) == 2:
+            for s in np.unique(df.iloc[:,0]):
+                dic[s] = float(df[df.iloc[:,0] == s].iloc[:,1].values)
+        if len(df.columns) == 3:
+            for s in np.unique(df.iloc[:,0]):
+                dic[s] = df[df.iloc[:, 0] == s].iloc[:, 1:].values.tolist()
+        return dic
+        #todo: finire di convertire tutto
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
@@ -593,19 +599,27 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
+    m.initial_agents = 100
+    m.create_agents()
+    m.generate_households()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    # m.initial_agents = 200
+    # m.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(m.watts_strogatz)
+    # print("num links:")
+    # print(m.total_num_links())
+    # m.setup_siblings()
+    # print("num links:")
+    # print(m.total_num_links())
+    #
+    # for net in Person.network_names:
+    #     print(net)
+    #     print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
+    # # m.make_friends()
 
-    for net in Person.network_names:
-        print(net)
-        print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
-    # m.make_friends()
-
+    # m.proportion_of_male_singles_by_age
+    #
+    # dic = dict()
+    # for s in np.unique(m.proportion_of_male_singles_by_age.iloc[:,0]):
+    #     dic[s] = float(m.proportion_of_male_singles_by_age[m.proportion_of_male_singles_by_age.iloc[:,0] == s].iloc[:,1:].values)
