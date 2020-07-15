@@ -487,11 +487,11 @@ class MesaPROTON_OC(Model):
                                     ["age_of_child", "p"]].values.tolist(), self.rng)[0]
                             child = self.pick_from_population_pool_by_age(child_age)
                             hh_members.append(child)
-                        else:
+                        # else:
                             # We might not have an age distribution for some combinations of child no / mother age
                             # (for example, no 18 year-old mother has 8 children), so we add `None` to our member
                             # list in those case, to signal that the household generation has failed
-                            hh_members.append(None)
+                            # hh_members.append(None)
                     hh_members = [x for x in hh_members if x != None] #exclude Nones
                     if len(hh_members) == size:
                         # only generate the household if we got everyone we needed
@@ -576,7 +576,6 @@ class MesaPROTON_OC(Model):
         picked_person = self.rng.choice([x for x in self.population if x.age() == age_wanted])
         self.population.remove(picked_person)
         return picked_person
-        pass
 
 
 # 778 / 1700
