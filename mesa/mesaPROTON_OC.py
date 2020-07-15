@@ -558,10 +558,10 @@ class MesaPROTON_OC(Model):
             male_wanted = 1
         if male_wanted == False:
             male_wanted = 0
-        if not [x for x in self.population if x.gender == male_wanted and np.floor(x.age()) == age_wanted]:
+        if not [x for x in self.population if x.gender == male_wanted and x.age() == age_wanted]:
             return None
         picked_person = self.rng.choice(
-            [x for x in self.population if x.gender == male_wanted and np.floor(x.age()) == age_wanted])
+            [x for x in self.population if x.gender == male_wanted and x.age() == age_wanted])
         self.population.remove(picked_person)
         return picked_person
 
@@ -571,9 +571,9 @@ class MesaPROTON_OC(Model):
         :param age_wanted: int, age wanted
         :return: agent or None
         """
-        if age_wanted not in [np.floor(x.age()) for x in self.population]:
+        if age_wanted not in [x.age() for x in self.population]:
             return None
-        picked_person = self.rng.choice([x for x in self.population if np.floor(x.age()) == age_wanted])
+        picked_person = self.rng.choice([x for x in self.population if x.age() == age_wanted])
         self.population.remove(picked_person)
         return picked_person
         pass
@@ -591,10 +591,9 @@ class MesaPROTON_OC(Model):
 
 # warning: for now we don't load up the partner in the partner network
 def conclude_wedding(ego, partner):
-    #For now we leave this commented
-    # for x in [ego, partner]:
-        # for y in x.neighbors["household"]:
-        #     y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
+    for x in [ego, partner]:
+        for y in x.neighbors["household"]:
+            y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
     ego.neighbors["household"] = {partner}
     partner.neighbors["household"] = {ego}
     ego.partner = partner

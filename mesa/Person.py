@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import extra
 from mesa import Agent, Model
-import math
 import mesaPROTON_OC
+import numpy as np
 
 class Person(Agent):
     max_id = 0
@@ -63,7 +63,7 @@ class Person(Agent):
 
     
     def age(self):
-        return math.floor(self.m.ticks - self.birth_tick) / 12
+        return np.floor((self.m.ticks - self.birth_tick) / 12)
 
         
     def random_init(self, random_relationships = False):
