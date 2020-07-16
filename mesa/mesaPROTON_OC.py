@@ -429,10 +429,10 @@ class MesaPROTON_OC(Model):
         # (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
         self.families = list()
         head_age_dist = self.df_to_dict(self.read_csv_city("head_age_dist_by_household_size"))
-        self.proportion_of_male_singles_by_age = self.df_to_dict(self.read_csv_city("proportion_of_male_singles_by_age"))
-        hh_type_dist = self.read_csv_city("household_type_dist_by_age")
-        partner_age_dist = self.read_csv_city("partner_age_dist")
-        children_age_dist = self.read_csv_city("children_age_dist")
+        proportion_of_male_singles_by_age = self.df_to_dict(self.read_csv_city("proportion_of_male_singles_by_age"))
+        hh_type_dist = self.df_to_dict(self.read_csv_city("household_type_dist_by_age"))
+        partner_age_dist = self.df_to_dict(self.read_csv_city("partner_age_dist"))
+        self.children_age_dist = self.df_to_dict(self.read_csv_city("children_age_dist"))
         p_single_father = self.read_csv_city("proportion_single_fathers")
         self.population = self.schedule.agents
         self.hh_size = self.household_sizes(self.initial_agents)
@@ -449,7 +449,7 @@ class MesaPROTON_OC(Model):
                 # pick the age of the head according to the size of the household
                 head_age = extra.pick_from_pair_list(head_age_dist[size],self.rng)
                 if size == 1:
-                    male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[head_age])
+                    male_wanted = (self.rng.random() < proportion_of_male_singles_by_age[head_age])
                     head = self.pick_from_population_pool_by_age_and_gender(head_age, male_wanted)
                     # Note that we don't "do" anything with the picked head: the fact that it gets
                     # removed from the population table when we pick it is sufficient for us.
@@ -457,16 +457,13 @@ class MesaPROTON_OC(Model):
                         success = True
                 else:
                     # For household sizes greater than 1, pick a household type according to age of the head
-                    hh_type = extra.pick_from_pair_list(
-                        hh_type_dist[hh_type_dist["age"] == head_age][["type", "p"]].values.tolist(), self.rng)
+                    hh_type = extra.pick_from_pair_list(hh_type_dist[head_age], self.rng)
                     if hh_type == "single_parent":
                         male_head = self.rng.random() < float(p_single_father.columns.to_list()[0])
                     else:
                         male_head = True
                     if male_head:
-                        mother_age = extra.pick_from_pair_list(
-                            partner_age_dist[partner_age_dist["age_of_head"] == head_age][
-                                ["age_of_partner", "p"]].values.tolist(), self.rng)
+                        mother_age = extra.pick_from_pair_list(partner_age_dist[head_age], self.rng)
                     else:
                         mother_age = head_age
                     hh_members.append(self.pick_from_population_pool_by_age_and_gender(head_age, male_head))
@@ -475,14 +472,12 @@ class MesaPROTON_OC(Model):
                         hh_members.append(mother)
                     num_children = size - len(hh_members)
                     for child in range(1, int(num_children) + 1):
-                        sub_num_child = children_age_dist[children_age_dist["child_number"] == num_children]
-                        if num_children in sub_num_child["child_number"] and mother_age in sub_num_child[
-                            "age_of_mother"]:
-                            child_age = extra.pick_from_pair_list(
-                                sub_num_child[sub_num_child["age_of_mother"] == mother_age][
-                                    ["age_of_child", "p"]].values.tolist(), self.rng)
-                            child = self.pick_from_population_pool_by_age(child_age)
-                            hh_members.append(child)
+                        # sub_num_child = children_age_dist[children_age_dist["child_number"] == num_children]
+                        if num_children in self.children_age_dist:
+                            if mother_age in self.children_age_dist[num_children]:
+                                child_age = extra.pick_from_pair_list(self.children_age_dist[num_children][mother_age], self.rng)
+                                child = self.pick_from_population_pool_by_age(child_age)
+                                hh_members.append(child)
                     hh_members = [x for x in hh_members if x != None] #exclude Nones
                     if len(hh_members) == size:
                         # only generate the household if we got everyone we needed
@@ -527,7 +522,7 @@ class MesaPROTON_OC(Model):
         :param size: int, the population size, initial agents
         :return: list, the sizes of household
         """
-        hh_size_dist = self.read_csv_city("household_size_dist").values.tolist()
+        hh_size_dist = self.read_csv_city("household_size_dist").values
         sizes = []
         current_sum = 0
         while current_sum < size:
@@ -567,13 +562,23 @@ class MesaPROTON_OC(Model):
     def df_to_dict(self, df):
         dic = dict()
         if len(df.columns) == 2:
-            for s in np.unique(df.iloc[:,0]):
-                dic[s] = float(df[df.iloc[:,0] == s].iloc[:,1].values)
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = float(df[df.iloc[:,0] == col].iloc[:,1].values)
         if len(df.columns) == 3:
-            for s in np.unique(df.iloc[:,0]):
-                dic[s] = df[df.iloc[:, 0] == s].iloc[:, 1:].values.tolist()
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
+        if len(df.columns) == 4:
+            for col in np.unique(df.iloc[:, 0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+            for key in dic:
+                subdic = dict()
+                for subcol in np.unique(dic[key].iloc[:, 0]):
+                    subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
+                dic[key] = subdic
+
         return dic
         #todo: finire di convertire tutto
+
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
@@ -618,8 +623,3 @@ if __name__ == "__main__":
     #     print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
     # # m.make_friends()
 
-    # m.proportion_of_male_singles_by_age
-    #
-    # dic = dict()
-    # for s in np.unique(m.proportion_of_male_singles_by_age.iloc[:,0]):
-    #     dic[s] = float(m.proportion_of_male_singles_by_age[m.proportion_of_male_singles_by_age.iloc[:,0] == s].iloc[:,1:].values)

@@ -34,10 +34,11 @@ def test_generate_households():
     3. Take the first simple family (we're sure it's in the first 5) and check if all the networks work.
     """
     m = MesaPROTON_OC()
-    m.initial_agents = 100
+    m.initial_agents = 1000
     m.create_agents()
     m.generate_households()
     #1
+    #todo: why this test fails some times
     assert len([x for x in m.hh_size if x == 1]) + len(m.families) == len(m.hh_size)
     #2
     test_family = m.rng.choice(m.families)
