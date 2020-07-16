@@ -34,11 +34,10 @@ def test_generate_households():
     3. Take the first simple family (we're sure it's in the first 5) and check if all the networks work.
     """
     m = MesaPROTON_OC()
-    m.initial_agents = 1000
+    m.initial_agents = 100
     m.create_agents()
     m.generate_households()
-    #1
-    #todo: why this test fails some times
+    #todo: why this test fails sometimes
     assert len([x for x in m.hh_size if x == 1]) + len(m.families) == len(m.hh_size)
     #2
     test_family = m.rng.choice(m.families)
@@ -57,13 +56,23 @@ def test_generate_households():
             assert son.neighbors["parent"] == set(test_simple_family[:2])
     else:
         assert test_simple_family[-1].neighbors["parent"] == set(test_simple_family[:2])
+    # wealth must be the same for all members of the household
+    for agent in m.schedule.agents:
+        for household in agent.neighbors["household"]:
+            assert agent.wealth_level == household.wealth_level
+    # nobody should have more than one father and one mather
+    for agent in m.schedule.agents:
+        if agent.neighbors["parent"]:
+            assert len(agent.neighbors["parent"]) <= 2
+            assert len([x for x in agent.neighbors["parent"] if x.gender_is_male == True]) <= 1
+            assert len([x for x in agent.neighbors["parent"] if x.gender_is_male == False]) <= 1
 
 def test_weddings():
     m = MesaPROTON_OC()
     m.create_agents(random_relationships=True)
     print(len(m.schedule.agents) - len(pp.Person.persons))
     print(m.number_weddings)
-    m.number_weddings_mean = 1000
+    m.number_weddings_mean = 100
     for i in range(1, 5):
         m.wedding()
     # print(Person.NumberOfLinks()-l)

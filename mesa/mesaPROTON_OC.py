@@ -427,6 +427,7 @@ class MesaPROTON_OC(Model):
     def generate_households(self):
         # this mostly follows the third algorithm from Gargiulo et al. 2010
         # (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
+        # The dataframes are transformed into nested dictionaries to ensure greater speed
         self.families = list()
         head_age_dist = self.df_to_dict(self.read_csv_city("head_age_dist_by_household_size"))
         proportion_of_male_singles_by_age = self.df_to_dict(self.read_csv_city("proportion_of_male_singles_by_age"))
@@ -607,19 +608,15 @@ if __name__ == "__main__":
     m.initial_agents = 100
     m.create_agents()
     m.generate_households()
-    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    # m.initial_agents = 200
-    # m.setup_persons_and_friendship()
-    # # Visualize network
-    # nx.draw(m.watts_strogatz)
-    # print("num links:")
-    # print(m.total_num_links())
-    # m.setup_siblings()
-    # print("num links:")
-    # print(m.total_num_links())
-    #
-    # for net in Person.network_names:
-    #     print(net)
-    #     print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
-    # # m.make_friends()
+    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    m.initial_agents = 200
+    m.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(m.watts_strogatz)
+    print("num links:")
+    print(m.total_num_links())
+    m.setup_siblings()
+    print("num links:")
+    print(m.total_num_links())
+
 
