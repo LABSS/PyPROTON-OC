@@ -439,6 +439,7 @@ class MesaPROTON_OC(Model):
         self.hh_size = self.household_sizes(self.initial_agents)
         self.complex_hh_sizes = list()  # will contain the sizes that we fail to generate: we'll reuse those for complex households
         max_attempts_by_size = 50
+        attempts_list = list()
         # We have two levels of iterating: the first level is the general attempts at generating a household
         # and the second level is the attempts at generating a household of a particular size before giving up.
         for size in self.hh_size:
@@ -456,6 +457,7 @@ class MesaPROTON_OC(Model):
                     # removed from the population table when we pick it is sufficient for us.
                     if head:
                         success = True
+                        attempts_list.append(nb_attempts)
                 else:
                     # For household sizes greater than 1, pick a household type according to age of the head
                     hh_type = extra.pick_from_pair_list(hh_type_dist[head_age], self.rng)
@@ -473,7 +475,6 @@ class MesaPROTON_OC(Model):
                         hh_members.append(mother)
                     num_children = size - len(hh_members)
                     for child in range(1, int(num_children) + 1):
-                        # sub_num_child = children_age_dist[children_age_dist["child_number"] == num_children]
                         if num_children in self.children_age_dist:
                             if mother_age in self.children_age_dist[num_children]:
                                 child_age = extra.pick_from_pair_list(self.children_age_dist[num_children][mother_age], self.rng)
@@ -483,6 +484,7 @@ class MesaPROTON_OC(Model):
                     if len(hh_members) == size:
                         # only generate the household if we got everyone we needed
                         success = True
+                        attempts_list.append(nb_attempts)
                         family_wealth_level = hh_members[0].wealth_level
                         # if it's a couple, partner up the first two members and set the others as offspring
                         if hh_type == "couple":
@@ -513,9 +515,11 @@ class MesaPROTON_OC(Model):
                 self.population.remove(member) # remove persons from the population
                 member.makeHouseholdLinks(complex_hh_members) #and link them up.
                 member.wealth_level = family_wealth_level
-            self.families.append(complex_hh_members)
+            if len(complex_hh_members) > 1:
+                self.families.append(complex_hh_members)
         print("Singles " + str(len([x for x in self.hh_size if x == 1])))
         print("Families " + str(len(self.families)))
+        print("Average of attempts " + str(np.mean(attempts_list)))
 
     def household_sizes(self, size):
         """
@@ -561,6 +565,11 @@ class MesaPROTON_OC(Model):
         return picked_person
 
     def df_to_dict(self, df):
+        """
+        Based on the size of the dataframe, it transforms the dataframe into a nested dictionary.
+        :param df: pandas dataframe
+        :return: dic
+        """
         dic = dict()
         if len(df.columns) == 2:
             for col in np.unique(df.iloc[:,0]):
@@ -576,9 +585,7 @@ class MesaPROTON_OC(Model):
                 for subcol in np.unique(dic[key].iloc[:, 0]):
                     subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
                 dic[key] = subdic
-
         return dic
-        #todo: finire di convertire tutto
 
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
@@ -605,7 +612,7 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 100
+    m.initial_agents = 1000
     m.create_agents()
     m.generate_households()
     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
@@ -615,7 +622,7 @@ if __name__ == "__main__":
     nx.draw(m.watts_strogatz)
     print("num links:")
     print(m.total_num_links())
-    m.setup_siblings()
+    # m.setup_siblings()
     print("num links:")
     print(m.total_num_links())
 

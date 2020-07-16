@@ -7,4 +7,4 @@ install:
 # command to run tests
 script:
   - cd mesa
-  - pytest -q testProton.py
+  - pytest -s testProton.py

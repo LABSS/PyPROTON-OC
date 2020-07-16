@@ -32,20 +32,30 @@ def test_generate_households():
     1. Check if all families have been generated
     2. Take a random household and check if all the members of the household are in the other members' network
     3. Take the first simple family (we're sure it's in the first 5) and check if all the networks work.
+    4. wealth must be the same for all members of the household
+    5. nobody should have more than one father and one mather
     """
     m = MesaPROTON_OC()
-    m.initial_agents = 100
+    m.initial_agents = 1000
     m.create_agents()
     m.generate_households()
-    #todo: why this test fails sometimes
-    assert len([x for x in m.hh_size if x == 1]) + len(m.families) == len(m.hh_size)
+    #1
+    counter_couple = 0
+    counter_single_parent = 0
+    for family in m.families:
+        if family[0].neighbors["partner"]:
+            counter_couple += 1
+        else:
+            counter_single_parent += 1
+    single = len([x for x in m.hh_size if x == 1])
+    assert counter_couple+counter_single_parent+single == len(m.hh_size)
     #2
     test_family = m.rng.choice(m.families)
     for member in test_family:
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
     #3
-    for test_simple_family in m.families[:5]:
+    for test_simple_family in m.families[:3]:
         if len(test_simple_family) >= 3:
             break
     assert set(test_simple_family[1:]) == test_simple_family[0].neighbors["household"]
@@ -56,11 +66,11 @@ def test_generate_households():
             assert son.neighbors["parent"] == set(test_simple_family[:2])
     else:
         assert test_simple_family[-1].neighbors["parent"] == set(test_simple_family[:2])
-    # wealth must be the same for all members of the household
+    #4
     for agent in m.schedule.agents:
         for household in agent.neighbors["household"]:
             assert agent.wealth_level == household.wealth_level
-    # nobody should have more than one father and one mather
+    #5
     for agent in m.schedule.agents:
         if agent.neighbors["parent"]:
             assert len(agent.neighbors["parent"]) <= 2
