@@ -44,7 +44,7 @@ class MesaPROTON_OC(Model):
         self.female_punishment_length_list = 0
         self.arrest_rate = 0
         self.jobs_by_company_size = 0
-        self.education_levels = 0  # table from education level to data
+        self.education_levels = list()  # table from education level to data
         self.c_by_age_and_sex = 0
         self.c_range_by_age_and_sex = 0
         self.labour_status_by_age_and_sex = 0
@@ -587,6 +587,14 @@ class MesaPROTON_OC(Model):
                 dic[key] = subdic
         return dic
 
+    def setup_education_levels(self):
+        self.list_schools = self.read_csv_city("schools").values.tolist()
+        for school_grade in self.list_schools:
+            school_grade[3] = np.ceil((school_grade[3]/school_grade[4])*self.initial_agents)
+            school_grade.remove(school_grade[4])
+            self.education_levels.append(school_grade)
+
+
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
@@ -612,18 +620,19 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 1000
+    m.initial_agents = 10000
     m.create_agents()
-    m.generate_households()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    # m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
+    m.setup_education_levels() #Remove
+    # m.generate_households()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    # m.initial_agents = 200
+    # m.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(m.watts_strogatz)
+    # print("num links:")
+    # print(m.total_num_links())
+    # # m.setup_siblings()
+    # print("num links:")
+    # print(m.total_num_links())
 
 
