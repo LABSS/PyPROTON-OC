@@ -381,7 +381,7 @@ class MesaPROTON_OC(Model):
         for x in self.schedule.agents: x.cached_oc_embeddedness = None
 
     def setup_persons_and_friendship(self):
-        age_gender_dist = self.read_csv_city("initial_age_gender_dist")
+        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist")
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
         for x in self.watts_strogatz.nodes():
             a = Person(self)
@@ -625,9 +625,8 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 10000
+    m.initial_agents = 100
     m.create_agents()
-    m.generate_households()
     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
     m.initial_agents = 200
     m.setup_persons_and_friendship()
