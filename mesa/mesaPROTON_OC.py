@@ -588,11 +588,16 @@ class MesaPROTON_OC(Model):
         return dic
 
     def setup_education_levels(self):
+        """
+        Modify the self.education_levels attribute in-place. Given 4 levels of education,
+        for each level returns the correct amount of schools, based on the number of agents.
+        """
         self.list_schools = self.read_csv_city("schools").values.tolist()
-        for school_grade in self.list_schools:
-            school_grade[3] = np.ceil((school_grade[3]/school_grade[4])*self.initial_agents)
-            school_grade.remove(school_grade[4])
-            self.education_levels.append(school_grade)
+        for education_level in self.list_schools:
+            education_level[3] = np.ceil((education_level[3]/education_level[4])*self.initial_agents)
+            education_level.remove(education_level[4])
+            self.education_levels.append(education_level)
+
 
 
 # 778 / 1700
