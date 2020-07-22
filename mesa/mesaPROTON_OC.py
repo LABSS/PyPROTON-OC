@@ -44,7 +44,7 @@ class MesaPROTON_OC(Model):
         self.female_punishment_length_list = 0
         self.arrest_rate = 0
         self.jobs_by_company_size = 0
-        self.education_levels = 0  # table from education level to data
+        self.education_levels = dict()  # table from education level to data
         self.c_by_age_and_sex = 0
         self.c_range_by_age_and_sex = 0
         self.labour_status_by_age_and_sex = 0
@@ -381,7 +381,7 @@ class MesaPROTON_OC(Model):
         for x in self.schedule.agents: x.cached_oc_embeddedness = None
 
     def setup_persons_and_friendship(self):
-        age_gender_dist = self.read_csv_city("initial_age_gender_dist")
+        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist")
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
         for x in self.watts_strogatz.nodes():
             a = Person(self)
@@ -587,6 +587,18 @@ class MesaPROTON_OC(Model):
                 dic[key] = subdic
         return dic
 
+    def setup_education_levels(self):
+        """
+        Modify the self.education_levels attribute in-place. Given "n" levels of education,
+        for each level compute the correct amount of schools, based on the number of agents.
+        """
+        self.list_schools = self.read_csv_city("schools").values.tolist()
+        for index, level in enumerate(self.list_schools):
+            level[3] = np.ceil((level[3]/level[4])*self.initial_agents)
+            level.remove(level[4])
+            self.education_levels[index+1] = level
+
+
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
@@ -612,9 +624,8 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 1000
+    m.initial_agents = 100
     m.create_agents()
-    m.generate_households()
     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
     m.initial_agents = 200
     m.setup_persons_and_friendship()
