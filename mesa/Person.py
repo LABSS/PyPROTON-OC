@@ -189,16 +189,15 @@ class Person(Agent):
     
     def init_person(self, age_gender_dist): # person command
         row = extra.weighted_one_of(age_gender_dist, lambda x: x[-1])  # select a row from our age_gender distribution
-        self.birth_tick =  0 - row[0] * ticks_per_year      # ...and age... = 
-        self.init_person_empty
-        self.male =  row[1]                            # ...and gender according to values in that row.
-        self.retired = self.age >= m.retirement_age                    # persons older than retirement_age are retired
+        self.birth_tick =  0 - row[0] * self.m.ticks_per_year      # ...and set age... =
+        self.gender_is_male =  row[1] # ...and gender according to values in that row.
+        self.retired = self.age >= self.m.retirement_age                 # persons older than retirement_age are retired
         # education level is chosen, job and wealth follow in a conditioned sequence
-        self.max_education_level = pick_from_pair_list(self.edu.get(self.male))
+        self.max_education_level = extra.pick_from_pair_list(self.m.edu[self.gender_is_male])
         # apply model-wide education modifier
-        if (m.education_modifier == 1.0):
-            if self.m.rng.random() < abs(education_rate - 1):
-                self.max_education_level = self.max_education_level + (1 if (m.education-modifier > 1) else -1)
+        if self.m.education_modifier != 1.0:
+            if self.m.rng.random() < abs(self.m.education_modifier - 1):
+                self.max_education_level = self.max_education_level + (1 if (self.m.education_modifier > 1) else -1)
                 self.max_education_level = 4 if self.max_education_level > 4 else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
         # notice how this deforms a little the initial setup

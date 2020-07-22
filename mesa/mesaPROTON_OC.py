@@ -84,7 +84,7 @@ class MesaPROTON_OC(Model):
         self.ticks = 0
         self.num_oc_persons = 30
         self.num_oc_families = 8
-        self.education_modifier = 1.0
+        self.education_modifier = 1.0 #education-rate in Netlogo model
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -166,7 +166,7 @@ class MesaPROTON_OC(Model):
         self.num_co_offenders_dist = pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv"))
         self.fertility_table = self.read_csv_city("initial_fertility_rates")
         self.mortality_table = self.read_csv_city("initial_mortality_rates")
-        self.edu = self.read_csv_city("edu")
+        self.edu = self.df_to_dict(self.read_csv_city("edu"))
 
         self.edu_by_wealth_lvl = self.read_csv_city("edu_by_wealth_lvl")
         self.work_status_by_edu_lvl = self.read_csv_city("work_status_by_edu_lvl")
@@ -381,7 +381,8 @@ class MesaPROTON_OC(Model):
         for x in self.schedule.agents: x.cached_oc_embeddedness = None
 
     def setup_persons_and_friendship(self):
-        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist")
+        # We transform this df into a list for ease of access
+        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
         for x in self.watts_strogatz.nodes():
             a = Person(self)
@@ -592,7 +593,7 @@ class MesaPROTON_OC(Model):
         Modify the self.education_levels attribute in-place. Given 4 levels of education,
         for each level returns the correct amount of schools, based on the number of agents.
         """
-        self.list_schools = self.read_csv_city("schools").values.tolist()
+        self.list_schools = self.df_to_dict(self.read_csv_city("schools"))#.values.tolist()
         for education_level in self.list_schools:
             education_level[3] = np.ceil((education_level[3]/education_level[4])*self.initial_agents)
             education_level.remove(education_level[4])
