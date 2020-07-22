@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import extra
 from mesa import Agent, Model
-import math
 import mesaPROTON_OC
+import numpy as np
 
 class Person(Agent):
     max_id = 0
@@ -12,8 +12,8 @@ class Person(Agent):
     network_names = [    
         'sibling',
         'offspring',
-        'parent'
-        #'partner',
+        'parent',
+        'partner',
         'household',
         'friendship',
         'criminal',
@@ -32,7 +32,7 @@ class Person(Agent):
         self.job_level = 0
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = 0
-        self.gender = 0
+        self.gender_is_male = False #True male False female
         self.father = None
         self.mother = None
         self.propensity = 0
@@ -57,22 +57,27 @@ class Person(Agent):
         #print(m)
         self.m=m
         #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.m)]))
+
+    def __repr__(self):
+        return "Agent " + str(self.unique_id)
+
     
     def age(self):
-        return math.floor(self.m.ticks - self.birth_tick) / 12
+        return np.floor((self.m.ticks - self.birth_tick) / 12)
 
         
-    def random_init(self):
-        self.randomfriends()
+    def random_init(self, random_relationships = False):
         self.education_level = self.m.rng.choice(range(0,4))
         self.max_education_level = self.education_level
         self.wealth_level = self.m.rng.choice(range(0,4))
         self.job_level = self.m.rng.choice(range(0,4))
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = -1 * self.m.rng.choice(range(0,80*12))
-        self.gender = self.m.rng.choice([0,1])
+        self.gender_is_male = self.m.rng.choice([True,False])
         self.hobby = 0
         self.criminal_tendency = self.m.rng.uniform(0, 1)
+        if random_relationships == True:
+            self.random_links()
 
 
     def networks_init(self):
@@ -90,34 +95,69 @@ class Person(Agent):
     def step(self):
             pass
 
-    def randomfriends(self):
+    def random_links(self):
+        """
+        Caution: Use only in test phase. This function generates blood relations and not, randomly
+        """
         for net in Person.network_names:
             for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
             self.neighbors.get(net).discard(self)
-            
+        pass
+
+    @staticmethod
     def NumberOfLinks():
         return sum([ 
             sum([
                 len(x.neighbors.get(net)) for x in Person.persons 
                 ])
             for net in Person.network_names])
-    staticmethod(NumberOfLinks)
     
     def makeFriends(self, asker):
+        """
+        Create a two-way friend links in-place
+        :param asker: agent
+        :return: None
+        """
         self.neighbors.get("friendship").add(asker)
         asker.neighbors.get("friendship").add(self)
 
     def makeProfessionalLinks(self, asker):
+        """
+        Create a two-way professional links in-place
+        :param asker: agent
+        :return: None
+        """
         self.neighbors.get("professional").add(asker)
         asker.neighbors.get("professional").add(self)
         
     def addSiblingLinks(self, targets):
         for x in targets:
-            self.neighbors.get("sibling").add(x)
-            x.neighbors.get("sibling").add(self)
+            if x != self:
+                self.neighbors.get("sibling").add(x)
+                x.neighbors.get("sibling").add(self)
+
+    def makeHouseholdLinks(self, targets):
+        for x in targets:
+            if x != self:
+                self.neighbors.get("household").add(x)
+                x.neighbors.get("household").add(self)
+
+    def makePartnerLinks(self,asker):
+        self.neighbors.get("partner").add(asker)
+        asker.neighbors.get("partner").add(self)
+
+    def makeParent_OffspringsLinks(self, asker):
+        if type(asker) == list:
+            for person in asker:
+                self.neighbors.get("offspring").add(person)
+                person.neighbors.get("parent").add(self)
+        else:
+            self.neighbors.get("offspring").add(asker)
+            asker.neighbors.get("parent").add(self)
 
     def addCriminalLink(self, asker):
+        #todo: Links between people do not have the "criminal_link_weight" attribute
         weight = self.criminal_link_weight.get(asker)
         if weight == None:
             self.neighbors.get("criminal").add(asker)

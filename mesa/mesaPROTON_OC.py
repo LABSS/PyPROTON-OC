@@ -11,7 +11,6 @@ import timeit
 from itertools import combinations
 import os
 from numpy.random import default_rng
-from pathlib import Path
 
 class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
@@ -45,7 +44,7 @@ class MesaPROTON_OC(Model):
         self.female_punishment_length_list = 0
         self.arrest_rate = 0
         self.jobs_by_company_size = 0
-        self.education_levels = 0  # table from education level to data
+        self.education_levels = dict()  # table from education level to data
         self.c_by_age_and_sex = 0
         self.c_range_by_age_and_sex = 0
         self.labour_status_by_age_and_sex = 0
@@ -112,11 +111,11 @@ class MesaPROTON_OC(Model):
         # self.running = True
         # self.datacollector.collect(self)
 
-    def create_agents(self):
+    def create_agents(self, random_relationships=False):
         for i_agent in range(0, self.initial_agents):
             i_agent = Person(self)
             self.schedule.add(i_agent)
-            i_agent.random_init()
+            i_agent.random_init(random_relationships)
 
     def step(self):
         self.schedule.step()
@@ -196,7 +195,7 @@ class MesaPROTON_OC(Model):
             poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(maritable)
             poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & set(maritable)
             pool = [x for x in (poolp | poolf) if
-                    x.gender != ego.gender and
+                    x.gender_is_male != ego.gender_is_male and
                     (x.age() - ego.age()) < 8 and
                     x not in ego.neigh("sibling") and
                     x not in ego.neigh("offspring") and ego not in x.neigh("offspring")  # directed network
@@ -229,7 +228,7 @@ class MesaPROTON_OC(Model):
         if social_support == "psychological" or social_support == "all": self.soc_add_psychological(targets)
         if social_support == "more friends" or social_support == "all": self.soc_add_more_friends(targets)
         welfare_createjobs({x for x in schedule.agents if
-                            x.gender == 'female' and x.neighbors.get('offspring').intersection(set(targets))})
+                            x.gender_is_male == False and x.neighbors.get('offspring').intersection(set(targets))})
 
     def soc_add_educational(self, targets):
         for x in targets: x.max_education_level = min(max_education_level + 1, max(education_levels.keys()))
@@ -256,7 +255,7 @@ class MesaPROTON_OC(Model):
     def welfare_intervene(self):
         if welfare_support == "job_mother":
             targets = [x for x in schedule.agents if
-                       x.gender == 'female' and
+                       x.gender_is_male == False and
                        not x.my_job and
                        (True if not x.partner else not x.partner.oc_member)
                        ]
@@ -363,8 +362,7 @@ class MesaPROTON_OC(Model):
                                              self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
         for x in oc_family_head: x.oc_member = True
         candidates_in_families = [y for y in x.neighbors.get('household') if y.age() >= 18 for x in oc_family_head]
-        if len(
-                candidates_in_families) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
+        if len(candidates_in_families) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families,
                                                       candidates_in_families, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
@@ -377,13 +375,13 @@ class MesaPROTON_OC(Model):
             for x in extras: x.oc_member = True
         # and now, the network with its weights..
         oc_members = [x for x in self.schedule.agents if x.oc_member]
-        for (i, j) in combinations(oc_members, 2): i.create_criminal_links_with(j)
+        for (i, j) in combinations(oc_members, 2): i.addCriminalLink(j)
 
     def reset_oc_embeddedness(self):
         for x in self.schedule.agents: x.cached_oc_embeddedness = None
 
     def setup_persons_and_friendship(self):
-        age_gender_dist = self.read_csv_city("initial_age_gender_dist")
+        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist")
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
         for x in self.watts_strogatz.nodes():
             a = Person(self)
@@ -414,7 +412,7 @@ class MesaPROTON_OC(Model):
             candidates = self.rng.choice(candidates, min(len(candidates), 5), False).tolist()
             print("len cand:" + str(len(candidates)))
             # remove couples from candidates and their neighborhoods
-            while len(candidates) > 0 and not m.incestuos(p, candidates):
+            while len(candidates) > 0 and not self.incestuos(p, candidates):
                 # trouble should exist, or incestous would be false.
                 trouble = self.rng.choice(
                     [x for x in candidates if x.partner], 1).tolist()
@@ -425,6 +423,180 @@ class MesaPROTON_OC(Model):
             targets = targets + set([x.neighbors.get("siblings") for x in targets])
             for x in targets:
                 x.addSiblingLinks(p)
+
+    def generate_households(self):
+        # this mostly follows the third algorithm from Gargiulo et al. 2010
+        # (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
+        # The dataframes are transformed into nested dictionaries to ensure greater speed
+        self.families = list()
+        head_age_dist = self.df_to_dict(self.read_csv_city("head_age_dist_by_household_size"))
+        proportion_of_male_singles_by_age = self.df_to_dict(self.read_csv_city("proportion_of_male_singles_by_age"))
+        hh_type_dist = self.df_to_dict(self.read_csv_city("household_type_dist_by_age"))
+        partner_age_dist = self.df_to_dict(self.read_csv_city("partner_age_dist"))
+        self.children_age_dist = self.df_to_dict(self.read_csv_city("children_age_dist"))
+        p_single_father = self.read_csv_city("proportion_single_fathers")
+        self.population = self.schedule.agents
+        self.hh_size = self.household_sizes(self.initial_agents)
+        self.complex_hh_sizes = list()  # will contain the sizes that we fail to generate: we'll reuse those for complex households
+        max_attempts_by_size = 50
+        attempts_list = list()
+        # We have two levels of iterating: the first level is the general attempts at generating a household
+        # and the second level is the attempts at generating a household of a particular size before giving up.
+        for size in self.hh_size:
+            success = False
+            nb_attempts = 0
+            while not success and nb_attempts < max_attempts_by_size:
+                hh_members = list()
+                nb_attempts += 1
+                # pick the age of the head according to the size of the household
+                head_age = extra.pick_from_pair_list(head_age_dist[size],self.rng)
+                if size == 1:
+                    male_wanted = (self.rng.random() < proportion_of_male_singles_by_age[head_age])
+                    head = self.pick_from_population_pool_by_age_and_gender(head_age, male_wanted)
+                    # Note that we don't "do" anything with the picked head: the fact that it gets
+                    # removed from the population table when we pick it is sufficient for us.
+                    if head:
+                        success = True
+                        attempts_list.append(nb_attempts)
+                else:
+                    # For household sizes greater than 1, pick a household type according to age of the head
+                    hh_type = extra.pick_from_pair_list(hh_type_dist[head_age], self.rng)
+                    if hh_type == "single_parent":
+                        male_head = self.rng.random() < float(p_single_father.columns.to_list()[0])
+                    else:
+                        male_head = True
+                    if male_head:
+                        mother_age = extra.pick_from_pair_list(partner_age_dist[head_age], self.rng)
+                    else:
+                        mother_age = head_age
+                    hh_members.append(self.pick_from_population_pool_by_age_and_gender(head_age, male_head))
+                    if hh_type == "couple":
+                        mother = self.pick_from_population_pool_by_age_and_gender(mother_age, False)
+                        hh_members.append(mother)
+                    num_children = size - len(hh_members)
+                    for child in range(1, int(num_children) + 1):
+                        if num_children in self.children_age_dist:
+                            if mother_age in self.children_age_dist[num_children]:
+                                child_age = extra.pick_from_pair_list(self.children_age_dist[num_children][mother_age], self.rng)
+                                child = self.pick_from_population_pool_by_age(child_age)
+                                hh_members.append(child)
+                    hh_members = [x for x in hh_members if x != None] #exclude Nones
+                    if len(hh_members) == size:
+                        # only generate the household if we got everyone we needed
+                        success = True
+                        attempts_list.append(nb_attempts)
+                        family_wealth_level = hh_members[0].wealth_level
+                        # if it's a couple, partner up the first two members and set the others as offspring
+                        if hh_type == "couple":
+                            hh_members[0].makePartnerLinks(hh_members[1])
+                            couple = hh_members[0:2]
+                            offsprings = hh_members[2:]
+                            for partner in couple:
+                                partner.makeParent_OffspringsLinks(offsprings)
+                            for sibling in offsprings:
+                                sibling.addSiblingLinks(offsprings)
+                        for member in hh_members:
+                            member.makeHouseholdLinks(hh_members)
+                            member.wealth_level = family_wealth_level
+                        self.families.append(hh_members)
+                    else:
+                        # in case of failure, we need to put the selected members back in the population
+                        for member in hh_members:
+                            self.population.append(member)
+            if not success:
+                self.complex_hh_sizes.append(size)
+        print("Complex size: " + str(len(self.complex_hh_sizes)) + str("/") + str(len(self.hh_size)))
+        for comp_hh_size in self.complex_hh_sizes:
+            comp_hh_size = int(min(comp_hh_size, len(self.population)))
+            complex_hh_members = self.population[0:comp_hh_size] # grab the first persons in the list
+            max_age_index = [x.age() for x in complex_hh_members].index(max([x.age() for x in complex_hh_members]))
+            family_wealth_level = complex_hh_members[max_age_index].wealth_level
+            for member in complex_hh_members:
+                self.population.remove(member) # remove persons from the population
+                member.makeHouseholdLinks(complex_hh_members) #and link them up.
+                member.wealth_level = family_wealth_level
+            if len(complex_hh_members) > 1:
+                self.families.append(complex_hh_members)
+        print("Singles " + str(len([x for x in self.hh_size if x == 1])))
+        print("Families " + str(len(self.families)))
+        print("Average of attempts " + str(np.mean(attempts_list)))
+
+    def household_sizes(self, size):
+        """
+        loads a .csv with a probability distribution of household size and calculates household based on initial agents
+        :param size: int, the population size, initial agents
+        :return: list, the sizes of household
+        """
+        hh_size_dist = self.read_csv_city("household_size_dist").values
+        sizes = []
+        current_sum = 0
+        while current_sum < size:
+            hh_size = extra.pick_from_pair_list(hh_size_dist, self.rng)
+            if current_sum + hh_size <= size:
+                sizes.append(hh_size)
+                current_sum += hh_size
+        sizes.sort(reverse=True)
+        return sizes
+
+    def pick_from_population_pool_by_age_and_gender(self, age_wanted, male_wanted):
+        """
+        Pick an agent with specific age and sex, None otherwise
+        :param age_wanted: int, age wanted
+        :param male_wanted: bool,
+        :return: agent, or None
+        """
+        if not [x for x in self.population if x.gender_is_male == male_wanted and x.age() == age_wanted]:
+            return None
+        picked_person = self.rng.choice(
+            [x for x in self.population if x.gender_is_male == male_wanted and x.age() == age_wanted])
+        self.population.remove(picked_person)
+        return picked_person
+
+    def pick_from_population_pool_by_age(self, age_wanted):
+        """
+        Pick an agent with specific age form population, None otherwise
+        :param age_wanted: int, age wanted
+        :return: agent or None
+        """
+        if age_wanted not in [x.age() for x in self.population]:
+            return None
+        picked_person = self.rng.choice([x for x in self.population if x.age() == age_wanted])
+        self.population.remove(picked_person)
+        return picked_person
+
+    def df_to_dict(self, df):
+        """
+        Based on the size of the dataframe, it transforms the dataframe into a nested dictionary.
+        :param df: pandas dataframe
+        :return: dic
+        """
+        dic = dict()
+        if len(df.columns) == 2:
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = float(df[df.iloc[:,0] == col].iloc[:,1].values)
+        if len(df.columns) == 3:
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
+        if len(df.columns) == 4:
+            for col in np.unique(df.iloc[:, 0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+            for key in dic:
+                subdic = dict()
+                for subcol in np.unique(dic[key].iloc[:, 0]):
+                    subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
+                dic[key] = subdic
+        return dic
+
+    def setup_education_levels(self):
+        """
+        Modify the self.education_levels attribute in-place. Given "n" levels of education,
+        for each level compute the correct amount of schools, based on the number of agents.
+        """
+        self.list_schools = self.read_csv_city("schools").values.tolist()
+        for index, level in enumerate(self.list_schools):
+            level[3] = np.ceil((level[3]/level[4])*self.initial_agents)
+            level.remove(level[4])
+            self.education_levels[index+1] = level
 
 
 # 778 / 1700
@@ -441,7 +613,7 @@ class MesaPROTON_OC(Model):
 def conclude_wedding(ego, partner):
     for x in [ego, partner]:
         for y in x.neighbors["household"]:
-            y.neighbors["household"].discard(x)  # shoudl be remove(x) once we finish tests
+            y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
     ego.neighbors["household"] = {partner}
     partner.neighbors["household"] = {ego}
     ego.partner = partner
@@ -450,8 +622,10 @@ staticmethod(conclude_wedding)
 
 
 if __name__ == "__main__":
-    # testProton.unittest.main()
+
     m = MesaPROTON_OC()
+    m.initial_agents = 100
+    m.create_agents()
     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
     m.initial_agents = 200
     m.setup_persons_and_friendship()
@@ -459,11 +633,8 @@ if __name__ == "__main__":
     nx.draw(m.watts_strogatz)
     print("num links:")
     print(m.total_num_links())
-    m.setup_siblings()
+    # m.setup_siblings()
     print("num links:")
     print(m.total_num_links())
 
-    for net in Person.network_names:
-        print(net)
-        print(sum([len(a.neighbors.get(net)) for a in m.schedule.agents]))
-    # m.make_friends()
+
