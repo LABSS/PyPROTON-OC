@@ -85,6 +85,7 @@ class MesaPROTON_OC(Model):
         self.num_oc_persons = 30
         self.num_oc_families = 8
         self.education_modifier = 1.0 #education-rate in Netlogo model
+        self.retirement_age = 65
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -386,6 +387,7 @@ class MesaPROTON_OC(Model):
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
         for x in self.watts_strogatz.nodes():
             a = Person(self)
+            a.init_person(self.age_gender_dist)
             self.schedule.add(a)
             # g.nodes[nlrow['id']].update(nlrow[1:].to_dict())
             self.watts_strogatz.nodes[x].update({'person': a})
@@ -629,6 +631,8 @@ if __name__ == "__main__":
     m.create_agents()
     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
     m.initial_agents = 200
+    m.load_stats_tables()
+    m.setup_education_levels()
     m.setup_persons_and_friendship()
     # Visualize network
     nx.draw(m.watts_strogatz)
