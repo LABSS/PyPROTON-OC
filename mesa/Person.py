@@ -59,7 +59,7 @@ class Person(Agent):
         #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.m)]))
 
     def __repr__(self):
-        return "Agent " + str(self.unique_id)
+        return "Agent: " + str(self.unique_id)
 
     
     def age(self):
