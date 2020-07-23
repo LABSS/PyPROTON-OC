@@ -612,6 +612,15 @@ class MesaPROTON_OC(Model):
                 new_school = School(self, level, list())
                 m.schools.append(new_school)
 
+    def init_students(self):
+        for level in m.education_levels.keys():
+            row = m.education_levels[level]
+            start_age = row[0]
+            end_age = row[1]
+            pool = [x for x in self.schedule.agents if x.age() >= start_age and x.age() <= end_age and x.education_level == level-1]
+            for agent in pool:
+                pass
+
 
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
@@ -652,5 +661,8 @@ if __name__ == "__main__":
     # m.setup_siblings()
     print("num links:")
     print(m.total_num_links())
+
+    #Remove
+    m.init_students()
 
 

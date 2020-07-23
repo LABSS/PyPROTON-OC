@@ -211,6 +211,12 @@ class Person(Agent):
             if self.age() <= max_age:
                 self.education_level = level - 1
 
+    def enroll_to_school(self):
+        potential_school = [x.my_school for x in self.neighbors["household"]]
+        pass
+
+
+
 class Prisoner(Person):
     sentence_countdown = 0
 
