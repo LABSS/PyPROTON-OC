@@ -187,8 +187,12 @@ class Person(Agent):
     def dunbar_number(self):
         return(150-abs(self.age()-30))
     
-    def init_person(self, age_gender_dist): # person command
-        row = extra.weighted_one_of(age_gender_dist, lambda x: x[-1], self.m.rng)  # select a row from our age_gender distribution
+    def init_person(self): # person command
+        """
+        This method modifies the attributes of the person instance based on the model's
+        stats_tables as part of the initial setup of the model agents.
+        """
+        row = extra.weighted_one_of(self.m.age_gender_dist, lambda x: x[-1], self.m.rng)  # select a row from our age_gender distribution
         self.birth_tick =  0 - row[0] * self.m.ticks_per_year      # ...and set age... =
         self.gender_is_male =  bool(row[1]) # ...and gender according to values in that row.
         self.retired = self.age() >= self.m.retirement_age                 # persons older than retirement_age are retired

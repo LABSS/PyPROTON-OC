@@ -168,6 +168,7 @@ class MesaPROTON_OC(Model):
         self.fertility_table = self.read_csv_city("initial_fertility_rates")
         self.mortality_table = self.read_csv_city("initial_mortality_rates")
         self.edu = self.df_to_dict(self.read_csv_city("edu"))
+        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
 
         self.edu_by_wealth_lvl = self.read_csv_city("edu_by_wealth_lvl")
         self.work_status_by_edu_lvl = self.read_csv_city("work_status_by_edu_lvl")
@@ -383,11 +384,10 @@ class MesaPROTON_OC(Model):
 
     def setup_persons_and_friendship(self):
         # We transform this df into a list for ease of access
-        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
         for x in self.watts_strogatz.nodes():
             a = Person(self)
-            a.init_person(self.age_gender_dist)
+            a.init_person()
             self.schedule.add(a)
             # g.nodes[nlrow['id']].update(nlrow[1:].to_dict())
             self.watts_strogatz.nodes[x].update({'person': a})
