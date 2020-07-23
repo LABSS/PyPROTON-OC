@@ -604,6 +604,9 @@ class MesaPROTON_OC(Model):
             self.education_levels[index+1] = level
 
     def setup_schools(self):
+        """
+        Generates n-schools based on the number of initial agents
+        """
         for level in m.education_levels.keys():
             for i_school in range(int(m.education_levels[level][3])):
                 new_school = School(self, level, list())
