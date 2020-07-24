@@ -48,6 +48,7 @@ class Person(Agent):
         self.migrant = 0
         self.criminal_tendency = 0
         self.my_school = None
+        self.my_ex_schools = list() #list of schools the agent has been enrolled
         self.target_of_intervention = 0
         self.arrest_weight = 0
         #super().__init__(self.unique_id, model)
@@ -212,8 +213,13 @@ class Person(Agent):
                 self.education_level = level - 1
 
     def enroll_to_school(self):
-        potential_school = [x.my_school for x in self.neighbors["household"]]
-        pass
+        self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_ex_schools if school.education_level == self.education_level]
+        if self.potential_school:
+            self.my_school = self.m.rng.choice(self.potential_school)
+        else:
+            self.potential_school = [x for x in self.m.schools if x.diploma_level == self.education_level]
+            self.my_school = self.m.rng.choice(self.potential_school)
+        self.my_school.my_students.add(self)
 
 
 

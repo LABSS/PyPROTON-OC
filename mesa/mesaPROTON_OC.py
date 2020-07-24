@@ -619,7 +619,13 @@ class MesaPROTON_OC(Model):
             end_age = row[1]
             pool = [x for x in self.schedule.agents if x.age() >= start_age and x.age() <= end_age and x.education_level == level-1]
             for agent in pool:
+                agent.enroll_to_school()
+            for school in m.schools:
                 pass
+
+    def decide_conn_number(self, agent):
+        pass
+
 
 
 # 778 / 1700
@@ -647,22 +653,24 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 100
-    m.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.load_stats_tables()
-    m.setup_education_levels()
+    # m.initial_agents = 100
+    # m.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    # m.initial_agents = 200
+    # m.load_stats_tables()
+    # m.setup_education_levels()
+    # m.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(m.watts_strogatz)
+    # print("num links:")
+    # print(m.total_num_links())
+    # # m.setup_siblings()
+    # print("num links:")
+    # print(m.total_num_links())
+    #
+    # #Remove
+    # m.init_students()
     m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    # m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
-
-    #Remove
-    m.init_students()
-
+    m.generate_households()
+    m.setup_education_levels()
 
