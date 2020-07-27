@@ -62,7 +62,7 @@ def weighted_n_of(n, agentset, weight_function, rng_istance):
     return  rng_istance.choice(agentset, n, replace=False, p=p)
 
 def weighted_one_of(agentset, weight_function, rng_istance):
-    return weighted_n_of(1, agentset, weight_function, rng_istance)
+    return weighted_n_of(1, agentset, weight_function, rng_istance)[0]
 
 def pick_from_pair_list(a_list_of_pairs, rng_istance):
     """
@@ -72,4 +72,4 @@ def pick_from_pair_list(a_list_of_pairs, rng_istance):
     :param rng_istance: numpy.random instance,
     :return: object
     """
-    return weighted_one_of(a_list_of_pairs, lambda x: x[-1], rng_istance)[0][0]
+    return weighted_one_of(a_list_of_pairs, lambda x: x[-1], rng_istance)[0]

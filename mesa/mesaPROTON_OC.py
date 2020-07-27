@@ -84,7 +84,8 @@ class MesaPROTON_OC(Model):
         self.ticks = 0
         self.num_oc_persons = 30
         self.num_oc_families = 8
-        self.education_modifier = 1.0
+        self.education_modifier = 1.0 #education-rate in Netlogo model
+        self.retirement_age = 65
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -166,7 +167,8 @@ class MesaPROTON_OC(Model):
         self.num_co_offenders_dist = pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv"))
         self.fertility_table = self.read_csv_city("initial_fertility_rates")
         self.mortality_table = self.read_csv_city("initial_mortality_rates")
-        self.edu = self.read_csv_city("edu")
+        self.edu = self.df_to_dict(self.read_csv_city("edu"))
+        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
 
         self.edu_by_wealth_lvl = self.read_csv_city("edu_by_wealth_lvl")
         self.work_status_by_edu_lvl = self.read_csv_city("work_status_by_edu_lvl")
@@ -381,10 +383,11 @@ class MesaPROTON_OC(Model):
         for x in self.schedule.agents: x.cached_oc_embeddedness = None
 
     def setup_persons_and_friendship(self):
-        self.age_gender_dist = self.read_csv_city("initial_age_gender_dist")
+        # We transform this df into a list for ease of access
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
         for x in self.watts_strogatz.nodes():
             a = Person(self)
+            a.init_person()
             self.schedule.add(a)
             # g.nodes[nlrow['id']].update(nlrow[1:].to_dict())
             self.watts_strogatz.nodes[x].update({'person': a})
@@ -628,6 +631,8 @@ if __name__ == "__main__":
     m.create_agents()
     num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
     m.initial_agents = 200
+    m.load_stats_tables()
+    m.setup_education_levels()
     m.setup_persons_and_friendship()
     # Visualize network
     nx.draw(m.watts_strogatz)
