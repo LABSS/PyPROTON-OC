@@ -220,12 +220,12 @@ class Person(Agent):
             if self.age() <= max_age:
                 self.education_level = level - 1
 
-    def enroll_to_school(self):
-        self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == self.education_level+1]
+    def enroll_to_school(self, level):
+        self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == level]
         if self.potential_school:
             self.my_school = self.m.rng.choice(self.potential_school)
         else:
-            self.potential_school = [x for x in self.m.schools if x.diploma_level == self.education_level+1]
+            self.potential_school = [x for x in self.m.schools if x.diploma_level == level]
             self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 

@@ -613,13 +613,17 @@ class MesaPROTON_OC(Model):
                 m.schools.append(new_school)
 
     def init_students(self):
-        for level in m.education_levels.keys():
+        """
+        Adds to schools the agents that meet the defined parameters of age and level of education and then
+        creates connections between agents within the school.
+        """
+        for level in self.education_levels:
             row = m.education_levels[level]
             start_age = row[0]
             end_age = row[1]
-            pool = [x for x in self.schedule.agents if x.age() >= start_age and x.age() <= end_age and x.education_level == level-1]
+            pool = [x for x in self.schedule.agents if x.age() >= start_age and x.age() <= end_age and x.education_level == level-1 and x.max_education_level >= level ]
             for agent in pool:
-                agent.enroll_to_school()
+                agent.enroll_to_school(level)
         for school in m.schools:
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
@@ -629,9 +633,10 @@ class MesaPROTON_OC(Model):
 
     def decide_conn_number(self, agents, max_lim):
         """
-        :param agents:
-        :param max_lim:
-        :return:
+        Given a set of agents decides the number of connections to be created between them based on a maximum number.
+        :param agents: list or set, of agents
+        :param max_lim: int, an arbitrary maximum number
+        :return: Returns max_lim if the agents are more than max_lim otherwise returns the number of agents minus one.
         """
         if len(agents) <= max_lim:
             return len(agents) -1
@@ -665,27 +670,20 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    # m.initial_agents = 100
-    # m.create_agents()
-    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    # m.initial_agents = 200
-    # m.load_stats_tables()
-    # m.setup_education_levels()
-    # m.setup_persons_and_friendship()
-    # # Visualize network
-    # nx.draw(m.watts_strogatz)
-    # print("num links:")
-    # print(m.total_num_links())
-    # # m.setup_siblings()
-    # print("num links:")
-    # print(m.total_num_links())
-    #
-    # #Remove
     m.initial_agents = 100
+    m.create_agents()
+    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    m.initial_agents = 200
     m.load_stats_tables()
     m.setup_education_levels()
     m.setup_persons_and_friendship()
-    m.setup_schools()
-    m.init_students()
+    # Visualize network
+    nx.draw(m.watts_strogatz)
+    print("num links:")
+    print(m.total_num_links())
+    # m.setup_siblings()
+    print("num links:")
+    print(m.total_num_links())
+
 
 
