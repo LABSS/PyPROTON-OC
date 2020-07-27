@@ -681,10 +681,11 @@ if __name__ == "__main__":
     # print(m.total_num_links())
     #
     # #Remove
-    m.initial_agents = 1000
+    m.initial_agents = 100
     m.load_stats_tables()
     m.setup_education_levels()
     m.setup_persons_and_friendship()
     m.setup_schools()
     m.init_students()
+
 
