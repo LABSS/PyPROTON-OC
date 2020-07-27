@@ -623,9 +623,8 @@ class MesaPROTON_OC(Model):
         for school in m.schools:
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
-                #todo Errore here "'Person' object is not iterable"
-                total_pool = school.my_students.difference_update(student)
-                conn_pool = m.rng.choice(total_pool, conn, replace=False)
+                total_pool = school.my_students.difference({student})
+                conn_pool = list(m.rng.choice(list(total_pool), conn, replace=False))
                 student.makeSchoolLinks(conn_pool)
 
     def decide_conn_number(self, agents, max_lim):
@@ -682,11 +681,10 @@ if __name__ == "__main__":
     # print(m.total_num_links())
     #
     # #Remove
-    m.initial_agents = 100
+    m.initial_agents = 1000
     m.load_stats_tables()
     m.setup_education_levels()
     m.setup_persons_and_friendship()
     m.setup_schools()
     m.init_students()
-    #m.generate_households()
 
