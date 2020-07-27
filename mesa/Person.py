@@ -48,7 +48,6 @@ class Person(Agent):
         self.migrant = 0
         self.criminal_tendency = 0
         self.my_school = None
-        self.my_ex_schools = list() #list of schools the agent has been enrolled
         self.target_of_intervention = 0
         self.arrest_weight = 0
         #super().__init__(self.unique_id, model)
@@ -157,6 +156,15 @@ class Person(Agent):
             self.neighbors.get("offspring").add(asker)
             asker.neighbors.get("parent").add(self)
 
+    def makeSchoolLinks(self, asker):
+        if type(asker) == list:
+            for person in asker:
+                self.neighbors.get("school").add(person)
+                person.neighbors.get("school").add(self)
+        else:
+            self.neighbors.get("school").add(asker)
+            asker.neighbors.get("school").add(self)
+
     def addCriminalLink(self, asker):
         #todo: Links between people do not have the "criminal_link_weight" attribute
         weight = self.criminal_link_weight.get(asker)
@@ -207,19 +215,20 @@ class Person(Agent):
         # limit education by age
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level
-        for level in sorted(list(self.m.education_levels.keys()),reverse=True):
+        for level in sorted(list(self.m.education_levels.keys()), reverse=True):
             max_age = self.m.education_levels.get(level)[1]
             if self.age() <= max_age:
                 self.education_level = level - 1
 
     def enroll_to_school(self):
-        self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_ex_schools if school.education_level == self.education_level]
-        if self.potential_school:
-            self.my_school = self.m.rng.choice(self.potential_school)
-        else:
-            self.potential_school = [x for x in self.m.schools if x.diploma_level == self.education_level]
-            self.my_school = self.m.rng.choice(self.potential_school)
-        self.my_school.my_students.add(self)
+        if self.education_level > 0:
+            self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == self.education_level]
+            if self.potential_school:
+                self.my_school = self.m.rng.choice(self.potential_school)
+            else:
+                self.potential_school = [x for x in self.m.schools if x.diploma_level == self.education_level]
+                self.my_school = self.m.rng.choice(self.potential_school)
+            self.my_school.my_students.add(self)
 
 
 

@@ -609,7 +609,7 @@ class MesaPROTON_OC(Model):
         """
         for level in m.education_levels.keys():
             for i_school in range(int(m.education_levels[level][3])):
-                new_school = School(self, level, list())
+                new_school = School(self, level)
                 m.schools.append(new_school)
 
     def init_students(self):
@@ -620,11 +620,24 @@ class MesaPROTON_OC(Model):
             pool = [x for x in self.schedule.agents if x.age() >= start_age and x.age() <= end_age and x.education_level == level-1]
             for agent in pool:
                 agent.enroll_to_school()
-            for school in m.schools:
-                pass
+        for school in m.schools:
+            conn = self.decide_conn_number(school.my_students, 15)
+            for student in school.my_students:
+                #todo Errore here "'Person' object is not iterable"
+                total_pool = school.my_students.difference_update(student)
+                conn_pool = m.rng.choice(total_pool, conn, replace=False)
+                student.makeSchoolLinks(conn_pool)
 
-    def decide_conn_number(self, agent):
-        pass
+    def decide_conn_number(self, agents, max_lim):
+        """
+        :param agents:
+        :param max_lim:
+        :return:
+        """
+        if len(agents) <= max_lim:
+            return len(agents) -1
+        else:
+            return max_lim
 
 
 
@@ -669,8 +682,11 @@ if __name__ == "__main__":
     # print(m.total_num_links())
     #
     # #Remove
-    # m.init_students()
-    m.setup_persons_and_friendship()
-    m.generate_households()
+    m.initial_agents = 100
+    m.load_stats_tables()
     m.setup_education_levels()
+    m.setup_persons_and_friendship()
+    m.setup_schools()
+    m.init_students()
+    #m.generate_households()
 
