@@ -6,10 +6,10 @@ import numpy as np
 class School():
     max_id = 0
     schools = list()
-    def __init__(self, m:mesaPROTON_OC, diploma_level, my_student):
+    def __init__(self, m:mesaPROTON_OC, diploma_level, my_students):
         self.m = m
         self.diploma_level = diploma_level
-        self.my_student = my_student
+        self.my_students = my_students
         self.unique_id = School.max_id
         School.max_id = School.max_id + 1
         School.schools.append(self)
