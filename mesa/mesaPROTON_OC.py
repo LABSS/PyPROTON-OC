@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 from Person import *
+from School import School
 import timeit
 # import testProton
 from itertools import combinations
@@ -72,6 +73,7 @@ class MesaPROTON_OC(Model):
         self.number_crimes = 0
         self.crime_multiplier = 0
         self.kids_intervention_counter = 0
+        self.schools = list()
 
         self.schedule = RandomActivation(self)
 
@@ -600,6 +602,15 @@ class MesaPROTON_OC(Model):
             level[3] = np.ceil((level[3]/level[4])*self.initial_agents)
             level.remove(level[4])
             self.education_levels[index+1] = level
+
+    def setup_schools(self):
+        """
+        Generates n-schools based on the number of initial agents
+        """
+        for level in m.education_levels.keys():
+            for i_school in range(int(m.education_levels[level][3])):
+                new_school = School(self, level, list())
+                m.schools.append(new_school)
 
 
 # 778 / 1700
