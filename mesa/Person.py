@@ -221,6 +221,11 @@ class Person(Agent):
                 self.education_level = level - 1
 
     def enroll_to_school(self, level):
+        """
+        Given a level of education, this method chooses a school where to enroll the agent
+        and modifies my_school atribute in-place.
+        :param level: int, level of education to enroll
+        """
         self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == level]
         if self.potential_school:
             self.my_school = self.m.rng.choice(self.potential_school)

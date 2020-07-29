@@ -607,10 +607,10 @@ class MesaPROTON_OC(Model):
         """
         Generates n-schools based on the number of initial agents
         """
-        for level in m.education_levels.keys():
-            for i_school in range(int(m.education_levels[level][3])):
+        for level in self.education_levels.keys():
+            for i_school in range(int(self.education_levels[level][3])):
                 new_school = School(self, level)
-                m.schools.append(new_school)
+                self.schools.append(new_school)
 
     def init_students(self):
         """
@@ -618,17 +618,18 @@ class MesaPROTON_OC(Model):
         creates connections between agents within the school.
         """
         for level in self.education_levels:
-            row = m.education_levels[level]
+            row = self.education_levels[level]
             start_age = row[0]
             end_age = row[1]
-            pool = [x for x in self.schedule.agents if x.age() >= start_age and x.age() <= end_age and x.education_level == level-1 and x.max_education_level >= level ]
+            pool = [x for x in self.schedule.agents if
+                    x.age() >= start_age and x.age() <= end_age and x.education_level == level - 1 and x.max_education_level >= level]
             for agent in pool:
                 agent.enroll_to_school(level)
-        for school in m.schools:
+        for school in self.schools:
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
                 total_pool = school.my_students.difference({student})
-                conn_pool = list(m.rng.choice(list(total_pool), conn, replace=False))
+                conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 student.makeSchoolLinks(conn_pool)
 
     def decide_conn_number(self, agents, max_lim):
@@ -636,7 +637,7 @@ class MesaPROTON_OC(Model):
         Given a set of agents decides the number of connections to be created between them based on a maximum number.
         :param agents: list or set, of agents
         :param max_lim: int, an arbitrary maximum number
-        :return: Returns max_lim if the agents are more than max_lim otherwise returns the number of agents minus one.
+        :return: max_lim if the agents are more than max_lim otherwise returns the number of agents minus one.
         """
         if len(agents) <= max_lim:
             return len(agents) -1
