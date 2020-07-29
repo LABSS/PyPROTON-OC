@@ -173,8 +173,8 @@ class MesaPROTON_OC(Model):
         self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
 
         self.edu_by_wealth_lvl = self.read_csv_city("edu_by_wealth_lvl")
-        self.work_status_by_edu_lvl = self.read_csv_city("work_status_by_edu_lvl")
-        self.wealth_quintile_by_work_status = self.read_csv_city("wealth_quintile_by_work_status")
+        self.work_status_by_edu_lvl = self.df_to_dict(self.read_csv_city("work_status_by_edu_lvl"))
+        self.wealth_quintile_by_work_status = self.df_to_dict(self.read_csv_city("wealth_quintile_by_work_status"))
         self.punishment_length_list = self.read_csv_city("conviction_length")
         # male_punishment_length_list =  map [ i _> (list (item 0 i) (item 2 i)) ] punishment_length_list
         # female_punishment_length_list =  map [ i _> (list (item 0 i) (item 1 i)) ] punishment_length_list
@@ -655,7 +655,20 @@ class MesaPROTON_OC(Model):
         self.setup_persons_and_friendship()
         self.setup_schools()
         self.init_students()
+        self.assign_jobs_and_wealth()
 
+    def assign_jobs_and_wealth(self):
+        """
+        This procedure modifies the job_level and wealth_level attributes of agents in-place. This is just a first
+        assignment, and will be modified first by the multiplier then by adding neet status.
+        """
+        for agent in self.schedule.agents:
+            if agent.age() > 16:
+                agent.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],self.rng)
+                agent.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male],self.rng)
+            else:
+                agent.job_level = 1
+                agent.wealth_level = 1  #this will be updated by family membership
 
 
 
