@@ -181,7 +181,7 @@ class MesaPROTON_OC(Model):
         self.jobs_by_company_size = self.read_csv_city("jobs_by_company_size")
         self.c_range_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age_range")
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
-        self.labour_status_by_age_and_sex = self.read_csv_city("labour_status")
+        self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), single_value=True)
         self.labour_status_range = self.read_csv_city("labour_status_range")
         # further sources:
         # schools.csv table goes into education_levels
@@ -569,27 +569,44 @@ class MesaPROTON_OC(Model):
         self.population.remove(picked_person)
         return picked_person
 
-    def df_to_dict(self, df):
+    def df_to_dict(self, df, single_value=False):
         """
-        Based on the size of the dataframe, it transforms the dataframe into a nested dictionary.
-        :param df: pandas dataframe
-        :return: dic
+        Based on the number of pandas DataFrame columns, transforms the dataframe into nested dictionaries as follows:
+        df-columns = age, sex, education, p --> dict-keys = {age:{sex:[education, p]}}
+
+        If single_value is True the transformation has an extra level of depth as follows:
+        df-columns = age, sex, education, p --> dict-keys = {age:{sex:{education: p}}}
+
+        This transformation ensures a faster access to the values using the dictionary keys.
+        :param df: pandas df, the df to be transformed
+        :param single_value: bool, if Frue gives an extra level of depth
+        :return: dict, a new dictionary
         """
         dic = dict()
-        if len(df.columns) == 2:
-            for col in np.unique(df.iloc[:,0]):
-                dic[col] = float(df[df.iloc[:,0] == col].iloc[:,1].values)
-        if len(df.columns) == 3:
-            for col in np.unique(df.iloc[:,0]):
-                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
-        if len(df.columns) == 4:
-            for col in np.unique(df.iloc[:, 0]):
-                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
-            for key in dic:
-                subdic = dict()
-                for subcol in np.unique(dic[key].iloc[:, 0]):
-                    subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
-                dic[key] = subdic
+        if single_value:
+            if len(df.columns) == 3:
+                for col in np.unique(df.iloc[:, 0]):
+                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+                for key in dic:
+                    subdic = dict()
+                    for subcol in np.unique(dic[key].iloc[:, 0]):
+                        subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values[0][0]
+                    dic[key] = subdic
+        else:
+            if len(df.columns) == 2:
+                for col in np.unique(df.iloc[:,0]):
+                    dic[col] = float(df[df.iloc[:,0] == col].iloc[:,1].values)
+            if len(df.columns) == 3:
+                for col in np.unique(df.iloc[:,0]):
+                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
+            if len(df.columns) == 4:
+                for col in np.unique(df.iloc[:, 0]):
+                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+                for key in dic:
+                    subdic = dict()
+                    for subcol in np.unique(dic[key].iloc[:, 0]):
+                        subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
+                    dic[key] = subdic
         return dic
 
     def setup_education_levels(self):
@@ -656,6 +673,7 @@ class MesaPROTON_OC(Model):
         self.setup_schools()
         self.init_students()
         self.assign_jobs_and_wealth()
+        self.setup_inactive_status()
 
     def assign_jobs_and_wealth(self):
         """
@@ -669,6 +687,15 @@ class MesaPROTON_OC(Model):
             else:
                 agent.job_level = 1
                 agent.wealth_level = 1  #this will be updated by family membership
+
+    def setup_inactive_status(self):
+        """
+        Based on labour_status_by_age_and_sex table, this method modifies the job_level attribute of the agents in-place.
+        """
+        for agent in self.schedule.agents:
+            if agent.age() > 14 and agent.age() < 65 and agent.job_level == 1 and self.rng.random() < \
+                    self.labour_status_by_age_and_sex[agent.gender_is_male][agent.age()]:
+                agent.job_level = 0
 
 
 
