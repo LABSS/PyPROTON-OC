@@ -629,7 +629,7 @@ class MesaPROTON_OC(Model):
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
                 total_pool = school.my_students.difference({student})
-                conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
+                conn_pool = list(extra.at_most(conn, list(total_pool), m.rng, replace=False))
                 student.makeSchoolLinks(conn_pool)
 
     def decide_conn_number(self, agents, max_lim):

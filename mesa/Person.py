@@ -157,13 +157,9 @@ class Person(Agent):
             asker.neighbors.get("parent").add(self)
 
     def makeSchoolLinks(self, asker):
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("school").add(person)
-                person.neighbors.get("school").add(self)
-        else:
-            self.neighbors.get("school").add(asker)
-            asker.neighbors.get("school").add(self)
+        for person in asker:
+            self.neighbors.get("school").add(person)
+            person.neighbors.get("school").add(self)
 
     def addCriminalLink(self, asker):
         #todo: Links between people do not have the "criminal_link_weight" attribute
