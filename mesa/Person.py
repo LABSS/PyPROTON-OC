@@ -156,6 +156,11 @@ class Person(Agent):
             self.neighbors.get("offspring").add(asker)
             asker.neighbors.get("parent").add(self)
 
+    def makeSchoolLinks(self, asker):
+        for person in asker:
+            self.neighbors.get("school").add(person)
+            person.neighbors.get("school").add(self)
+
     def addCriminalLink(self, asker):
         #todo: Links between people do not have the "criminal_link_weight" attribute
         weight = self.criminal_link_weight.get(asker)
@@ -206,10 +211,23 @@ class Person(Agent):
         # limit education by age
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level
-        for level in sorted(list(self.m.education_levels.keys()),reverse=True):
+        for level in sorted(list(self.m.education_levels.keys()), reverse=True):
             max_age = self.m.education_levels.get(level)[1]
             if self.age() <= max_age:
                 self.education_level = level - 1
+
+    def enroll_to_school(self, level):
+        """
+        Given a level of education, this method chooses a school where to enroll the agent
+        and modifies my_school atribute in-place.
+        :param level: int, level of education to enroll
+        """
+        self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == level]
+        if not self.potential_school:
+            self.potential_school = [x for x in self.m.schools if x.diploma_level == level]
+        self.my_school = self.m.rng.choice(self.potential_school)
+        self.my_school.my_students.add(self)
+
 
 class Prisoner(Person):
     sentence_countdown = 0

@@ -607,10 +607,43 @@ class MesaPROTON_OC(Model):
         """
         Generates n-schools based on the number of initial agents
         """
-        for level in m.education_levels.keys():
-            for i_school in range(int(m.education_levels[level][3])):
-                new_school = School(self, level, list())
-                m.schools.append(new_school)
+        for level in self.education_levels.keys():
+            for i_school in range(int(self.education_levels[level][3])):
+                new_school = School(self, level)
+                self.schools.append(new_school)
+
+    def init_students(self):
+        """
+        Adds to schools the agents that meet the defined parameters of age and level of education and then
+        creates connections between agents within the school.
+        """
+        for level in self.education_levels:
+            row = self.education_levels[level]
+            start_age = row[0]
+            end_age = row[1]
+            pool = [x for x in self.schedule.agents if
+                    x.age() >= start_age and x.age() <= end_age and x.education_level == level - 1 and x.max_education_level >= level]
+            for agent in pool:
+                agent.enroll_to_school(level)
+        for school in self.schools:
+            conn = self.decide_conn_number(school.my_students, 15)
+            for student in school.my_students:
+                total_pool = school.my_students.difference({student})
+                conn_pool = list(extra.at_most(conn, list(total_pool), m.rng, replace=False))
+                student.makeSchoolLinks(conn_pool)
+
+    def decide_conn_number(self, agents, max_lim):
+        """
+        Given a set of agents decides the number of connections to be created between them based on a maximum number.
+        :param agents: list or set, of agents
+        :param max_lim: int, an arbitrary maximum number
+        :return: max_lim if the agents are more than max_lim otherwise returns the number of agents minus one.
+        """
+        if len(agents) <= max_lim:
+            return len(agents) -1
+        else:
+            return max_lim
+
 
 
 # 778 / 1700
@@ -652,5 +685,6 @@ if __name__ == "__main__":
     # m.setup_siblings()
     print("num links:")
     print(m.total_num_links())
+
 
 
