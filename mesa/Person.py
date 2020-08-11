@@ -223,13 +223,10 @@ class Person(Agent):
         :param level: int, level of education to enroll
         """
         self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == level]
-        if self.potential_school:
-            self.my_school = self.m.rng.choice(self.potential_school)
-        else:
+        if not self.potential_school:
             self.potential_school = [x for x in self.m.schools if x.diploma_level == level]
-            self.my_school = self.m.rng.choice(self.potential_school)
+        self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
-
 
 
 class Prisoner(Person):
