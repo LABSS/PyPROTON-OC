@@ -7,6 +7,8 @@ import numpy as np
 import networkx as nx
 from Person import *
 from School import School
+from Employer import Employer
+from Job import Job
 import timeit
 # import testProton
 from itertools import combinations
@@ -44,7 +46,6 @@ class MesaPROTON_OC(Model):
         self.male_punishment_length_list = 0
         self.female_punishment_length_list = 0
         self.arrest_rate = 0
-        self.jobs_by_company_size = 0
         self.education_levels = dict()  # table from education level to data
         self.c_by_age_and_sex = 0
         self.c_range_by_age_and_sex = 0
@@ -74,6 +75,8 @@ class MesaPROTON_OC(Model):
         self.crime_multiplier = 0
         self.kids_intervention_counter = 0
         self.schools = list()
+        self.jobs = list()
+        self.employers = list()
 
         self.schedule = RandomActivation(self)
 
@@ -88,6 +91,7 @@ class MesaPROTON_OC(Model):
         self.num_oc_families = 8
         self.education_modifier = 1.0 #education-rate in Netlogo model
         self.retirement_age = 65
+        self.unemployment_multiplier = "base"
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -178,7 +182,7 @@ class MesaPROTON_OC(Model):
         self.punishment_length_list = self.read_csv_city("conviction_length")
         # male_punishment_length_list =  map [ i _> (list (item 0 i) (item 2 i)) ] punishment_length_list
         # female_punishment_length_list =  map [ i _> (list (item 0 i) (item 1 i)) ] punishment_length_list
-        self.jobs_by_company_size = self.read_csv_city("jobs_by_company_size")
+        self.jobs_by_company_size = self.df_to_dict(self.read_csv_city("jobs_by_company_size"))
         self.c_range_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age_range")
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
         self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), single_value=True)
@@ -674,6 +678,10 @@ class MesaPROTON_OC(Model):
         self.init_students()
         self.assign_jobs_and_wealth()
         self.setup_inactive_status()
+        if self.unemployment_multiplier != "base": self.fix_unemployment(self.unemployment_multiplier)
+        self.generate_households()
+        # self.setup_siblings()
+        self.setup_employers_jobs()
 
     def assign_jobs_and_wealth(self):
         """
@@ -697,6 +705,41 @@ class MesaPROTON_OC(Model):
                     self.labour_status_by_age_and_sex[agent.gender_is_male][agent.age()]:
                 agent.job_level = 0
 
+    def setup_employers_jobs(self):
+        """
+        #todo Aggiungere docstrings controllare tutto
+        :return: None
+        """
+        self.job_counts = self.read_csv_city("employer_sizes").iloc[:,0].values.tolist()
+        # a small multiplier is added so to increase the pool to allow for matching at the job level
+        self.jobs_target = len([a for a in self.schedule.agents if a.job_level > 1 and a.my_school == None and a.age() > 16 and a.age() < self.retirement_age]) * 1.2
+        while len(self.jobs) < self.jobs_target:
+            n = int(self.rng.choice(self.job_counts, 1))
+            new_employer = Employer(self)
+            self.employers.append(new_employer)
+            for new_job in range(n):
+                new_job = Job(self)
+                self.jobs.append(new_job)
+                new_job.my_employer = new_employer
+                new_employer.my_jobs = new_job
+                new_job.job_level = self.random_level_by_size(n)
+
+    def random_level_by_size(self, employer_size):
+        """
+        Given a float or int (employer_size) this function returns the level to be assigned
+        based on the table (self.jobs_by_company_size) keys.
+        :param employer_size: float,
+        :return: int,
+        """
+        if employer_size in list(self.jobs_by_company_size.keys()):
+            return extra.pick_from_pair_list(self.jobs_by_company_size[employer_size], self.rng)
+        else:
+            min_dist = 1e10
+            for key in list(self.jobs_by_company_size.keys()):
+                if abs(employer_size - key) < min_dist:
+                    most_similar_key = key
+                    min_dist = abs(employer_size - key)
+            return extra.pick_from_pair_list(self.jobs_by_company_size[most_similar_key], self.rng)
 
 
 # 778 / 1700
@@ -724,20 +767,21 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 100
-    m.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.load_stats_tables()
-    m.setup_education_levels()
-    m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    # m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
+    # m.initial_agents = 100
+    # m.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    # m.initial_agents = 200
+    # m.load_stats_tables()
+    # m.setup_education_levels()
+    # m.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(m.watts_strogatz)
+    # print("num links:")
+    # print(m.total_num_links())
+    # # m.setup_siblings()
+    # print("num links:")
+    # print(m.total_num_links())
 
+    m.setup(100)
 
 
