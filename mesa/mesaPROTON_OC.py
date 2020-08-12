@@ -644,6 +644,19 @@ class MesaPROTON_OC(Model):
         else:
             return max_lim
 
+    def setup(self, n_agent):
+        """
+        Warning: At the moment this procedure is partial, it has been added for testing in the development phase.
+        Standard setup of the model
+        :param n_agent: int, number of initial agents
+        """
+        self.initial_agents = n_agent
+        self.setup_education_levels()
+        self.setup_persons_and_friendship()
+        self.setup_schools()
+        self.init_students()
+
+
 
 
 # 778 / 1700
