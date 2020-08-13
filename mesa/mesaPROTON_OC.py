@@ -88,6 +88,7 @@ class MesaPROTON_OC(Model):
         self.num_oc_families = 8
         self.education_modifier = 1.0 #education-rate in Netlogo model
         self.retirement_age = 65
+        self.unemployment_multiplier = "base"
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -674,6 +675,9 @@ class MesaPROTON_OC(Model):
         self.init_students()
         self.assign_jobs_and_wealth()
         self.setup_inactive_status()
+        if self.unemployment_multiplier != "base":
+            self.fix_unemployment(self.unemployment_multiplier)
+        self.generate_households()
 
     def assign_jobs_and_wealth(self):
         """
