@@ -55,16 +55,13 @@ def test_generate_households():
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
     #3
-    for test_simple_family in m.families[:5]:
+    for test_simple_family in m.families:
         if len(test_simple_family) >= 3 and test_family[0].neighbors["partner"] == test_family[1] and test_family[1].neighbors["partner"]  == test_family[0]:
             assert set(test_simple_family[1:]) == test_simple_family[0].neighbors["household"]
             assert test_simple_family[-1] in test_simple_family[0].neighbors["offspring"]
             assert test_simple_family[-1] in test_simple_family[1].neighbors["offspring"]
-            if type(test_simple_family[2:]) == list:
-                for son in test_simple_family[2:]:
-                    assert son.neighbors["parent"] == set(test_simple_family[:2])
-            else:
-                assert test_simple_family[-1].neighbors["parent"] == set(test_simple_family[:2])
+            for son in test_simple_family[2:]:
+                assert son.neighbors["parent"] == set(test_simple_family[:2])
     #4
     for agent in m.schedule.agents:
         for household in agent.neighbors["household"]:
