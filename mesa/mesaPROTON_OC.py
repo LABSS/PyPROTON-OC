@@ -685,10 +685,7 @@ class MesaPROTON_OC(Model):
         for agent in [a for a in self.schedule.agents if
                       a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
                       and a.job_level > 1]:
-            pass
-
-
-
+            agent.find_job()
 
     def assign_jobs_and_wealth(self):
         """

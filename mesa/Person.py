@@ -235,7 +235,19 @@ class Person(Agent):
         self.my_school.my_students.add(self)
 
     def find_job(self):
-        the_job = self.m.rng.choice([j for j in self.m.jobs if j.worker == None and j.job_level == self.job_level])
+        """
+        This method assigns a job to the Person based on those available and their level. Modify in-place the
+        my_worker attribute of Job and the my_job attribute of Person.
+        :return: None
+        """
+        jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level == self.job_level]
+        if not jobs_pool:
+            jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level < self.job_level]
+        the_job = self.m.rng.choice(jobs_pool, 1)[0]
+        self.my_job = the_job
+        the_job.my_worker = self
+
+
 
 
 

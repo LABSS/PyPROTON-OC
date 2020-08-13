@@ -15,7 +15,7 @@ class Job():
         self.m = m
         self.job_level = 0
         self.my_employer = 0
-        self.worker = None
+        self.my_worker = None
         self.unique_id = Job.max_id
         Job.max_id = Job.max_id + 1
         Job.jobs.append(self)
