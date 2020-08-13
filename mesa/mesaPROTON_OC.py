@@ -402,33 +402,48 @@ class MesaPROTON_OC(Model):
         # plt.show()
 
     def incestuos(self, ego, candidates):
-        all_potential_siblings = [ego] + candidates + list(ego.neighbors.get('sibling')) + [s for c in candidates for s
-                                                                                            in
-                                                                                            c.neighbors.get('sibling')]
-        return ego.neighbors.get("partner").pop() in all_potential_siblings
+        all_potential_siblings = [ego] + candidates + ego.get_link_list("sibling") + [s for c in candidates for s in c.neighbors.get('sibling')]
+        return ego.neighbors.get("sibling") in all_potential_siblings
 
     def setup_siblings(self):
-        for p in [p for p in self.schedule.agents if
-                  p.neighbors.get('parent')]:  # simulates people who left the original household.
+        agent_left_household = [p for p in self.schedule.agents if p.neighbors.get('offspring')] # simulates people who left the original household.
+        for agent in agent_left_household:
             num_siblings = self.rng.poisson(0.5)  # 0.5 -> the number of links is N^3 agents, so let's keep this low
             # at this stage links with other persons are only relatives inside households and friends.
-            candidates = [c for c in self.schedule.agents if
-                          c.neighbors.get('parent') and not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
-            candidates = [c for c in self.schedule.agents if not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
-            candidates = self.rng.choice(candidates, min(len(candidates), 5), False).tolist()
-            print("len cand:" + str(len(candidates)))
-            # remove couples from candidates and their neighborhoods
-            while len(candidates) > 0 and not self.incestuos(p, candidates):
-                # trouble should exist, or incestous would be false.
-                trouble = self.rng.choice(
-                    [x for x in candidates if x.neighbors.get("partner").pop()], 1).tolist()
-                candidates = cadidates.remove(trouble)
-            targets = p + self.rng.choice(candidates,
-                                           min(len(candidates, num_siblings))
-                                           )
-            targets = targets + set([x.neighbors.get("siblings") for x in targets])
-            for x in targets:
-                x.addSiblingLinks(p)
+            candidates = [c for c in agent_left_household if c not in agent.neighbors.get("household") and abs(agent.age() - c.age()) < 5 and c != agent]
+            # remove couples from candidates and their neighborhoods (siblings)
+            if len(candidates) >= 50:
+                candidates = self.rng.choice(candidates, 50, replace=False).tolist()
+                print(agent)
+            while len(candidates) > 0 and not self.incestuos(agent, candidates):
+                potential_trouble = [x for x in candidates if x in agent.neighbors.get("partner")] + [s for c in candidates for s in c.neighbors.get("partner")]
+                trouble = self.rng.choice(potential_trouble)
+                candidates.remove(trouble)
+            targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
+            for target in targets:
+                target.addSiblingLinks(targets)
+            other_targets = targets + [s for c in targets for s in c.neighbors.get('sibling')]
+            for target in other_targets:
+                target.addSiblingLinks(other_targets)
+
+
+
+
+
+
+
+
+
+            #     # trouble should exist, or incestous would be false.
+            #     trouble = self.rng.choice(
+            #         [x for x in candidates if x.neighbors.get("partner").pop()], 1).tolist()
+            #     candidates = candidates.remove(trouble)
+            # targets = p + self.rng.choice(candidates,
+            #                                min(len(candidates, num_siblings))
+            #                                )
+            # targets = targets + set([x.neighbors.get("siblings") for x in targets])
+            # for x in targets:
+            #     x.addSiblingLinks(p)
 
     def generate_households(self):
         # this mostly follows the third algorithm from Gargiulo et al. 2010
@@ -728,20 +743,30 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 100
-    m.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.load_stats_tables()
-    m.setup_education_levels()
-    m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    # m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
+    # m.initial_agents = 100
+    # m.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    # m.initial_agents = 200
+    # m.load_stats_tables()
+    # m.setup_education_levels()
+    # m.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(m.watts_strogatz)
+    # print("num links:")
+    # print(m.total_num_links())
+    # # m.setup_siblings()
+    # print("num links:")
+    # print(m.total_num_links())
+
+    m.setup(1000)
+    m.setup_siblings()
+
+
+
+    for agent in m.schedule.agents:
+        for sibling in agent.get_link_list("sibling"):
+            if sibling in agent.get_link_list("partner"):
+                print("male")
 
 
 
