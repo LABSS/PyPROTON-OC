@@ -30,7 +30,7 @@ class Person(Agent):
         self.max_education_level = 0
         self.wealth_level = 0
         self.job_level = 0
-        self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
+        self.my_job = None               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = 0
         self.gender_is_male = False #True male False female
         self.father = None
@@ -233,6 +233,9 @@ class Person(Agent):
             self.potential_school = [x for x in self.m.schools if x.diploma_level == level]
             self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
+
+    def find_job(self):
+        the_job = self.m.rng.choice([j for j in self.m.jobs if j.worker == None and j.job_level == self.job_level])
 
 
 
