@@ -33,7 +33,7 @@ def test_generate_households():
     2. Take a random household and check if all the members of the household are in the other members' network
     3. Take the first simple family (we're sure it's in the first 5) and check if all the networks work.
     4. wealth must be the same for all members of the household
-    5. nobody should have more than one father and one mather
+    5. nobody should have more than one father and one mother
     """
     m = MesaPROTON_OC()
     m.initial_agents = 1000
