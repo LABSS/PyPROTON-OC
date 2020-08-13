@@ -707,12 +707,14 @@ class MesaPROTON_OC(Model):
 
     def setup_employers_jobs(self):
         """
-        #todo Aggiungere docstrings controllare tutto
+        Given a table this function generates the correct number of Jobs and Employers. Modify in-place the
+        "my_employer" and "job_level" attributes of "Job" and the "my_jobs" attribute of "Employer".
         :return: None
         """
-        self.job_counts = self.read_csv_city("employer_sizes").iloc[:,0].values.tolist()
+        self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
         # a small multiplier is added so to increase the pool to allow for matching at the job level
-        self.jobs_target = len([a for a in self.schedule.agents if a.job_level > 1 and a.my_school == None and a.age() > 16 and a.age() < self.retirement_age]) * 1.2
+        self.jobs_target = len([a for a in self.schedule.agents if
+                                a.job_level > 1 and a.my_school == None and a.age() > 16 and a.age() < self.retirement_age]) * 1.2
         while len(self.jobs) < self.jobs_target:
             n = int(self.rng.choice(self.job_counts, 1))
             new_employer = Employer(self)
