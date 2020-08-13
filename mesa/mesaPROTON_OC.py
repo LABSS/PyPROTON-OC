@@ -193,7 +193,7 @@ class MesaPROTON_OC(Model):
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
-        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.partner == None]
+        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.neigbhors.get("partner")]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable) > 1:
             ego = self.rng.choice(maritable)
@@ -262,7 +262,7 @@ class MesaPROTON_OC(Model):
             targets = [x for x in schedule.agents if
                        x.gender_is_male == False and
                        not x.my_job and
-                       (True if not x.partner else not x.partner.oc_member)
+                       (True if not x.neighbors.get("partner") else not x.neighbors.get("partner").pop().oc_member)
                        ]
         if welfare_support == "job_child":
             targets = [x for x in schedule.agents if
@@ -405,7 +405,7 @@ class MesaPROTON_OC(Model):
         all_potential_siblings = [ego] + candidates + list(ego.neighbors.get('sibling')) + [s for c in candidates for s
                                                                                             in
                                                                                             c.neighbors.get('sibling')]
-        return ego.partner in all_potential_siblings
+        return ego.neighbors.get("partner").pop() in all_potential_siblings
 
     def setup_siblings(self):
         for p in [p for p in self.schedule.agents if
@@ -421,7 +421,7 @@ class MesaPROTON_OC(Model):
             while len(candidates) > 0 and not self.incestuos(p, candidates):
                 # trouble should exist, or incestous would be false.
                 trouble = self.rng.choice(
-                    [x for x in candidates if x.partner], 1).tolist()
+                    [x for x in candidates if x.neighbors.get("partner").pop()], 1).tolist()
                 candidates = cadidates.remove(trouble)
             targets = p + self.rng.choice(candidates,
                                            min(len(candidates, num_siblings))
@@ -720,8 +720,8 @@ def conclude_wedding(ego, partner):
             y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
     ego.neighbors["household"] = {partner}
     partner.neighbors["household"] = {ego}
-    ego.partner = partner
-    partner.partner = ego
+    ego.neighbors.get("partner").add(partner)
+    partner.neighbors.get("partner").add(ego)
 staticmethod(conclude_wedding)
 
 
