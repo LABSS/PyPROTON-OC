@@ -403,7 +403,22 @@ class MesaPROTON_OC(Model):
 
     def incestuos(self, ego, candidates):
         all_potential_siblings = [ego] + candidates + ego.get_link_list("sibling") + [s for c in candidates for s in c.neighbors.get('sibling')]
-        return ego.neighbors.get("sibling") in all_potential_siblings
+        checks = list()
+        #todo qui devo controllare se ci sono partner tra tutti gli all_potential_siblings
+        for sibling in all_potential_siblings:
+            if len(sibling.get_link_list("partner")) < 0:
+                if sibling.get_link_list("partner")[0] in all_potential_siblings:
+                    checks.append(False)
+                else:
+                    checks.append(True)
+
+        for c in checks:
+            if c == False:
+                return True
+        return False
+
+
+
 
     def setup_siblings(self):
         agent_left_household = [p for p in self.schedule.agents if p.neighbors.get('offspring')] # simulates people who left the original household.
@@ -415,7 +430,7 @@ class MesaPROTON_OC(Model):
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
                 print(agent)
-            while len(candidates) > 0 and not self.incestuos(agent, candidates):
+            while len(candidates) > 0 and self.incestuos(agent, candidates):
                 potential_trouble = [x for x in candidates if x in agent.neighbors.get("partner")] + [s for c in candidates for s in c.neighbors.get("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
@@ -761,9 +776,11 @@ if __name__ == "__main__":
     m.setup(1000)
     m.setup_siblings()
 
-
+    num_sibling = list()
 
     for agent in m.schedule.agents:
+        if len(agent.get_link_list("sibling")) > 0:
+            num_sibling.append(len(agent.get_link_list("sibling")))
         for sibling in agent.get_link_list("sibling"):
             if sibling in agent.get_link_list("partner"):
                 print("male")
