@@ -402,30 +402,25 @@ class MesaPROTON_OC(Model):
         # plt.show()
 
     def incestuos(self, ego, candidates):
-        all_potential_siblings = [ego] + candidates + ego.get_link_list("sibling") + [s for c in candidates for s in c.neighbors.get('sibling')]
-        #todo qui devo controllare se ci sono partner tra tutti gli all_potential_siblings
+        all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
         for sibling in all_potential_siblings:
-            if len(sibling.get_link_list("partner")) > 0:
-                if sibling.get_link_list("partner")[0] in all_potential_siblings:
-                    return True
-                else:
-                    return False
-
-
+            if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
+                return True
 
     def setup_siblings(self):
+        #todo: Aggiungere docstrings
+        #todo: Questa procedura è un problema, crea legami tra fratelli esagerati
         agent_left_household = [p for p in self.schedule.agents if p.neighbors.get('offspring')] # simulates people who left the original household.
         for agent in agent_left_household:
-            num_siblings = self.rng.poisson(0.5)  # 0.5 -> the number of links is N^3 agents, so let's keep this low
+            num_siblings = self.rng.poisson(0.5)
+            # 0.5 -> the number of links is N^3 agents, so let's keep this low
             # at this stage links with other persons are only relatives inside households and friends.
             candidates = [c for c in agent_left_household if c not in agent.neighbors.get("household") and abs(agent.age() - c.age()) < 5 and c != agent]
             # remove couples from candidates and their neighborhoods (siblings)
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
-                print(agent)
             while len(candidates) > 0 and self.incestuos(agent, candidates):
-                #todo l'errore è qui, quando vengono pescati ci sono situe in cui non trova
-                potential_trouble = [x for x in candidates if x in agent.neighbors.get("partner")] + [s for c in candidates for s in c.neighbors.get("partner")]
+                potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
             targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
@@ -435,24 +430,6 @@ class MesaPROTON_OC(Model):
             for target in other_targets:
                 target.addSiblingLinks(other_targets)
 
-
-
-
-
-
-
-
-
-            #     # trouble should exist, or incestous would be false.
-            #     trouble = self.rng.choice(
-            #         [x for x in candidates if x.neighbors.get("partner").pop()], 1).tolist()
-            #     candidates = candidates.remove(trouble)
-            # targets = p + self.rng.choice(candidates,
-            #                                min(len(candidates, num_siblings))
-            #                                )
-            # targets = targets + set([x.neighbors.get("siblings") for x in targets])
-            # for x in targets:
-            #     x.addSiblingLinks(p)
 
     def generate_households(self):
         # this mostly follows the third algorithm from Gargiulo et al. 2010
@@ -767,12 +744,21 @@ if __name__ == "__main__":
     # print("num links:")
     # print(m.total_num_links())
 
-    m.setup(1000)
+    m.setup(500)
     m.setup_siblings()
 
     num_sibling = list()
 
     for agent in m.schedule.agents:
+        if agent.get_link_list("offspring") and agent.get_link_list("sibling"):
+            # print()
+            # print()
+            # print(str(agent) + " Age: " + str(agent.age()))
+            print("len SIBLINGS: " + str(len(agent.get_link_list("sibling"))))
+            # for sib in agent.get_link_list("sibling"):
+            #     print(str(sib) + " Age: " + str(sib.age()))
+
+
         if len(agent.get_link_list("sibling")) > 0:
             num_sibling.append(len(agent.get_link_list("sibling")))
         for sibling in agent.get_link_list("sibling"):
