@@ -424,6 +424,11 @@ class MesaPROTON_OC(Model):
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
             targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
+
+            for sib in targets:
+                if sib in agent_left_household:
+                    agent_left_household.remove(sib)
+
             for target in targets:
                 target.addSiblingLinks(targets)
             other_targets = targets + [s for c in targets for s in c.neighbors.get('sibling')]
@@ -744,20 +749,21 @@ if __name__ == "__main__":
     # print("num links:")
     # print(m.total_num_links())
 
-    m.setup(500)
+    m.setup(10000)
     m.setup_siblings()
 
     num_sibling = list()
 
+    lista = list()
     for agent in m.schedule.agents:
         if agent.get_link_list("offspring") and agent.get_link_list("sibling"):
             # print()
             # print()
             # print(str(agent) + " Age: " + str(agent.age()))
+            lista.append(len(agent.get_link_list("sibling")))
             print("len SIBLINGS: " + str(len(agent.get_link_list("sibling"))))
             # for sib in agent.get_link_list("sibling"):
             #     print(str(sib) + " Age: " + str(sib.age()))
-
 
         if len(agent.get_link_list("sibling")) > 0:
             num_sibling.append(len(agent.get_link_list("sibling")))
@@ -765,5 +771,5 @@ if __name__ == "__main__":
             if sibling in agent.get_link_list("partner"):
                 print("male")
 
-
-
+    print("fratellaza: " + str(np.mean(lista)))
+    
