@@ -403,20 +403,13 @@ class MesaPROTON_OC(Model):
 
     def incestuos(self, ego, candidates):
         all_potential_siblings = [ego] + candidates + ego.get_link_list("sibling") + [s for c in candidates for s in c.neighbors.get('sibling')]
-        checks = list()
         #todo qui devo controllare se ci sono partner tra tutti gli all_potential_siblings
         for sibling in all_potential_siblings:
-            if len(sibling.get_link_list("partner")) < 0:
+            if len(sibling.get_link_list("partner")) > 0:
                 if sibling.get_link_list("partner")[0] in all_potential_siblings:
-                    checks.append(False)
+                    return True
                 else:
-                    checks.append(True)
-
-        for c in checks:
-            if c == False:
-                return True
-        return False
-
+                    return False
 
 
 
@@ -431,6 +424,7 @@ class MesaPROTON_OC(Model):
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
                 print(agent)
             while len(candidates) > 0 and self.incestuos(agent, candidates):
+                #todo l'errore è qui, quando vengono pescati ci sono situe in cui non trova
                 potential_trouble = [x for x in candidates if x in agent.neighbors.get("partner")] + [s for c in candidates for s in c.neighbors.get("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
