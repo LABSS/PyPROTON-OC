@@ -182,7 +182,7 @@ class MesaPROTON_OC(Model):
         self.jobs_by_company_size = self.read_csv_city("jobs_by_company_size")
         self.c_range_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age_range")
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
-        self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), single_value=True)
+        self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), extra_depth=True)
         self.labour_status_range = self.read_csv_city("labour_status_range")
         # further sources:
         # schools.csv table goes into education_levels
@@ -570,44 +570,41 @@ class MesaPROTON_OC(Model):
         self.population.remove(picked_person)
         return picked_person
 
-    def df_to_dict(self, df, single_value=False):
+    def df_to_dict(self, df, extra_depth=False):
         """
         Based on the number of pandas DataFrame columns, transforms the dataframe into nested dictionaries as follows:
         df-columns = age, sex, education, p --> dict-keys = {age:{sex:[education, p]}}
 
-        If single_value is True the transformation has an extra level of depth as follows:
+        If extra_depth is True the transformation has an extra level of depth as follows:
         df-columns = age, sex, education, p --> dict-keys = {age:{sex:{education: p}}}
 
         This transformation ensures a faster access to the values using the dictionary keys.
         :param df: pandas df, the df to be transformed
-        :param single_value: bool, if Frue gives an extra level of depth
+        :param extra_depth: bool, if True gives an extra level of depth
         :return: dict, a new dictionary
         """
         dic = dict()
-        if single_value:
-            if len(df.columns) == 3:
-                for col in np.unique(df.iloc[:, 0]):
-                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
-                for key in dic:
-                    subdic = dict()
-                    for subcol in np.unique(dic[key].iloc[:, 0]):
+        extra_depth_modifier = 0
+        if extra_depth:
+            extra_depth_modifier = 1
+
+        if len(df.columns) + extra_depth_modifier == 2:
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = df[df.iloc[:,0] == col].iloc[:,1].values
+        if len(df.columns) + extra_depth_modifier == 3:
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
+        if len(df.columns) + extra_depth_modifier == 4:
+            for col in np.unique(df.iloc[:, 0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+            for key in dic:
+                subdic = dict()
+                for subcol in np.unique(dic[key].iloc[:, 0]):
+                    if extra_depth:
                         subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values[0][0]
-                    dic[key] = subdic
-        else:
-            if len(df.columns) == 2:
-                for col in np.unique(df.iloc[:,0]):
-                    dic[col] = float(df[df.iloc[:,0] == col].iloc[:,1].values)
-            if len(df.columns) == 3:
-                for col in np.unique(df.iloc[:,0]):
-                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
-            if len(df.columns) == 4:
-                for col in np.unique(df.iloc[:, 0]):
-                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
-                for key in dic:
-                    subdic = dict()
-                    for subcol in np.unique(dic[key].iloc[:, 0]):
+                    else:
                         subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
-                    dic[key] = subdic
+                dic[key] = subdic
         return dic
 
     def setup_education_levels(self):
