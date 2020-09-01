@@ -402,14 +402,27 @@ class MesaPROTON_OC(Model):
         # plt.show()
 
     def incestuos(self, ego, candidates):
+        """
+        This procedure checks if there are any links between partners within the candidate pool.
+        Returns True if there are, None if there are not.
+        It is used during the setup_siblings procedure to avoid incestuous marriages.
+        :param ego: Person
+        :param candidates: list of Person objects
+        :return: bool, True if there are links between partners, None otherwise.
+        """
         all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
         for sibling in all_potential_siblings:
             if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
                 return True
 
     def setup_siblings(self):
-        #todo: Aggiungere docstrings
-        #todo: Questa procedura è un problema, crea legami tra fratelli esagerati
+        """
+        Right now, during setup, links between agents are only those within households, between friends
+        and related to the school. At this stage of the standard setup, agents are linked through "siblings" links
+        outside the household. To simulate agents who have left the original household, agents who have
+        children are taken and "sibling" links are created taking care not to create incestuous relationships.
+        :return: None
+        """
         agent_left_household = [p for p in self.schedule.agents if p.neighbors.get('offspring')] # simulates people who left the original household.
         for agent in agent_left_household:
             num_siblings = self.rng.poisson(0.5)
@@ -420,17 +433,18 @@ class MesaPROTON_OC(Model):
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
             while len(candidates) > 0 and self.incestuos(agent, candidates):
+                # trouble should exist, or check-all-siblings would fail
                 potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
             targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
-
             for sib in targets:
                 if sib in agent_left_household:
                     agent_left_household.remove(sib)
-
             for target in targets:
                 target.addSiblingLinks(targets)
+                # this is a good place to remind that the number of links in the sibling link neighbors is not the "number of brothers and sisters"
+                # because, for example, 4 brothers = 6 links.
             other_targets = targets + [s for c in targets for s in c.neighbors.get('sibling')]
             for target in other_targets:
                 target.addSiblingLinks(other_targets)
@@ -684,6 +698,7 @@ class MesaPROTON_OC(Model):
         if self.unemployment_multiplier != "base":
             self.fix_unemployment(self.unemployment_multiplier)
         self.generate_households()
+        self.setup_siblings()
 
     def assign_jobs_and_wealth(self):
         """
@@ -734,42 +749,17 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    # m.initial_agents = 100
-    # m.create_agents()
-    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    # m.initial_agents = 200
-    # m.load_stats_tables()
-    # m.setup_education_levels()
-    # m.setup_persons_and_friendship()
-    # # Visualize network
-    # nx.draw(m.watts_strogatz)
-    # print("num links:")
-    # print(m.total_num_links())
-    # # m.setup_siblings()
-    # print("num links:")
-    # print(m.total_num_links())
-
-    m.setup(10000)
-    m.setup_siblings()
-
-    num_sibling = list()
-
-    lista = list()
-    for agent in m.schedule.agents:
-        if agent.get_link_list("offspring") and agent.get_link_list("sibling"):
-            # print()
-            # print()
-            # print(str(agent) + " Age: " + str(agent.age()))
-            lista.append(len(agent.get_link_list("sibling")))
-            print("len SIBLINGS: " + str(len(agent.get_link_list("sibling"))))
-            # for sib in agent.get_link_list("sibling"):
-            #     print(str(sib) + " Age: " + str(sib.age()))
-
-        if len(agent.get_link_list("sibling")) > 0:
-            num_sibling.append(len(agent.get_link_list("sibling")))
-        for sibling in agent.get_link_list("sibling"):
-            if sibling in agent.get_link_list("partner"):
-                print("male")
-
-    print("fratellaza: " + str(np.mean(lista)))
-    
+    m.initial_agents = 100
+    m.create_agents()
+    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    m.initial_agents = 200
+    m.load_stats_tables()
+    m.setup_education_levels()
+    m.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(m.watts_strogatz)
+    print("num links:")
+    print(m.total_num_links())
+    # m.setup_siblings()
+    print("num links:")
+    print(m.total_num_links())
