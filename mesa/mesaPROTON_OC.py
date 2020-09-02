@@ -680,7 +680,7 @@ class MesaPROTON_OC(Model):
         self.setup_inactive_status()
         if self.unemployment_multiplier != "base": self.fix_unemployment(self.unemployment_multiplier)
         self.generate_households()
-        # self.setup_siblings()
+        self.setup_siblings()
         self.setup_employers_jobs()
 
     def assign_jobs_and_wealth(self):
