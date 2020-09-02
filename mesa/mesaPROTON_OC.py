@@ -196,7 +196,7 @@ class MesaPROTON_OC(Model):
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
-        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.neigbhors.get("partner")]
+        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.neighbors.get("partner")]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable) > 1:
             ego = self.rng.choice(maritable)
