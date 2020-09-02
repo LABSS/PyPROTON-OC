@@ -39,7 +39,6 @@ class Person(Agent):
         self.oc_member = False
         self.cached_oc_embeddedness = 0
         self.oc_embeddedness_fresh = 0
-        self.partner = None       # the person's significant other
         self.retired = False
         self.number_of_children = 0
         self.facilitator = 0
@@ -90,7 +89,7 @@ class Person(Agent):
         return extra.find_neighb(netname, dist, set(), {self}) - {self}
     
     def isneighbor(self, other):
-        return any([other in self.neighbors[x] for x in Person.network_names]) or self.partner == other
+        return any([other in self.neighbors[x] for x in Person.network_names])
 
     def step(self):
             pass
@@ -188,7 +187,7 @@ class Person(Agent):
         return self.age() >= low and self.age() < high
     
     def family(self): # maybe add self?
-        return self.neighbors.get("sibling").union(self.neighbors.get("offspring")).union(set(self.partner) if self.partner else set())
+        return self.neighbors.get("sibling").union(self.neighbors.get("offspring")).union(self.neighbors.get("partner"))
     
     def potential_friends(self):
         return self.family().union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(self.neighbors.get("friendship")) #minus self.. needed?
@@ -234,6 +233,18 @@ class Person(Agent):
             self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
+    def get_link_list(self, net_name):
+        """
+        Given the name of a network, this method returns a list of agents within the network.
+        If the network is empty, it returns an empty list.
+        :param net_name: str, the network name
+        :return: list, return an empty list if the network is empty
+        """
+        agent_net = self.neighbors.get(net_name)
+        if len(agent_net) > 0:
+            return list(agent_net)
+        else:
+            return []
     def find_job(self):
         """
         This method assigns a job to the Person based on those available and their level. Modify in-place the
@@ -247,6 +258,7 @@ class Person(Agent):
             the_job = self.m.rng.choice(jobs_pool, 1)[0]
             self.my_job = the_job
             the_job.my_worker = self
+
 
 
 

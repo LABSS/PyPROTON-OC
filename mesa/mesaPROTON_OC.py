@@ -185,7 +185,7 @@ class MesaPROTON_OC(Model):
         self.jobs_by_company_size = self.df_to_dict(self.read_csv_city("jobs_by_company_size"))
         self.c_range_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age_range")
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
-        self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), single_value=True)
+        self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), extra_depth=True)
         self.labour_status_range = self.read_csv_city("labour_status_range")
         # further sources:
         # schools.csv table goes into education_levels
@@ -196,7 +196,7 @@ class MesaPROTON_OC(Model):
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
-        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.partner == None]
+        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.neigbhors.get("partner")]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable) > 1:
             ego = self.rng.choice(maritable)
@@ -265,7 +265,7 @@ class MesaPROTON_OC(Model):
             targets = [x for x in schedule.agents if
                        x.gender_is_male == False and
                        not x.my_job and
-                       (True if not x.partner else not x.partner.oc_member)
+                       (True if not x.neighbors.get("partner") else not x.neighbors.get("partner").pop().oc_member)
                        ]
         if welfare_support == "job_child":
             targets = [x for x in schedule.agents if
@@ -405,33 +405,53 @@ class MesaPROTON_OC(Model):
         # plt.show()
 
     def incestuos(self, ego, candidates):
-        all_potential_siblings = [ego] + candidates + list(ego.neighbors.get('sibling')) + [s for c in candidates for s
-                                                                                            in
-                                                                                            c.neighbors.get('sibling')]
-        return ego.partner in all_potential_siblings
+        """
+        This procedure checks if there are any links between partners within the candidate pool.
+        Returns True if there are, None if there are not.
+        It is used during the setup_siblings procedure to avoid incestuous marriages.
+        :param ego: Person
+        :param candidates: list of Person objects
+        :return: bool, True if there are links between partners, None otherwise.
+        """
+        all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
+        for sibling in all_potential_siblings:
+            if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
+                return True
 
     def setup_siblings(self):
-        for p in [p for p in self.schedule.agents if
-                  p.neighbors.get('parent')]:  # simulates people who left the original household.
-            num_siblings = self.rng.poisson(0.5)  # 0.5 -> the number of links is N^3 agents, so let's keep this low
+        """
+        Right now, during setup, links between agents are only those within households, between friends
+        and related to the school. At this stage of the standard setup, agents are linked through "siblings" links
+        outside the household. To simulate agents who have left the original household, agents who have
+        children are taken and "sibling" links are created taking care not to create incestuous relationships.
+        :return: None
+        """
+        agent_left_household = [p for p in self.schedule.agents if p.neighbors.get('offspring')] # simulates people who left the original household.
+        for agent in agent_left_household:
+            num_siblings = self.rng.poisson(0.5)
+            # 0.5 -> the number of links is N^3 agents, so let's keep this low
             # at this stage links with other persons are only relatives inside households and friends.
-            candidates = [c for c in self.schedule.agents if
-                          c.neighbors.get('parent') and not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
-            candidates = [c for c in self.schedule.agents if not p.isneighbor(c) and abs(p.age() - c.age()) < 5]
-            candidates = self.rng.choice(candidates, min(len(candidates), 5), False).tolist()
-            print("len cand:" + str(len(candidates)))
-            # remove couples from candidates and their neighborhoods
-            while len(candidates) > 0 and not self.incestuos(p, candidates):
-                # trouble should exist, or incestous would be false.
-                trouble = self.rng.choice(
-                    [x for x in candidates if x.partner], 1).tolist()
-                candidates = cadidates.remove(trouble)
-            targets = p + self.rng.choice(candidates,
-                                           min(len(candidates, num_siblings))
-                                           )
-            targets = targets + set([x.neighbors.get("siblings") for x in targets])
-            for x in targets:
-                x.addSiblingLinks(p)
+            candidates = [c for c in agent_left_household if c not in agent.neighbors.get("household") and abs(agent.age() - c.age()) < 5 and c != agent]
+            # remove couples from candidates and their neighborhoods (siblings)
+            if len(candidates) >= 50:
+                candidates = self.rng.choice(candidates, 50, replace=False).tolist()
+            while len(candidates) > 0 and self.incestuos(agent, candidates):
+                # trouble should exist, or check-all-siblings would fail
+                potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
+                trouble = self.rng.choice(potential_trouble)
+                candidates.remove(trouble)
+            targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
+            for sib in targets:
+                if sib in agent_left_household:
+                    agent_left_household.remove(sib)
+            for target in targets:
+                target.addSiblingLinks(targets)
+                # this is a good place to remind that the number of links in the sibling link neighbors is not the "number of brothers and sisters"
+                # because, for example, 4 brothers = 6 links.
+            other_targets = targets + [s for c in targets for s in c.neighbors.get('sibling')]
+            for target in other_targets:
+                target.addSiblingLinks(other_targets)
+
 
     def generate_households(self):
         # this mostly follows the third algorithm from Gargiulo et al. 2010
@@ -573,44 +593,41 @@ class MesaPROTON_OC(Model):
         self.population.remove(picked_person)
         return picked_person
 
-    def df_to_dict(self, df, single_value=False):
+    def df_to_dict(self, df, extra_depth=False):
         """
         Based on the number of pandas DataFrame columns, transforms the dataframe into nested dictionaries as follows:
         df-columns = age, sex, education, p --> dict-keys = {age:{sex:[education, p]}}
 
-        If single_value is True the transformation has an extra level of depth as follows:
+        If extra_depth is True the transformation has an extra level of depth as follows:
         df-columns = age, sex, education, p --> dict-keys = {age:{sex:{education: p}}}
 
         This transformation ensures a faster access to the values using the dictionary keys.
         :param df: pandas df, the df to be transformed
-        :param single_value: bool, if Frue gives an extra level of depth
+        :param extra_depth: bool, if True gives an extra level of depth
         :return: dict, a new dictionary
         """
         dic = dict()
-        if single_value:
-            if len(df.columns) == 3:
-                for col in np.unique(df.iloc[:, 0]):
-                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
-                for key in dic:
-                    subdic = dict()
-                    for subcol in np.unique(dic[key].iloc[:, 0]):
+        extra_depth_modifier = 0
+        if extra_depth:
+            extra_depth_modifier = 1
+
+        if len(df.columns) + extra_depth_modifier == 2:
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = df[df.iloc[:,0] == col].iloc[:,1].values
+        if len(df.columns) + extra_depth_modifier == 3:
+            for col in np.unique(df.iloc[:,0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
+        if len(df.columns) + extra_depth_modifier == 4:
+            for col in np.unique(df.iloc[:, 0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+            for key in dic:
+                subdic = dict()
+                for subcol in np.unique(dic[key].iloc[:, 0]):
+                    if extra_depth:
                         subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values[0][0]
-                    dic[key] = subdic
-        else:
-            if len(df.columns) == 2:
-                for col in np.unique(df.iloc[:,0]):
-                    dic[col] = float(df[df.iloc[:,0] == col].iloc[:,1].values)
-            if len(df.columns) == 3:
-                for col in np.unique(df.iloc[:,0]):
-                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
-            if len(df.columns) == 4:
-                for col in np.unique(df.iloc[:, 0]):
-                    dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
-                for key in dic:
-                    subdic = dict()
-                    for subcol in np.unique(dic[key].iloc[:, 0]):
+                    else:
                         subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
-                    dic[key] = subdic
+                dic[key] = subdic
         return dic
 
     def setup_education_levels(self):
@@ -766,8 +783,8 @@ def conclude_wedding(ego, partner):
             y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
     ego.neighbors["household"] = {partner}
     partner.neighbors["household"] = {ego}
-    ego.partner = partner
-    partner.partner = ego
+    ego.neighbors.get("partner").add(partner)
+    partner.neighbors.get("partner").add(ego)
 staticmethod(conclude_wedding)
 
 
