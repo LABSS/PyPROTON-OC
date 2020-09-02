@@ -65,7 +65,7 @@ class Person(Agent):
         return np.floor((self.m.ticks - self.birth_tick) / 12)
 
         
-    def random_init(self, random_relationships = False, exclude_partner_net = False):
+    def random_init(self, random_relationships = False):
         self.education_level = self.m.rng.choice(range(0,4))
         self.max_education_level = self.education_level
         self.wealth_level = self.m.rng.choice(range(0,4))
@@ -76,7 +76,7 @@ class Person(Agent):
         self.hobby = 0
         self.criminal_tendency = self.m.rng.uniform(0, 1)
         if random_relationships == True:
-            self.random_links(exclude_partner_net)
+            self.random_links()
 
 
     def networks_init(self):
@@ -94,20 +94,15 @@ class Person(Agent):
     def step(self):
             pass
 
-    def random_links(self, exclude_partner_net=False):
+    def random_links(self):
         """
         Caution: Use only in test phase. This function generates blood relations and not, randomly
-        :param exclude_partner: exclude partner network
-        :return: None
         """
-        networks = Person.network_names.copy()
-        if exclude_partner_net:
-            networks.remove("partner")
-        for net in networks:
+        for net in Person.network_names:
             for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
             self.neighbors.get(net).discard(self)
-
+        pass
 
     @staticmethod
     def NumberOfLinks():
