@@ -678,9 +678,10 @@ class MesaPROTON_OC(Model):
         self.init_students()
         self.assign_jobs_and_wealth()
         self.setup_inactive_status()
-        if self.unemployment_multiplier != "base": self.fix_unemployment(self.unemployment_multiplier)
+        if self.unemployment_multiplier != "base":
+            self.fix_unemployment(self.unemployment_multiplier)
         self.generate_households()
-        # self.setup_siblings()
+        self.setup_siblings()
         self.setup_employers_jobs()
         for agent in [a for a in self.schedule.agents if
                       a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
