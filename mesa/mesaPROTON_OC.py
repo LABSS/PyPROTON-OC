@@ -115,11 +115,11 @@ class MesaPROTON_OC(Model):
         # self.running = True
         # self.datacollector.collect(self)
 
-    def create_agents(self, random_relationships=False):
+    def create_agents(self, random_relationships=False, exclude_partner_net=False):
         for i_agent in range(0, self.initial_agents):
             i_agent = Person(self)
             self.schedule.add(i_agent)
-            i_agent.random_init(random_relationships)
+            i_agent.random_init(random_relationships, exclude_partner_net)
 
     def step(self):
         self.schedule.step()
