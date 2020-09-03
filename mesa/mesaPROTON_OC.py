@@ -699,6 +699,7 @@ class MesaPROTON_OC(Model):
             self.fix_unemployment(self.unemployment_multiplier)
         self.generate_households()
         self.setup_siblings()
+        self.setup_employers_jobs()
 
     def assign_jobs_and_wealth(self):
         """
@@ -736,11 +737,12 @@ class MesaPROTON_OC(Model):
             n = int(self.rng.choice(self.job_counts, 1))
             new_employer = Employer(self)
             self.employers.append(new_employer)
-            for new_job in range(n):
+            for job in range(n):
                 new_job = Job(self)
+                #todo: Check here
                 self.jobs.append(new_job)
                 new_job.my_employer = new_employer
-                new_employer.my_jobs = new_job
+                new_employer.my_jobs.append(new_job)
                 new_job.job_level = self.random_level_by_size(n)
 
     def random_level_by_size(self, employer_size):
