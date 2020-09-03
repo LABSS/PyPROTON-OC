@@ -65,7 +65,7 @@ class Person(Agent):
         return np.floor((self.m.ticks - self.birth_tick) / 12)
 
         
-    def random_init(self, random_relationships = False):
+    def random_init(self, random_relationships = False, exclude_partner_net = False):
         self.education_level = self.m.rng.choice(range(0,4))
         self.max_education_level = self.education_level
         self.wealth_level = self.m.rng.choice(range(0,4))
@@ -76,7 +76,7 @@ class Person(Agent):
         self.hobby = 0
         self.criminal_tendency = self.m.rng.uniform(0, 1)
         if random_relationships == True:
-            self.random_links()
+            self.random_links(exclude_partner_net)
 
 
     def networks_init(self):
