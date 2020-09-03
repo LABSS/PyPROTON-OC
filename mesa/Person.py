@@ -94,15 +94,19 @@ class Person(Agent):
     def step(self):
             pass
 
-    def random_links(self):
+    def random_links(self, exclude_partner_net=False):
         """
         Caution: Use only in test phase. This function generates blood relations and not, randomly
+        :param exclude_partner: exclude partner network
+        :return: None
         """
-        for net in Person.network_names:
+        networks = Person.network_names.copy()
+        if exclude_partner_net:
+            networks.remove("partner")
+        for net in networks:
             for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
             self.neighbors.get(net).discard(self)
-        pass
 
     @staticmethod
     def NumberOfLinks():
