@@ -183,7 +183,7 @@ class MesaPROTON_OC(Model):
         # male_punishment_length_list =  map [ i _> (list (item 0 i) (item 2 i)) ] punishment_length_list
         # female_punishment_length_list =  map [ i _> (list (item 0 i) (item 1 i)) ] punishment_length_list
         self.jobs_by_company_size = self.df_to_dict(self.read_csv_city("jobs_by_company_size"))
-        self.c_range_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age_range")
+        self.c_range_by_age_and_sex = self.df_to_lists(self.read_csv_city("crime_rate_by_gender_and_age_range"))
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
         self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), extra_depth=True)
         self.labour_status_range = self.read_csv_city("labour_status_range")
@@ -705,6 +705,7 @@ class MesaPROTON_OC(Model):
                       and a.job_level > 1]:
             agent.find_job()
         self.init_professional_links()
+        self.calculate_crime_multiplier()
 
     def assign_jobs_and_wealth(self):
         """
@@ -780,7 +781,32 @@ class MesaPROTON_OC(Model):
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.makeProfessionalLinks(conn_pool)
 
+    def df_to_lists(self,df):
+        """
+        This function transforms a pandas DataRame into nested lists as follows:
+        df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
 
+        This transformation ensures a faster access to the values using the position in the list
+        :param df: pandas df, the df to be transformed
+        :return: list, a new list
+        """
+        output_list = list()
+        temp_list = df.iloc[:, :2].values.tolist()
+        for index, row in df.iterrows():
+            output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
+        return output_list
+
+    def calculate_crime_multiplier(self):
+        """
+        Based on self.c_range_by_age_and_sex this procedure modifies in-place the attribute self.crime_multiplier
+        :return: None
+        """
+        total_crime = 0
+        for line in self.c_range_by_age_and_sex:
+            people_in_cell = [agent for agent in self.schedule.agents if agent.age() > line[0][1] and agent.age() <= line[1][0] and agent.gender_is_male == line[0][0]]
+            n_of_crimes = line[1][1] * len(people_in_cell)
+            total_crime +=  n_of_crimes
+        self.crime_multiplier = self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
 
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
