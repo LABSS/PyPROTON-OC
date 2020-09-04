@@ -22,6 +22,7 @@ class Person(Agent):
     
     def __init__(self, m:mesaPROTON_OC):
         # networks
+        self.m = m
         self.networks_init()
         self.sentence_countdown = 0
         self.num_crimes_committed = 0
@@ -35,7 +36,7 @@ class Person(Agent):
         self.gender_is_male = False #True male False female
         self.father = None
         self.mother = None
-        self.propensity = 0
+        self.propensity = self.m.lognormal(self.m.nat_propensity_m, self.m.nat_propensity_sigma)
         self.oc_member = False
         self.cached_oc_embeddedness = 0
         self.oc_embeddedness_fresh = 0
@@ -54,7 +55,6 @@ class Person(Agent):
         Person.max_id = Person.max_id + 1
         Person.persons.append(self)
         #print(m)
-        self.m=m
         #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.m)]))
 
     def __repr__(self):
@@ -267,6 +267,21 @@ class Person(Agent):
             the_job = self.m.rng.choice(jobs_pool, 1)[0]
             self.my_job = the_job
             the_job.my_worker = self
+
+    def factors_c(self):
+        # todo: Add docstrings
+        self.criminal_tendency *= 1.30 if self.job_level == 1 else 1.0 #employment
+        self.criminal_tendency *= 0.94 if self.education_level >= 2 else 1.0 #education
+        self.criminal_tendency *= 1.97 if self.propensity > np.exp(
+            self.m.nat_propensity_m - self.m.nat_propensity_sigma ** 2 / 2) + self.m.nat_propensity_threshold * np.sqrt(
+            np.exp(self.m.nat_propensity_sigma ** 2 - 1) * np.exp(
+            self.m.nat_propensity_m + self.m.nat_propensity_sigma ** 2 / 2)) else 1.0 #propensity
+        self.criminal_tendency *= 1.62 if self.num_crimes_committed >= 0 else 1.0 #crim-hist
+        #self.criminal_tendency *= 1.45 if
+
+    def family_link_neighbors(self):
+        #todo: Add docstrings
+        return self.get_link_list("sibling") + self.get_link_list("offspring") + self.get_link_list("partner")
 
 
 

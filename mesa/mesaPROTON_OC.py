@@ -92,6 +92,9 @@ class MesaPROTON_OC(Model):
         self.education_modifier = 1.0 #education-rate in Netlogo model
         self.retirement_age = 65
         self.unemployment_multiplier = "base"
+        self.nat_propensity_m = 1.0
+        self.nat_propensity_sigma = 0.25
+        self.nat_propensity_threshold = 1.0
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -808,6 +811,23 @@ class MesaPROTON_OC(Model):
             total_crime +=  n_of_crimes
         self.crime_multiplier = self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
 
+    def calculate_criminal_tendency(self):
+        # todo: Add docstrings
+        for line in self.c_range_by_age_and_sex:
+            subpop = [agent for agent in self.schedule.agents if
+                      agent.age() >= line[0][1] and agent.age() < line[1][0] and agent.gender_is_male == line[0][0]]
+            if subpop:
+                c = line[1][1]
+                # c is the cell value. Now we calcolate criminal-tendency with the factors.
+                for agent in subpop:
+                    agent.criminal_tendency = c
+                    pass
+
+    def lognormal(self, mu, sigma):
+        # todo: Add docstrings
+        return np.exp(mu + sigma * self.rng.normal())
+
+
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
@@ -833,19 +853,20 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    m.initial_agents = 100
-    m.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.load_stats_tables()
-    m.setup_education_levels()
-    m.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(m.watts_strogatz)
-    print("num links:")
-    print(m.total_num_links())
-    # m.setup_siblings()
-    print("num links:")
-    print(m.total_num_links())
+    # m.initial_agents = 100
+    # m.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    # m.initial_agents = 200
+    # m.load_stats_tables()
+    # m.setup_education_levels()
+    # m.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(m.watts_strogatz)
+    # print("num links:")
+    # print(m.total_num_links())
+    # # m.setup_siblings()
+    # print("num links:")
+    # print(m.total_num_links())
+    m.setup(100)
 
 
