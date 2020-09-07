@@ -117,8 +117,6 @@ class MesaPROTON_OC(Model):
         #     model_reporters={"Gini": compute_gini},
         #     agent_reporters={"Wealth": "wealth"}
         # )
-        # this gives the base probability of arrest, propotionally to the number of expected crimes in the first year.
-        self.arrest_rate = self.number_arrests_per_year / self.ticks_per_year / self.number_crimes_yearly_per10k / 10000 * self.initial_agents
 
         # Create agents(
         # mesaConfigCreateAgents.configAgents(self)
@@ -715,6 +713,7 @@ class MesaPROTON_OC(Model):
         self.init_professional_links()
         self.calculate_crime_multiplier()
         self.calculate_criminal_tendency()
+        self.calculate_arrest_rate()
 
     def assign_jobs_and_wealth(self):
         """
@@ -857,6 +856,14 @@ class MesaPROTON_OC(Model):
         :return: bool
         """
         return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
+
+    def calculate_arrest_rate(self):
+        """
+        This gives the base probability of arrest, proportionally to the number of expected crimes in the first year.
+        Modifies the attribute self.arrest_rate in-place
+        :return: None
+        """
+        self.arrest_rate = self.number_arrests_per_year / self.ticks_per_year / self.number_crimes_yearly_per10k / 10000 * self.initial_agents
 
 
 # 778 / 1700
