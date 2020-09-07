@@ -840,6 +840,7 @@ class MesaPROTON_OC(Model):
                     agent.criminal_tendency += epsilon
         if self.intervention_is_on() and self.facilitator_repression:
                 self.calc_correction_for_non_facilitators()
+            #todo: Error Here! agent.criminal_tendency is negative or zero
 
     def calc_correction_for_non_facilitators(self):
         """
