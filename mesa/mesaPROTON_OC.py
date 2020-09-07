@@ -48,7 +48,6 @@ class MesaPROTON_OC(Model):
         self.arrest_rate = 0
         self.education_levels = dict()  # table from education level to data
         self.c_by_age_and_sex = 0
-        self.c_range_by_age_and_sex = 0
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
@@ -87,6 +86,9 @@ class MesaPROTON_OC(Model):
         self.ticks_per_year = 12
         self.number_crimes_yearly_per10k = 2000
         self.ticks = 0
+        self.ticks_between_intervention = 1
+        self.intervention_start = 13
+        self.intervention_end = 999
         self.num_oc_persons = 30
         self.num_oc_families = 8
         self.education_modifier = 1.0 #education-rate in Netlogo model
@@ -95,6 +97,9 @@ class MesaPROTON_OC(Model):
         self.nat_propensity_m = 1.0
         self.nat_propensity_sigma = 0.25
         self.nat_propensity_threshold = 1.0
+        self.oc_members_scrutinize = False
+        self.facilitator_repression = False
+        self.facilitator_repression_multiplier = 2.0
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -709,6 +714,7 @@ class MesaPROTON_OC(Model):
             agent.find_job()
         self.init_professional_links()
         self.calculate_crime_multiplier()
+        self.calculate_criminal_tendency()
 
     def assign_jobs_and_wealth(self):
         """
@@ -806,13 +812,19 @@ class MesaPROTON_OC(Model):
         """
         total_crime = 0
         for line in self.c_range_by_age_and_sex:
-            people_in_cell = [agent for agent in self.schedule.agents if agent.age() > line[0][1] and agent.age() <= line[1][0] and agent.gender_is_male == line[0][0]]
+            people_in_cell = [agent for agent in self.schedule.agents if
+                              agent.age() > line[0][1] and agent.age() <= line[1][0] and agent.gender_is_male ==
+                              line[0][0]]
             n_of_crimes = line[1][1] * len(people_in_cell)
-            total_crime +=  n_of_crimes
+            total_crime += n_of_crimes
         self.crime_multiplier = self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
 
     def calculate_criminal_tendency(self):
-        # todo: Add docstrings
+        """
+        Based on the c_range_by_age_and_sex distribution, this function calculates and assigns to each agent
+        a value representing the criminal tendency. It modifies the attribute Person.criminal_tendency in-place.
+        :return: None
+        """
         for line in self.c_range_by_age_and_sex:
             subpop = [agent for agent in self.schedule.agents if
                       agent.age() >= line[0][1] and agent.age() < line[1][0] and agent.gender_is_male == line[0][0]]
@@ -821,11 +833,30 @@ class MesaPROTON_OC(Model):
                 # c is the cell value. Now we calcolate criminal-tendency with the factors.
                 for agent in subpop:
                     agent.criminal_tendency = c
-                    pass
+                    agent.factors_c()
+                # then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
+                epsilon = c - np.mean([agent.criminal_tendency for agent in subpop])
+                for agent in subpop:
+                    agent.criminal_tendency += epsilon
+        if self.intervention_is_on() and self.facilitator_repression:
+                self.calc_correction_for_non_facilitators()
 
-    def lognormal(self, mu, sigma):
-        # todo: Add docstrings
-        return np.exp(mu + sigma * self.rng.normal())
+    def calc_correction_for_non_facilitators(self):
+        """
+        This function modifies the self.correction_for_non_facilitators attribute of the model.
+        :return: None
+        """
+        f = len([agent for agent in self.schedule.agents if agent.facilitator])
+        n = len(self.schedule.agents)
+        self.correction_for_non_facilitators = [
+            (n - self.facilitator_repression_multiplier * f) / (n - f)] if f > 0 else 1.0
+
+    def intervention_is_on(self):
+        """
+        Returns True if there is an active intervention False otherwise.
+        :return: bool
+        """
+        return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
 
 # 778 / 1700
@@ -853,20 +884,19 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     m = MesaPROTON_OC()
-    # m.initial_agents = 100
-    # m.create_agents()
-    # num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    # m.initial_agents = 200
-    # m.load_stats_tables()
-    # m.setup_education_levels()
-    # m.setup_persons_and_friendship()
-    # # Visualize network
-    # nx.draw(m.watts_strogatz)
-    # print("num links:")
-    # print(m.total_num_links())
-    # # m.setup_siblings()
-    # print("num links:")
-    # print(m.total_num_links())
-    m.setup(100)
+    m.initial_agents = 100
+    m.create_agents()
+    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
+    m.initial_agents = 200
+    m.load_stats_tables()
+    m.setup_education_levels()
+    m.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(m.watts_strogatz)
+    print("num links:")
+    print(m.total_num_links())
+    # m.setup_siblings()
+    print("num links:")
+    print(m.total_num_links())
 
 
