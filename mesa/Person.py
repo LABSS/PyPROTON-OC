@@ -36,7 +36,7 @@ class Person(Agent):
         self.gender_is_male = False #True male False female
         self.father = None
         self.mother = None
-        self.propensity = self.m.rng.lognormal(self.m.nat_propensity_m, self.m.nat_propensity_sigma)
+        self.propensity = 0
         self.oc_member = False
         self.cached_oc_embeddedness = 0
         self.oc_embeddedness_fresh = 0
@@ -227,6 +227,7 @@ class Person(Agent):
             max_age = self.m.education_levels.get(level)[1]
             if self.age() <= max_age:
                 self.education_level = level - 1
+        self.propensity = self.m.lognormal(self.m.nat_propensity_m, self.m.nat_propensity_sigma)
 
     def enroll_to_school(self, level):
         """
@@ -274,22 +275,30 @@ class Person(Agent):
         [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
         :return: None
         """
-        self.criminal_tendency *= 1.30 if self.job_level == 1 else 1.0 #employment
-        self.criminal_tendency *= 0.94 if self.education_level >= 2 else 1.0 #education
-        self.criminal_tendency *= 1.97 if self.propensity > np.exp(
+        # employment
+        self.criminal_tendency *= 1.30 if self.job_level == 1 else 1.0
+        # education
+        self.criminal_tendency *= 0.94 if self.education_level >= 2 else 1.0
+        # propensity
+        self.criminal_tendency *= 1.97 if self.propensity > (np.exp(
             self.m.nat_propensity_m - self.m.nat_propensity_sigma ** 2 / 2) + self.m.nat_propensity_threshold * np.sqrt(
-            np.exp(self.m.nat_propensity_sigma ** 2 - 1) * np.exp(
-            self.m.nat_propensity_m + self.m.nat_propensity_sigma ** 2 / 2)) else 1.0 #propensity
-        self.criminal_tendency *= 1.62 if self.num_crimes_committed >= 0 else 1.0 #crim-hist
+            np.exp(self.m.nat_propensity_sigma) ** 2 - 1) * np.exp(
+            self.m.nat_propensity_m + self.m.nat_propensity_sigma ** 2 / 2)) else 1.0
+        # crim-hist
+        self.criminal_tendency *= 1.62 if self.num_crimes_committed >= 0 else 1.0
+        # crim-fam
         self.criminal_tendency *= 1.45 if self.family_link_neighbors() and (
-                    len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
-                self.family_link_neighbors())) > 0.5 else 1.0 #crim-fam
+                len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
+            self.family_link_neighbors())) > 0.5 else 1.0
+        # crim-neigh
         self.criminal_tendency *= 1.81 if self.get_link_list("friendship") or self.get_link_list("professional") and (
-                    len([agent for agent in self.get_link_list("friendship") if agent.num_crimes_committed > 0]
-                        + [agent for agent in self.get_link_list("professional") if agent.num_crimes_committed > 0]) / len(
-                [agent for agent in self.get_link_list("friendship")] + [agent for agent in self.get_link_list(
-                    "professional")])) > 0.5 else 1.0 #crim-neigh
-        self.criminal_tendency *= 4.50 if self.oc_member and not (self.m.intervention_is_on() and self.m.oc_members_scrutinize) else 1.0 #oc-member
+                len([agent for agent in self.get_link_list("friendship") if agent.num_crimes_committed > 0]
+                    + [agent for agent in self.get_link_list("professional") if agent.num_crimes_committed > 0]) / len(
+            [agent for agent in self.get_link_list("friendship")] + [agent for agent in self.get_link_list(
+                "professional")])) > 0.5 else 1.0
+        # oc-member
+        self.criminal_tendency *= 4.50 if self.oc_member and not (
+                    self.m.intervention_is_on() and self.m.oc_members_scrutinize) else 1.0
 
     def family_link_neighbors(self):
         """
