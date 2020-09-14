@@ -859,6 +859,14 @@ class MesaPROTON_OC(Model):
         """
         return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
+    def lognormal(self, mu, sigma):
+        """
+        Draw samples from a log-normal distribution
+        :param mu: float, mean
+        :param sigma: float, standard deviation
+        :return: float, sample
+        """
+        return np.exp(mu + sigma * self.rng.normal())
     def calculate_arrest_rate(self):
         """
         This gives the base probability of arrest, proportionally to the number of expected crimes in the first year.
