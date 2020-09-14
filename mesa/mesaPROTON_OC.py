@@ -826,21 +826,22 @@ class MesaPROTON_OC(Model):
         :return: None
         """
         for line in self.c_range_by_age_and_sex:
+            #the line variable is composed as follows:
+            #[[bool(gender_is_male), int(minimum age range)], [int(maximum age range), float(c value)]]
             subpop = [agent for agent in self.schedule.agents if
-                      agent.age() >= line[0][1] and agent.age() < line[1][0] and agent.gender_is_male == line[0][0]]
+                      agent.age() >= line[0][1] and agent.age() <= line[1][0] and agent.gender_is_male == line[0][0]]
             if subpop:
                 c = line[1][1]
-                # c is the cell value. Now we calcolate criminal-tendency with the factors.
+                #c is the cell value. Now we calculate criminal-tendency with the factors.
                 for agent in subpop:
                     agent.criminal_tendency = c
                     agent.factors_c()
-                # then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
+                #then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
                 epsilon = c - np.mean([agent.criminal_tendency for agent in subpop])
                 for agent in subpop:
                     agent.criminal_tendency += epsilon
         if self.intervention_is_on() and self.facilitator_repression:
                 self.calc_correction_for_non_facilitators()
-            #todo: Error Here! agent.criminal_tendency is negative or zero
 
     def calc_correction_for_non_facilitators(self):
         """
