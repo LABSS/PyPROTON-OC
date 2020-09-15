@@ -59,7 +59,7 @@ def weighted_n_of(n, agentset, weight_function, rng_istance):
     #minp = min(p)
     #maxp = max(p)
     p = [i/sump for i in p]
-    return  rng_istance.choice(agentset, n, replace=False, p=p)
+    return  rng_istance.choice(agentset, int(n), replace=False, p=p)
 
 def weighted_one_of(agentset, weight_function, rng_istance):
     return weighted_n_of(1, agentset, weight_function, rng_istance)[0]

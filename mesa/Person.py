@@ -50,6 +50,7 @@ class Person(Agent):
         self.my_school = None
         self.target_of_intervention = 0
         self.arrest_weight = 0
+        self.criminal_net_weight = dict()
         #super().__init__(self.unique_id, model)
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
@@ -174,16 +175,15 @@ class Person(Agent):
             asker.neighbors.get("school").add(self)
 
     def addCriminalLink(self, asker):
-        #todo: Links between people do not have the "criminal_link_weight" attribute
-        weight = self.criminal_link_weight.get(asker)
-        if weight == None:
-            self.neighbors.get("criminal").add(asker)
-            self.criminal_link_weight[asker] = 1
-            asker.neighbors.get("criminal").add(self)
-            asker.criminal_link_weight[asker] = 1
-        else:
-            self.criminal_link_weight[asker]  += 1
-            asker.criminal_link_weight[asker] += 1 
+        """
+        Create a two-way criminal links in-place and update the connection weight
+        :param asker: agent
+        :return: None
+        """
+        self.neighbors.get("criminal").add(asker)
+        self.criminal_net_weight[asker] = 1
+        asker.neighbors.get("criminal").add(self)
+        asker.criminal_net_weight[self] = 1
             
     def remove_link(self, forlorn, kind):
         self.neighbors.get(kind).discard(forlorn)
