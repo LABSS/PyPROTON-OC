@@ -114,10 +114,20 @@ class MesaPROTON_OC(Model):
         # loading data from tables and making first calculations
         self.data_folder = os.path.join(self.palermo_inputs, "data")
         self.load_stats_tables()
-        # self.datacollector = DataCollector(
-        #     model_reporters={"Gini": compute_gini},
-        #     agent_reporters={"Wealth": "wealth"}
-        # )
+
+        #Data Colletor
+        self.datacollector = DataCollector(
+            model_reporters={"n_agents": extra.get_n_agents},
+            agent_reporters={"household_links": extra.get_n_household_links,
+                             "friendship_links":extra.get_n_friendship_links,
+                             "criminal_links": extra.get_n_criminal_links,
+                             "professional_links":extra.get_n_professional_links,
+                             "school_links":extra.get_n_school_links,
+                             "sibling_links": extra.get_n_sibling_links,
+                             "offspring_links": extra.get_n_offspring_links,
+                             "partner_links": extra.get_n_partner_links,
+                             "criminal_tendency": extra.get_criminal_tendency})
+
 
         # Create agents(
         # mesaConfigCreateAgents.configAgents(self)
@@ -725,6 +735,7 @@ class MesaPROTON_OC(Model):
         self.calculate_arrest_rate()
         self.setup_oc_groups()
         self.setup_facilitators()
+        self.datacollector.collect(self)
 
     def assign_jobs_and_wealth(self):
         """
@@ -912,20 +923,20 @@ staticmethod(conclude_wedding)
 
 if __name__ == "__main__":
 
-    m = MesaPROTON_OC()
-    m.initial_agents = 100
-    m.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(m.general_data, "num_co_offenders_dist.csv"))
-    m.initial_agents = 200
-    m.load_stats_tables()
-    m.setup_education_levels()
-    m.setup_persons_and_friendship()
+    model = MesaPROTON_OC()
+    model.initial_agents = 100
+    model.create_agents()
+    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    model.initial_agents = 200
+    model.load_stats_tables()
+    model.setup_education_levels()
+    model.setup_persons_and_friendship()
     # Visualize network
-    nx.draw(m.watts_strogatz)
+    nx.draw(model.watts_strogatz)
     print("num links:")
-    print(m.total_num_links())
-    # m.setup_siblings()
+    print(model.total_num_links())
+    # model.setup_siblings()
     print("num links:")
-    print(m.total_num_links())
+    print(model.total_num_links())
 
 
