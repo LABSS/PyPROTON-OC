@@ -14,6 +14,7 @@ import timeit
 from itertools import combinations
 import os
 from numpy.random import default_rng
+import time
 
 class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
@@ -709,10 +710,10 @@ class MesaPROTON_OC(Model):
 
     def setup(self, n_agent):
         """
-        Warning: At the moment this procedure is partial, it has been added for testing in the development phase.
         Standard setup of the model
         :param n_agent: int, number of initial agents
         """
+        start = time.time()
         self.initial_agents = n_agent
         self.setup_education_levels()
         self.setup_persons_and_friendship()
@@ -739,6 +740,12 @@ class MesaPROTON_OC(Model):
         for agent in self.schedule.agents:
             agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
         self.calc_correction_for_non_facilitators()
+        elapsed_time = time.time() - start
+        hours = elapsed_time // 3600
+        temp = elapsed_time - 3600 * hours
+        minutes = temp // 60
+        seconds = temp - 60 * minutes
+        print("Setup Completed in: " + "%d:%d:%d" %(hours, minutes, seconds))
 
     def assign_jobs_and_wealth(self):
         """
