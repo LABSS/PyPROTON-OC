@@ -1347,7 +1347,7 @@ end
 to calculate-criminal-tendency
   foreach table:keys c-range-by-age-and-sex [ genderage ->
     let top-and-value item 0 table:get c-range-by-age-and-sex genderage
-    let subpop all-persons with [ age >= item 1 genderage and age < item 0 top-and-value and male? = item 0 genderage ]
+    let subpop all-persons with [ age >= item 1 genderage and age <= item 0 top-and-value and male? = item 0 genderage ]
     if any? subpop [
       let c item 1 top-and-value
       ; c is the cell value. Now we calcolate criminal-tendency with the factors.
@@ -1817,7 +1817,7 @@ num-persons
 num-persons
 100
 10000
-550.0
+2000.0
 100
 1
 NIL
@@ -2936,7 +2936,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.4
+NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
