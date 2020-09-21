@@ -584,9 +584,7 @@ class MesaPROTON_OC(Model):
         :return: dict, a new dictionary
         """
         dic = dict()
-        extra_depth_modifier = 0
-        if extra_depth:
-            extra_depth_modifier = 1
+        extra_depth_modifier = 1 if extra_depth else 0
 
         if len(df.columns) + extra_depth_modifier == 2:
             for col in np.unique(df.iloc[:,0]):
