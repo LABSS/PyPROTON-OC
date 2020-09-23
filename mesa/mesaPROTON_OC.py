@@ -586,15 +586,14 @@ class MesaPROTON_OC(Model):
         dic = dict()
         extra_depth_modifier = 1 if extra_depth else 0
 
-        if len(df.columns) + extra_depth_modifier == 2:
-            for col in np.unique(df.iloc[:,0]):
+        for col in np.unique(df.iloc[:, 0]):
+            if len(df.columns) + extra_depth_modifier == 2:
                 dic[col] = df[df.iloc[:,0] == col].iloc[:,1].values
-        if len(df.columns) + extra_depth_modifier == 3:
-            for col in np.unique(df.iloc[:,0]):
+            if len(df.columns) + extra_depth_modifier == 3:
                 dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
-        if len(df.columns) + extra_depth_modifier == 4:
-            for col in np.unique(df.iloc[:, 0]):
+            if len(df.columns) + extra_depth_modifier == 4:
                 dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+        if len(df.columns) + extra_depth_modifier == 4:
             for key in dic:
                 subdic = dict()
                 for subcol in np.unique(dic[key].iloc[:, 0]):
