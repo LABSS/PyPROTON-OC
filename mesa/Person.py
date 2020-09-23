@@ -61,10 +61,8 @@ class Person(Agent):
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
 
-    
     def age(self):
-        return np.floor((self.model.ticks - self.birth_tick) / 12)
-
+        return extra._age(self.model.ticks, self.birth_tick)
         
     def random_init(self, random_relationships = False, exclude_partner_net = False):
         self.education_level = self.model.rng.choice(range(0, 4))
