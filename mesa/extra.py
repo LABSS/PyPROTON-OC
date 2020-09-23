@@ -7,6 +7,7 @@ Created on Tue Apr  7 19:05:04 2020
 """
 import Person
 import numpy as np
+import numba
 
 # basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
 def print_id(p):
@@ -106,6 +107,11 @@ def get_criminal_tendency(agent):
 #Model Methods
 def get_n_agents(model):
     return len(model.schedule.agents)
+
+#Numba functions
+@numba.jit(nopython=True)
+def _age(tick, birth_tick):
+    return np.floor((tick - birth_tick) / 12)
 
 
 
