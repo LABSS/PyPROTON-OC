@@ -227,10 +227,12 @@ class MesaPROTON_OC(Model):
                 self.number_weddings += 1
             maritable.remove(ego)  # removed in both cases, if married or if can't find a partner
 
-    def intervention_on(self):
-        return self.ticks % self.ticks_between_intervention == 0 and \
-               self.ticks >= intervention_start and \
-               self.ticks < intervention_end
+    def intervention_is_on(self):
+        """
+        Returns True if there is an active intervention False otherwise.
+        :return: bool
+        """
+        return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
     def socialization_intervene(self):
         potential_targets = [x for x in schedule.agents if x.age() < 18 and x.age >= 6 and x.my_school != None]
@@ -852,13 +854,6 @@ class MesaPROTON_OC(Model):
         n = len(self.schedule.agents)
         self.correction_for_non_facilitators = [
             (n - self.facilitator_repression_multiplier * f) / (n - f)] if f > 0 else 1.0
-
-    def intervention_is_on(self):
-        """
-        Returns True if there is an active intervention False otherwise.
-        :return: bool
-        """
-        return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
     def lognormal(self, mu, sigma):
         """
