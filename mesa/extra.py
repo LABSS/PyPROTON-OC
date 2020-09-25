@@ -78,28 +78,28 @@ def pick_from_pair_list(a_list_of_pairs, rng_istance):
 #Data Collectors
 #Agents Method
 def get_n_household_links(agent):
-    return len(agent.neighbors.get("household"))
+    return list(agent.neighbors.get("household"))
 
 def get_n_friendship_links(agent):
-    return len(agent.neighbors.get("friendship"))
+    return list(agent.neighbors.get("friendship"))
 
 def get_n_criminal_links(agent):
-    return len(agent.neighbors.get("criminal"))
+    return list(agent.neighbors.get("criminal"))
 
 def get_n_professional_links(agent):
-    return len(agent.neighbors.get("professional"))
+    return list(agent.neighbors.get("professional"))
 
 def get_n_school_links(agent):
-    return len(agent.neighbors.get("school"))
+    return list(agent.neighbors.get("school"))
 
 def get_n_sibling_links(agent):
-    return len(agent.neighbors.get("sibling"))
+    return list(agent.neighbors.get("sibling"))
 
 def get_n_offspring_links(agent):
-    return len(agent.neighbors.get("offspring"))
+    return list(agent.neighbors.get("offspring"))
 
 def get_n_partner_links(agent):
-    return len(agent.neighbors.get("partner"))
+    return list(agent.neighbors.get("partner"))
 
 def get_criminal_tendency(agent):
     return agent.criminal_tendency
