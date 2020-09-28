@@ -53,6 +53,9 @@ class MesaPROTON_OC(Model):
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
+        #Intervention
+        self.family_intervention = None
+
         # outputs
         self.number_deceased = 0
         self.facilitator_fails = 0
@@ -155,8 +158,16 @@ class MesaPROTON_OC(Model):
             i_agent.random_init(random_relationships, exclude_partner_net)
 
     def step(self):
-        self.schedule.step()
-        self.wedding()
+        for agent in self.schedule.agents:
+            agent.num_crimes_committed_this_tick = 0
+        self.number_law_interventions_this_tick = 0
+        if self.intervention_on():
+            if self.family_intervention:
+                self.family_intervene()
+
+
+        # self.schedule.step()
+        # self.wedding()
         # collect data
         # self.datacollector.collect(self)
 
@@ -319,23 +330,24 @@ class MesaPROTON_OC(Model):
     # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network?
     # for now I think I'll just add another network and keep the redundancy, then we'll see.
     def family_intervene(self):
-        kids_to_protect = [x for x in schedule.agents if x.age_between(12, 18)]
-        if family_intervention == "remove_if_caught":
+        kids_to_protect = [x for x in self.schedule.agents if x.age_between(12, 18)]
+        if self.family_intervention == "remove_if_caught":
             kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner]
-        if family_intervention == "remove_if_OC_member":
+        if self.family_intervention == "remove_if_OC_member":
             kids_to_protect = [x for x in kids_to_protect if x.father.oc_member]
-        if family_intervention == "remove_if_caught_and_OC_member":
+        if self.family_intervention == "remove_if_caught_and_OC_member":
             kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner and x.father.oc_member]
         if kids_to_protect:
             # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
             # gee but how comes that it increases with the nubmer of targets We have to do better here
-            how_many = math.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect))
-            for x in self.rng.choice(kids_to_protect, how_many, replace=False):
-                kids_intervention_counter += 1
+            how_many = np.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect))
+            kids_pool = self.rng.choice(kids_to_protect, how_many, replace=False)
+            for kid in kids_pool:
+                self.kids_intervention_counter += 1
                 # this also removes household links, leaving the household in an incoherent state.
-                x.neighbor.get('parent').remove(x.father)
+                kid.neighbor.get('parent').remove(kid.father)
                 # maybe not needed?
-                self.removed_fatherships.add([((18 * ticks_per_year + birth_tick) - ticks), x.father, x])
+                self.removed_fatherships.add([((18 * self.ticks_per_year + x.birth_tick) - self.ticks), x.father, x])
                 # at this point bad dad is out and we help the remaining with the whole package
                 family = x.family().add(x)
                 self.welfare_createjobs([y for y in family if y.age() >= 16 and not y.job and not y.my_school])
