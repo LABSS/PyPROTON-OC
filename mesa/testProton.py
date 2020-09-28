@@ -78,6 +78,7 @@ def test_generate_households():
 
 def test_weddings():
     m = MesaPROTON_OC()
+    m.initial_agents = 1000
     m.create_agents(random_relationships=True, exclude_partner_net=True)
     print(len(m.schedule.agents) - len(pp.Person.persons))
     print(m.number_weddings)
