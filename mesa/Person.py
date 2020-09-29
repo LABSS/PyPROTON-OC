@@ -39,7 +39,6 @@ class Person(Agent):
         self.oc_member = False
         self.cached_oc_embeddedness = 0
         self.oc_embeddedness_fresh = 0
-        self.partner = None       # the person's significant other
         self.retired = False
         self.number_of_children = 0
         self.facilitator = 0
@@ -66,7 +65,7 @@ class Person(Agent):
         return np.floor((self.m.ticks - self.birth_tick) / 12)
 
         
-    def random_init(self, random_relationships = False):
+    def random_init(self, random_relationships = False, exclude_partner_net = False):
         self.education_level = self.m.rng.choice(range(0,4))
         self.max_education_level = self.education_level
         self.wealth_level = self.m.rng.choice(range(0,4))
@@ -77,7 +76,7 @@ class Person(Agent):
         self.hobby = 0
         self.criminal_tendency = self.m.rng.uniform(0, 1)
         if random_relationships == True:
-            self.random_links()
+            self.random_links(exclude_partner_net)
 
 
     def networks_init(self):
@@ -90,20 +89,25 @@ class Person(Agent):
         return extra.find_neighb(netname, dist, set(), {self}) - {self}
     
     def isneighbor(self, other):
-        return any([other in self.neighbors[x] for x in Person.network_names]) or self.partner == other
+        return any([other in self.neighbors[x] for x in Person.network_names])
 
     def step(self):
             pass
 
-    def random_links(self):
+    def random_links(self, exclude_partner_net=False):
         """
         Caution: Use only in test phase. This function generates blood relations and not, randomly
+        :param exclude_partner: exclude partner network
+        :return: None
         """
-        for net in Person.network_names:
+        networks = Person.network_names.copy()
+        if exclude_partner_net:
+            networks.remove("partner")
+        for net in networks:
             for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
                 self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
             self.neighbors.get(net).discard(self)
-        pass
+
 
     @staticmethod
     def NumberOfLinks():
@@ -184,7 +188,7 @@ class Person(Agent):
         return self.age() >= low and self.age() < high
     
     def family(self): # maybe add self?
-        return self.neighbors.get("sibling").union(self.neighbors.get("offspring")).union(set(self.partner) if self.partner else set())
+        return self.neighbors.get("sibling").union(self.neighbors.get("offspring")).union(self.neighbors.get("partner"))
     
     def potential_friends(self):
         return self.family().union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(self.neighbors.get("friendship")) #minus self.. needed?
@@ -227,6 +231,19 @@ class Person(Agent):
             self.potential_school = [x for x in self.m.schools if x.diploma_level == level]
         self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
+
+    def get_link_list(self, net_name):
+        """
+        Given the name of a network, this method returns a list of agents within the network.
+        If the network is empty, it returns an empty list.
+        :param net_name: str, the network name
+        :return: list, return an empty list if the network is empty
+        """
+        agent_net = self.neighbors.get(net_name)
+        if len(agent_net) > 0:
+            return list(agent_net)
+        else:
+            return []
 
 
 class Prisoner(Person):
