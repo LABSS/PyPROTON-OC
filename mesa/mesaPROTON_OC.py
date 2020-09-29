@@ -193,7 +193,7 @@ class MesaPROTON_OC(Model):
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
-        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.neighbors.get("partner")]
+        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and not x.neighbors.get("partner")]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable) > 1:
             ego = self.rng.choice(maritable)
@@ -736,10 +736,10 @@ def conclude_wedding(ego, partner):
     for x in [ego, partner]:
         for y in x.neighbors["household"]:
             y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
-    ego.neighbors["household"] = {partner}
-    partner.neighbors["household"] = {ego}
-    ego.neighbors.get("partner").add(partner)
-    partner.neighbors.get("partner").add(ego)
+    ego.neighbors["household"].add(partner)
+    partner.neighbors["household"].add(ego)
+    ego.neighbors["partner"].add(partner)
+    partner.neighbors["partner"].add(ego)
 staticmethod(conclude_wedding)
 
 
