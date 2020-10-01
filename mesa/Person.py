@@ -302,6 +302,20 @@ class Person(Agent):
         """
         return self.get_link_list("sibling") + self.get_link_list("offspring") + self.get_link_list("partner")
 
+    def remove_from_household(self):
+        """
+        This method removes the agent from the household, keeping all networks consistent.
+        Modify the Person.neighbors attribute in-place
+        :return: None
+        """
+        net_name = ["sibling", "partner", "offspring", "household", "parent"]
+        for member in self.neighbors.get("household").copy():
+            for net in net_name:
+                if self in member.neighbors.get(net):
+                    member.neighbors.get(net).remove(self)
+                if member in self.neighbors.get(net):
+                    self.neighbors.get(net).remove(member)
+
 
 
 class Prisoner(Person):
