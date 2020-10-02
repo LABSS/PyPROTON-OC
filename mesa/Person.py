@@ -237,7 +237,7 @@ class Person(Agent):
             self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
-    def get_link_list(self, net_name):
+    def get_neighbor_list(self, net_name):
         """
         Given the name of a network, this method returns a list of agents within the network.
         If the network is empty, it returns an empty list.
