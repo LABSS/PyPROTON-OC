@@ -84,9 +84,9 @@ def test_weddings():
         m.wedding()
     # print(Person.NumberOfLinks()-l)
     for agent in m.schedule.agents:
-        if agent.get_link_list("partner"):
-            assert agent.get_link_list("partner")[0].get_link_list("partner")[0] == agent
-    assert m.number_weddings == len([x for x in m.schedule.agents if x.get_link_list("partner")]) / 2
+        if agent.get_neighbor_list("partner"):
+            assert agent.get_neighbor_list("partner")[0].get_neighbor_list("partner")[0] == agent
+    assert m.number_weddings == len([x for x in m.schedule.agents if x.get_neighbor_list("partner")]) / 2
     assert m.number_weddings > 0
     # coherent state of weddings
 
