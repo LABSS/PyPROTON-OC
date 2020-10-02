@@ -57,6 +57,8 @@ class MesaPROTON_OC(Model):
 
         #Intervention
         self.family_intervention = None
+        self.social_support = None
+        self.welfare_support = None
 
         # outputs
         self.number_deceased = 0
@@ -167,14 +169,17 @@ class MesaPROTON_OC(Model):
         if self.intervention_on():
             if self.family_intervention:
                 self.family_intervene_netlogo_version() if self.as_netlogo else self.family_intervene_mesa_version()
+            if self.social_support:
+                self.socialization_intervene()
+            if self.welfare_support:
+                self.welfare_intervene()
+
         self.ticks += 1
         self.datacollector.collect(self)
 
 
         # self.schedule.step()
         # self.wedding()
-        # collect data
-        # self.datacollector.collect(self)
 
     def run_model(self, n):
         for self.ticks in range(n):
@@ -271,18 +276,27 @@ class MesaPROTON_OC(Model):
                self.ticks < self.intervention_end
 
     def socialization_intervene(self):
-        potential_targets = [x for x in schedule.agents if x.age() < 18 and x.age >= 6 and x.my_school != None]
-        targets = self.rng.choice(potential_targets,
-                                   p=[x.criminal_tendency for x in potential_targets],
-                                   size=math.ceil((targets_addressed_percent / 100 * len(potential_targets))
-                                                  # criminal_tendency + criminal_tendency_addme_for_weighted_extraction
-                                                  )
-                                   )
-        if social_support == "educational" or social_support == "all": self.soc_add_educational(targets)
-        if social_support == "psychological" or social_support == "all": self.soc_add_psychological(targets)
-        if social_support == "more friends" or social_support == "all": self.soc_add_more_friends(targets)
-        welfare_createjobs({x for x in schedule.agents if
-                            x.gender_is_male == False and x.neighbors.get('offspring').intersection(set(targets))})
+        """
+        This procedure is active when the self.social_support attribute is different from None. There are 4
+        possible social interventions: educational, psychological, more-friends or all. The intervention has effect on a
+        portion of eligible members, determined by "how_many" variable that depends on self.targets_addressed_percent attribute.
+        The interventions consist of:
+        1. soc_add_educational, the max_education_level attribute of the eligible members is increased by one
+        2. soc_add_psychological, a new support member (who has not committed crimes) is added to the friends network
+        3. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
+        4. welfare_createjobs, new jobs are created and assigned to eligible members (mothers)
+        :return: None
+        """
+        potential_targets = [agent for agent in self.schedule.agents if
+                             agent.age() <= 18 and agent.age() >= 6 and agent.my_school != None]
+        how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(potential_targets)))
+        targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency, self.rng)
+
+        if self.social_support == "educational" or self.social_support == "all": self.soc_add_educational(targets)
+        if self.social_support == "psychological" or self.social_support == "all": self.soc_add_psychological(targets)
+        if self.social_support == "more-friends" or self.social_support == "all": self.soc_add_more_friends(targets)
+        # also give a job to the mothers
+        if self.social_support == "all": self.welfare_createjobs(agent.mother for agent in self.schedule.agents if agent.mother)
 
     def soc_add_educational(self, targets):
         """
@@ -319,21 +333,23 @@ class MesaPROTON_OC(Model):
                 target.makeFriends(extra.weighted_one_of(support_set, lambda x: max_criminal_tendency - x.criminal_tendency, self.rng))
 
     def welfare_intervene(self):
-        if welfare_support == "job_mother":
-            targets = [x for x in schedule.agents if
-                       x.gender_is_male == False and
-                       not x.my_job and
-                       (True if not x.neighbors.get("partner") else not x.neighbors.get("partner").pop().oc_member)
-                       ]
-        if welfare_support == "job_child":
-            targets = [x for x in schedule.agents if
-                       x.age() > 16 and x.age() < 24 and
-                       not x.my_school and
-                       not x.my_job and
-                       x.father.oc_member
-                       ]
+        if self.welfare_support == "job-mother":
+            targets = list()
+            for mother in [agent.mother for agent in self.schedule.agents if agent.mother]:
+                if not mother.my_job and mother.neighbors.get("partner"):
+                    if mother.get_link_list("partner")[0].oc_member:
+                        targets.append(mother)
+
+        if self.welfare_support == "job-child":
+            targets = list()
+            for agent in self.schedule.agents:
+                if agent.age() > 16 and agent.age() < 24 and not agent.my_school and not agent.my_job and agent.father:
+                    if agent.father.oc_member:
+                        targets.append(agent)
+
         if targets:
-            targets = self.rng.choice(targets, math.ceil(targets_addressed_percent / 100 * len(targets)), replace=False)
+            how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(targets)))
+            targets = self.rng.choice(targets, how_many, replace=False)
             self.welfare_createjobs(targets)
 
     def welfare_createjobs(self, targets):
@@ -1164,18 +1180,24 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     model = MesaPROTON_OC()
-    model.initial_agents = 100
-    model.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    model.initial_agents = 200
-    model.load_stats_tables()
-    model.setup_education_levels()
-    model.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(model.watts_strogatz)
-    print("num links:")
-    print(model.total_num_links())
-    # model.setup_siblings()
-    print("num links:")
-    print(model.total_num_links())
+    # model.initial_agents = 100
+    # model.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    # model.initial_agents = 200
+    # model.load_stats_tables()
+    # model.setup_education_levels()
+    # model.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(model.watts_strogatz)
+    # print("num links:")
+    # print(model.total_num_links())
+    # # model.setup_siblings()
+    # print("num links:")
+    # print(model.total_num_links())
+    model.welfare_support = "job-child"
+    model.targets_addressed_percent = 1000
+    model.setup(10000)
+    for a in range(100):
+        model.step()
+
 
