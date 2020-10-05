@@ -333,6 +333,14 @@ class MesaPROTON_OC(Model):
                 target.makeFriends(extra.weighted_one_of(support_set, lambda x: max_criminal_tendency - x.criminal_tendency, self.rng))
 
     def welfare_intervene(self):
+        """
+        This procedure is active when the self.welfare_support attribute is different from None. There are 2
+        possible welfare interventions: job-mother or job-child. These parameters determine the portion of the population
+        on which the intervention will have effect. The intervention consists of the application of a single procedures
+        on eligible family members:
+        1. new jobs are created and assigned to eligible members (mothers or children)
+        :return: None
+        """
         if self.welfare_support == "job-mother":
             targets = list()
             for mother in [agent.mother for agent in self.schedule.agents if agent.mother]:
@@ -1195,8 +1203,8 @@ if __name__ == "__main__":
     # print("num links:")
     # print(model.total_num_links())
     model.welfare_support = "job-child"
-    model.targets_addressed_percent = 1000
-    model.setup(10000)
+    model.targets_addressed_percent = 100
+    model.setup(1000)
     for a in range(100):
         model.step()
 
