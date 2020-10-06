@@ -11,7 +11,7 @@ resolvers += Resolver.bintrayRepo("netlogo", "NetLogo-JVM")
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.5" % Test,
-  "org.nlogo" % "netlogo" % "6.0.4" % Test
+  "org.nlogo" % "netlogo" % "6.1.1" % Test
 )
 
 lazy val downloadFromZip = taskKey[Unit]("Download zipped extensions and extract them to ./extensions")
