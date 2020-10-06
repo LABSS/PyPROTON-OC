@@ -934,7 +934,7 @@ end
 to limit-education-by-age ; person command
   foreach reverse sort table:keys education-levels [ i ->
     let max-age first but-first table:get education-levels i
-    if age < max-age [ set education-level i - 1 ]
+    if age <= max-age or education-level > max-education-level [ set education-level i - 1 ]
   ]
 end
 
@@ -1093,7 +1093,7 @@ to graduate-and-enter-jobmarket
       leave-school
       set education-level school-education-level
       ifelse table:has-key? education-levels (school-education-level + 1) and
-      (school-education-level + 1 < max-education-level)
+      (school-education-level + 1 <= max-education-level)
       [
         enroll-to-school (school-education-level + 1)
       ] [ ; otherwise, get a job level compatible with my education. Find-jobs will then try to assign the job. This includes the neet-check.
