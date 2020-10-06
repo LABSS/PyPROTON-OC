@@ -53,7 +53,7 @@ class MesaPROTON_OC(Model):
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
-        self.as_netlogo = True
+        self.as_netlogo = False
 
         #Intervention
         self.family_intervention = None
@@ -173,6 +173,13 @@ class MesaPROTON_OC(Model):
                 self.socialization_intervene()
             if self.welfare_support:
                 self.welfare_intervene()
+            # OC-members-scrutiny works directly in factors-c
+            # OC-members-repression works in arrest-probability-with-intervention in commmit-crime
+        if (self.ticks % self.ticks_per_year) == 0: # this should be 11, probably, otherwise
+            self.calculate_criminal_tendency()
+            self.calculate_crime_multiplier() # we should update it, if population change
+            self.graduate_and_enter_jobmarket()
+
 
         self.ticks += 1
         self.datacollector.collect(self)
@@ -1162,8 +1169,32 @@ class MesaPROTON_OC(Model):
             self.intervention_start = 13
             self.intervention_end = 9999
 
+    def graduate_and_enter_jobmarket(self):
+        """
+        This enables students to move between levels of education and into the labor market.
+        :return: None
+        """
+        primary_age = self.education_levels[1][0]
+        for student in [agent for agent in self.schedule.agents
+                        if agent.education_level == 0 and agent.age() == primary_age and agent.my_school == None]:
+            student.enroll_to_school(1)
+        for school in self.schools:
+            end_age = self.education_levels[school.diploma_level][1]
+            for student in [agent for agent in school.my_students if agent.age() == end_age + 1]:
+                student.leave_school()
+                student.education_level = school.diploma_level
+                if school.diploma_level + 1 in self.education_levels.keys() \
+                        and school.diploma_level + 1 <= student.max_education_level:
+                    student.enroll_to_school(school.diploma_level + 1)
+                else:
+                    student.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[student.education_level][student.gender_is_male], self.rng)
+                    student.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[student.job_level][student.gender_is_male], self.rng)
+                    if student.age() > 14 and student.age() < self.retirement_age and student.job_level == 1 and self.rng.random() < self.labour_status_by_age_and_sex[student.gender_is_male][student.age()]:
+                        student.job_level = 0
 
-        # 778 / 1700
+
+
+# 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
 
