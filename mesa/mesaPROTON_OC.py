@@ -1238,11 +1238,6 @@ class MesaPROTON_OC(Model):
                 new_agent.migrant = True
 
 
-
-
-
-
-
 # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
