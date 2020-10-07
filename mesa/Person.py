@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import extra
-from mesa import Agent, Model
+from mesa import Agent
 import mesaPROTON_OC
 import numpy as np
 
@@ -29,26 +29,26 @@ class Person(Agent):
         self.num_crimes_committed_this_tick = 0
         self.education_level = 0     # level: last school I finished (for example, 4: I finished university)
         self.max_education_level = 0
-        self.wealth_level = 0
+        self.wealth_level = 1
         self.job_level = 0
         self.my_job = None               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick = 0
-        self.gender_is_male = False #True male False female
+        self.birth_tick = self.model.ticks
+        self.gender_is_male = self.model.rng.choice([True, False], 1) #True male False female
         self.father = None
         self.mother = None
-        self.propensity = 0
+        self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
         self.oc_member = False
         self.cached_oc_embeddedness = 0
         self.oc_embeddedness_fresh = 0
         self.retired = False
         self.number_of_children = 0
         self.facilitator = None
-        self.hobby = 0
+        self.hobby = self.model.rng.integers(low = 1,high = 5, endpoint=True)
         self.new_recruit = -2
-        self.migrant = 0
+        self.migrant = False
         self.criminal_tendency = 0
         self.my_school = None
-        self.target_of_intervention = 0
+        self.target_of_intervention = False
         self.arrest_weight = 0
         self.criminal_net_weight = dict()
         #super().__init__(self.unique_id, model)
@@ -91,7 +91,7 @@ class Person(Agent):
         return any([other in self.neighbors[x] for x in Person.network_names])
 
     def step(self):
-            pass
+        pass
 
     def random_links(self, exclude_partner_net=False):
         """
@@ -253,6 +253,7 @@ class Person(Agent):
             return list(agent_net)
         else:
             return []
+
     def find_job(self):
         """
         This method assigns a job to the Person based on those available and their level. Modify in-place the
@@ -327,6 +328,20 @@ class Person(Agent):
         self.my_school.my_students.remove(self)
         self.my_school = None
 
+    def just_changed_age(self):
+        """
+        If the agent has changed years during this tick this function returns true, otherwise it returns false.
+        :return: bool,
+        """
+        return np.floor((self.model.ticks - self.birth_tick)/ self.model.ticks_per_year) \
+               == ((self.model.ticks - self.birth_tick) / self.model.ticks_per_year)
+
+    def update_unemployment_status(self):
+        """
+        This function modifies the job_level attribute in-place according to table model.labour_status_by_age_and_sex
+        :return: None
+        """
+        self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][self.age()] else 1
 
 
 

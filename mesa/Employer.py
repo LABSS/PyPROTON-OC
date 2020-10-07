@@ -21,7 +21,7 @@ class Employer():
     def __repr__(self):
         return "Employer: " + str(self.unique_id)
   
-    def create_job(self,  level: int, worker: Person):
+    def create_job(self, level: int, worker: Person):
         newjob = Job(self.m)
         newjob.level = level
         worker.my_job = newjob
