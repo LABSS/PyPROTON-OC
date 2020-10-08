@@ -56,6 +56,11 @@ class MesaPROTON_OC(Model):
         #switches
         self.as_netlogo = False
         self.migration_on = False
+        if self.as_netlogo:
+            self.removed_fatherships = list()
+        else:
+            self.removed_fatherships = dict()
+
 
         #Intervention
         self.family_intervention = None
@@ -72,7 +77,6 @@ class MesaPROTON_OC(Model):
         self.number_weddings = 0
         self.number_weddings_mean = 100
         self.number_weddings_sd = 0
-        self.removed_fatherships = list()
         self.criminal_tendency_addme_for_weighted_extraction = 0
         self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction = 0
         self.number_law_interventions_this_tick = 0
@@ -197,6 +201,7 @@ class MesaPROTON_OC(Model):
                     agent.makeProfessionalLinks(employees)
 
             self.let_migrants_in()
+            # self.return_kids()
 
         self.ticks += 1
         self.datacollector.collect(self)
@@ -477,9 +482,11 @@ class MesaPROTON_OC(Model):
         how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(father_to_remove_pool)))
         father_to_remove = list(self.rng.choice(father_to_remove_pool, how_many, replace=False))
         for father in father_to_remove:
+            self.removed_fatherships[father] = list()
             self.kids_intervention_counter += 1
             for kid in father.neighbors.get("offspring"):
-                self.removed_fatherships.append([((18 * self.ticks_per_year + kid.birth_tick) - self.ticks), father, kid])
+                self.removed_fatherships[father].append([kid,((18 * self.ticks_per_year + kid.birth_tick) - self.ticks)])
+
             # we only want households
             family = father.neighbors.get("household").copy()
             father.remove_from_household()
@@ -492,7 +499,7 @@ class MesaPROTON_OC(Model):
         return [x for x in self.schedule.agents if eval(reporter)]
 
     def return_kids(self):
-        for a in removed - fatherships:
+        for father in self.removed_fatherships:
             # list tick father son
             if a[2].age() >= 18:
                 if self.rng.random() < (6 / a[0]):
@@ -500,6 +507,26 @@ class MesaPROTON_OC(Model):
                     a[2].networks.get['parents'].add(a[1])
                     a[2].father = a[1]
                     removed.fatherships.remove(a)
+
+    def return_kids(self):
+
+        if self.removed_fatherships:
+            if self.as_netlogo:
+                for removed in self.removed_fatherships:
+                    if removed[2].age() >= 18 and self.rng.random() < 6 / removed[0]:
+                        removed[2].neighbors.get("parent").add(removed[2].father)
+                        removed[2].father.neighbors.get("offspring").add(removed[2])
+                        self.removed_fatherships.remove(removed)
+            else:
+                pass
+        # for father in self.removed_fatherships:
+        #     # list tick father son
+        #     if a[2].age() >= 18:
+        #         if self.rng.random() < (6 / a[0]):
+        #             # check for coherence. Need better offspring design.
+        #             a[2].networks.get['parents'].add(a[1])
+        #             a[2].father = a[1]
+        #             removed.fatherships.remove(a)
 
     def make_friends(self):
         for a in self.schedule.agent_buffer(shuffled=True):
@@ -1263,19 +1290,48 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     model = MesaPROTON_OC()
-    model.initial_agents = 100
-    model.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    model.initial_agents = 200
-    model.load_stats_tables()
-    model.setup_education_levels()
-    model.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(model.watts_strogatz)
-    print("num links:")
-    print(model.total_num_links())
-    # model.setup_siblings()
-    print("num links:")
-    print(model.total_num_links())
+    # model.initial_agents = 100
+    # model.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    # model.initial_agents = 200
+    # model.load_stats_tables()
+    # model.setup_education_levels()
+    # model.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(model.watts_strogatz)
+    # print("num links:")
+    # print(model.total_num_links())
+    # # model.setup_siblings()
+    # print("num links:")
+    # print(model.total_num_links())
+    model.intervention = "preventive-strong"
+    model.as_netlogo = False
+    model.setup(1000)
+    candidate = [agent for agent in model.schedule.agents if agent.neighbors.get("offspring") and agent.gender_is_male and not agent.oc_member]
+    chosen = model.rng.choice(candidate, 10, replace=False)
+    model.targets_addressed_percent = 50
+    for agent in chosen:
+        agent.oc_member = True
+
+    for a in range(100):
+        model.step()
+
+    returned = list()
+    if model.removed_fatherships:
+        if model.as_netlogo:
+            for removed in model.removed_fatherships:
+                father = removed[1]
+                if removed[2].age() >= 18 and model.rng.random() < 6 / removed[0]:
+                    removed[2].neighbors.get("parent").add(removed[2].father)
+                    removed[2].father.neighbors.get("offspring").add(removed[2])
+                    model.removed_fatherships.remove(removed)
+        else:
+            pass
+
+
+
+
+
+
 
 
