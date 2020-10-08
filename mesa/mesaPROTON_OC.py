@@ -20,7 +20,7 @@ class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, as_netlogo=False):
         super().__init__(seed=seed)
         self.seed = seed
         self.rng = default_rng(seed)
@@ -53,7 +53,11 @@ class MesaPROTON_OC(Model):
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
-        self.as_netlogo = False
+        self.as_netlogo = as_netlogo
+        if self.as_netlogo:
+            self.removed_fatherships = list()
+        else:
+            self.removed_fatherships = dict()
 
         #Intervention
         self.family_intervention = None
@@ -70,7 +74,6 @@ class MesaPROTON_OC(Model):
         self.number_weddings = 0
         self.number_weddings_mean = 100
         self.number_weddings_sd = 0
-        self.removed_fatherships = list()
         self.criminal_tendency_addme_for_weighted_extraction = 0
         self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction = 0
         self.number_law_interventions_this_tick = 0
@@ -168,7 +171,10 @@ class MesaPROTON_OC(Model):
         self.number_law_interventions_this_tick = 0
         if self.intervention_on():
             if self.family_intervention:
-                self.family_intervene_netlogo_version() if self.as_netlogo else self.family_intervene_mesa_version()
+                if self.as_netlogo:
+                    self.family_intervene_netlogo_version()
+                else:
+                    self.family_intervene_mesa_version()
             if self.social_support:
                 self.socialization_intervene()
             if self.welfare_support:
@@ -460,9 +466,11 @@ class MesaPROTON_OC(Model):
         how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(father_to_remove_pool)))
         father_to_remove = list(self.rng.choice(father_to_remove_pool, how_many, replace=False))
         for father in father_to_remove:
+            self.removed_fatherships[father] = list()
             self.kids_intervention_counter += 1
             for kid in father.neighbors.get("offspring"):
-                self.removed_fatherships.append([((18 * self.ticks_per_year + kid.birth_tick) - self.ticks), father, kid])
+                self.removed_fatherships[father].append(
+                    [kid, ((18 * self.ticks_per_year + kid.birth_tick) - self.ticks)])
             # we only want households
             family = father.neighbors.get("household").copy()
             father.remove_from_household()
