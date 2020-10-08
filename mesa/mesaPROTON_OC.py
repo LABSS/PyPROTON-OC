@@ -20,7 +20,7 @@ class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, as_netlogo=False):
         super().__init__(seed=seed)
         self.seed = seed
         self.rng = default_rng(seed)
@@ -54,13 +54,12 @@ class MesaPROTON_OC(Model):
         self.labour_status_range = 0
 
         #switches
-        self.as_netlogo = False
+        self.as_netlogo = as_netlogo
         self.migration_on = False
         if self.as_netlogo:
             self.removed_fatherships = list()
         else:
             self.removed_fatherships = dict()
-
 
         #Intervention
         self.family_intervention = None
@@ -174,7 +173,10 @@ class MesaPROTON_OC(Model):
         self.number_law_interventions_this_tick = 0
         if self.intervention_on():
             if self.family_intervention:
-                self.family_intervene_netlogo_version() if self.as_netlogo else self.family_intervene_mesa_version()
+                if self.as_netlogo:
+                    self.family_intervene_netlogo_version()
+                else:
+                    self.family_intervene_mesa_version()
             if self.social_support:
                 self.socialization_intervene()
             if self.welfare_support:
@@ -1289,7 +1291,7 @@ staticmethod(conclude_wedding)
 
 if __name__ == "__main__":
 
-    model = MesaPROTON_OC()
+    model = MesaPROTON_OC(as_netlogo=True)
     # model.initial_agents = 100
     # model.create_agents()
     # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
@@ -1305,7 +1307,6 @@ if __name__ == "__main__":
     # print("num links:")
     # print(model.total_num_links())
     model.intervention = "preventive-strong"
-    model.as_netlogo = False
     model.setup(1000)
     candidate = [agent for agent in model.schedule.agents if agent.neighbors.get("offspring") and agent.gender_is_male and not agent.oc_member]
     chosen = model.rng.choice(candidate, 10, replace=False)
@@ -1316,17 +1317,17 @@ if __name__ == "__main__":
     for a in range(100):
         model.step()
 
-    returned = list()
-    if model.removed_fatherships:
-        if model.as_netlogo:
-            for removed in model.removed_fatherships:
-                father = removed[1]
-                if removed[2].age() >= 18 and model.rng.random() < 6 / removed[0]:
-                    removed[2].neighbors.get("parent").add(removed[2].father)
-                    removed[2].father.neighbors.get("offspring").add(removed[2])
-                    model.removed_fatherships.remove(removed)
-        else:
-            pass
+    # returned = list()
+    # if model.removed_fatherships:
+    #     if model.as_netlogo:
+    #         for removed in model.removed_fatherships:
+    #             father = removed[1]
+    #             if removed[2].age() >= 18 and model.rng.random() < 6 / removed[0]:
+    #                 removed[2].neighbors.get("parent").add(removed[2].father)
+    #                 removed[2].father.neighbors.get("offspring").add(removed[2])
+    #                 model.removed_fatherships.remove(removed)
+    #     else:
+    #         pass
 
 
 
