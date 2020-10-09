@@ -739,7 +739,6 @@ class MesaPROTON_OC(Model):
             self.employers.append(new_employer)
             for job in range(n):
                 new_job = Job(self)
-                #todo: Check here
                 self.jobs.append(new_job)
                 new_job.my_employer = new_employer
                 new_employer.my_jobs.append(new_job)

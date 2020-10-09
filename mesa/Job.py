@@ -9,7 +9,6 @@ import Person
 
 class Job():
     max_id = 0
-    jobs = list()
 
     def __init__(self, m: mesaPROTON_OC):
         self.m = m
@@ -18,7 +17,6 @@ class Job():
         self.worker = 0
         self.unique_id = Job.max_id
         Job.max_id = Job.max_id + 1
-        Job.jobs.append(self)
 
     def __repr__(self):
         return "Job: " + str(self.unique_id) + " Level: " + str(self.job_level)
