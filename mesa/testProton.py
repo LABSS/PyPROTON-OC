@@ -78,17 +78,18 @@ def test_generate_households():
 
 def test_weddings():
     m = MesaPROTON_OC()
+    m.initial_agents = 500
     m.create_agents(random_relationships=True, exclude_partner_net=True)
     print(len(m.schedule.agents) - len(pp.Person.persons))
     print(m.number_weddings)
     m.number_weddings_mean = 100
-    for i in range(1, 5):
+    for i in range(1, 2):
         m.wedding()
     # print(Person.NumberOfLinks()-l)
     for agent in m.schedule.agents:
-        if agent.get_link_list("partner"):
-            assert agent.get_link_list("partner")[0].get_link_list("partner")[0] == agent
-    assert m.number_weddings == len([x for x in m.schedule.agents if x.get_link_list("partner")]) / 2
+        if agent.get_neighbor_list("partner"):
+            assert agent.get_neighbor_list("partner")[0].get_neighbor_list("partner")[0] == agent
+    assert m.number_weddings == len([x for x in m.schedule.agents if x.get_neighbor_list("partner")]) / 2
     assert m.number_weddings > 0
     # coherent state of weddings
 

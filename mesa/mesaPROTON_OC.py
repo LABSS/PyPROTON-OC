@@ -196,7 +196,7 @@ class MesaPROTON_OC(Model):
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
-        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.neighbors.get("partner")]
+        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and not x.neighbors.get("partner")]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable) > 1:
             ego = self.rng.choice(maritable)
@@ -404,7 +404,7 @@ class MesaPROTON_OC(Model):
         # nx.draw(watts_strogatz, with_labels=True)
         # plt.show()
 
-    def incestuos(self, ego, candidates):
+    def list_contains_problems(self, ego, candidates):
         """
         This procedure checks if there are any links between partners within the candidate pool.
         Returns True if there are, None if there are not.
@@ -413,9 +413,9 @@ class MesaPROTON_OC(Model):
         :param candidates: list of Person objects
         :return: bool, True if there are links between partners, None otherwise.
         """
-        all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
+        all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
         for sibling in all_potential_siblings:
-            if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
+            if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[0] in all_potential_siblings:
                 return True
 
     def setup_siblings(self):
@@ -435,9 +435,9 @@ class MesaPROTON_OC(Model):
             # remove couples from candidates and their neighborhoods (siblings)
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
-            while len(candidates) > 0 and self.incestuos(agent, candidates):
+            while len(candidates) > 0 and self.list_contains_problems(agent, candidates):
                 # trouble should exist, or check-all-siblings would fail
-                potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
+                potential_trouble = [x for x in candidates if agent.get_neighbor_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
             targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
@@ -743,7 +743,6 @@ class MesaPROTON_OC(Model):
             self.employers.append(new_employer)
             for job in range(n):
                 new_job = Job(self)
-                #todo: Check here
                 self.jobs.append(new_job)
                 new_job.my_employer = new_employer
                 new_employer.my_jobs.append(new_job)
@@ -782,12 +781,11 @@ def conclude_wedding(ego, partner):
     for x in [ego, partner]:
         for y in x.neighbors["household"]:
             y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
-    ego.neighbors["household"] = {partner}
-    partner.neighbors["household"] = {ego}
-    ego.neighbors.get("partner").add(partner)
-    partner.neighbors.get("partner").add(ego)
+    ego.neighbors["household"].add(partner)
+    partner.neighbors["household"].add(ego)
+    ego.neighbors["partner"].add(partner)
+    partner.neighbors["partner"].add(ego)
 staticmethod(conclude_wedding)
-
 
 if __name__ == "__main__":
 
