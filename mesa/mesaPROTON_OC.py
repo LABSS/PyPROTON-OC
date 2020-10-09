@@ -420,7 +420,7 @@ class MesaPROTON_OC(Model):
         5. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
         :return: None
         """
-        kids_to_protect = [agent for agent in self.schedule.agents if agent.age_between(12, 18) and agent.father in agent.neighbors.get("parent")]
+        kids_to_protect = [agent for agent in self.schedule.agents if agent.age() < 18 and agent.age() >= 12 and agent.father in agent.neighbors.get("parent")]
         if self.family_intervention == "remove_if_caught":
             kids_to_protect = [agent for agent in kids_to_protect if type(agent.father) == Prisoner]
         if self.family_intervention == "remove_if_OC_member":
@@ -468,50 +468,42 @@ class MesaPROTON_OC(Model):
         5. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
         :return: None
         """
-        father_to_remove_pool = list()
-        for agent in self.schedule.agents:
+        father_to_remove_pool = set()
+        for agent in model.schedule.agents:
             if agent.gender_is_male and agent.neighbors.get("offspring"):
-                for age_condition in [offspring.age_between(12, 18) for offspring in agent.neighbors.get("offspring")]:
+                for age_condition in [offspring.age() < 18 and offspring.age() >= 12 for offspring in
+                                      agent.neighbors.get("offspring")]:
                     if age_condition:
-                        father_to_remove_pool.append(agent)
+                        father_to_remove_pool.add(agent)
+
         if self.family_intervention == "remove_if_caught":
             father_to_remove_pool = [agent for agent in father_to_remove_pool if type(agent) == Prisoner]
         if self.family_intervention == "remove_if_OC_member":
             father_to_remove_pool = [agent for agent in father_to_remove_pool if agent.oc_member]
         if self.family_intervention == "remove_if_caught_and_OC_member":
             father_to_remove_pool = [agent for agent in father_to_remove_pool if type(agent) == Prisoner and agent.oc_member]
+        if father_to_remove_pool:
+            how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(father_to_remove_pool)))
+            father_to_remove = list(self.rng.choice(father_to_remove_pool, how_many, replace=False))
+            for father in father_to_remove:
+                self.removed_fatherships[father] = list()
+                self.kids_intervention_counter += 1
+                for kid in father.neighbors.get("offspring"):
+                    if kid.age() < 18 and kid.age() >= 12:
+                        self.removed_fatherships[father].append([kid,((18 * self.ticks_per_year + kid.birth_tick) - self.ticks)])
 
-        how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(father_to_remove_pool)))
-        father_to_remove = list(self.rng.choice(father_to_remove_pool, how_many, replace=False))
-        for father in father_to_remove:
-            self.removed_fatherships[father] = list()
-            self.kids_intervention_counter += 1
-            for kid in father.neighbors.get("offspring"):
-                self.removed_fatherships[father].append([kid,((18 * self.ticks_per_year + kid.birth_tick) - self.ticks)])
-
-            # we only want households
-            family = father.neighbors.get("household").copy()
-            father.remove_from_household()
-            self.welfare_createjobs([agent for agent in family if agent.age() >= 16 and not agent.my_job and not agent.my_school])
-            self.soc_add_educational([agent for agent in family if agent.age() < 18 and not agent.my_job])
-            self.soc_add_psychological(family)
-            self.soc_add_more_friends(family)
+                # we only want households
+                family = father.neighbors.get("household").copy()
+                father.remove_from_household()
+                self.welfare_createjobs([agent for agent in family if agent.age() >= 16 and not agent.my_job and not agent.my_school])
+                self.soc_add_educational([agent for agent in family if agent.age() < 18 and not agent.my_job])
+                self.soc_add_psychological(family)
+                self.soc_add_more_friends(family)
 
     def agents_where(self, reporter):
         return [x for x in self.schedule.agents if eval(reporter)]
 
     def return_kids(self):
-        for father in self.removed_fatherships:
-            # list tick father son
-            if a[2].age() >= 18:
-                if self.rng.random() < (6 / a[0]):
-                    # check for coherence. Need better offspring design.
-                    a[2].networks.get['parents'].add(a[1])
-                    a[2].father = a[1]
-                    removed.fatherships.remove(a)
-
-    def return_kids(self):
-
         if self.removed_fatherships:
             if self.as_netlogo:
                 for removed in self.removed_fatherships:
@@ -521,14 +513,8 @@ class MesaPROTON_OC(Model):
                         self.removed_fatherships.remove(removed)
             else:
                 pass
-        # for father in self.removed_fatherships:
-        #     # list tick father son
-        #     if a[2].age() >= 18:
-        #         if self.rng.random() < (6 / a[0]):
-        #             # check for coherence. Need better offspring design.
-        #             a[2].networks.get['parents'].add(a[1])
-        #             a[2].father = a[1]
-        #             removed.fatherships.remove(a)
+
+
 
     def make_friends(self):
         for a in self.schedule.agent_buffer(shuffled=True):
@@ -1137,7 +1123,7 @@ class MesaPROTON_OC(Model):
             self.intervention_end = 9999
 
         if self.intervention == "preventive-strong":
-            self.family_intervention = "remove-if-OC-member"
+            self.family_intervention = "remove_if_OC_member"
             self.social_support = None
             self.welfare_support = None
             self.oc_boss_repression = False
