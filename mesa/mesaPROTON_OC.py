@@ -1302,31 +1302,21 @@ staticmethod(conclude_wedding)
 if __name__ == "__main__":
 
     model = MesaPROTON_OC(as_netlogo=False)
-    # model.initial_agents = 100
-    # model.create_agents()
-    # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    # model.initial_agents = 200
-    # model.load_stats_tables()
-    # model.setup_education_levels()
-    # model.setup_persons_and_friendship()
-    # # Visualize network
-    # nx.draw(model.watts_strogatz)
-    # print("num links:")
-    # print(model.total_num_links())
-    # # model.setup_siblings()
-    # print("num links:")
-    # print(model.total_num_links())
-    model.intervention = "preventive-strong"
-    model.setup(1000)
-    candidate = [agent for agent in model.schedule.agents if agent.neighbors.get("offspring") and agent.gender_is_male and not agent.oc_member]
-    chosen = model.rng.choice(candidate, 10, replace=False)
-    model.targets_addressed_percent = 50
-    for agent in chosen:
-        agent.oc_member = True
+    model.initial_agents = 100
+    model.create_agents()
+    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    model.initial_agents = 200
+    model.load_stats_tables()
+    model.setup_education_levels()
+    model.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(model.watts_strogatz)
+    print("num links:")
+    print(model.total_num_links())
+    # model.setup_siblings()
+    print("num links:")
+    print(model.total_num_links())
 
-    for a in range(1000):
-        print(model.removed_fatherships)
-        model.step()
 
 
 
