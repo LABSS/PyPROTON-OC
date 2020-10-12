@@ -1216,5 +1216,3 @@ if __name__ == "__main__":
     # model.setup_siblings()
     print("num links:")
     print(model.total_num_links())
-
-
