@@ -307,17 +307,14 @@ class Person(Agent):
 
     def remove_from_household(self):
         """
-        This method removes the agent from the household, keeping all networks consistent.
+        This method removes the agent from household, keeping the networks consistent.
         Modify the Person.neighbors attribute in-place
         :return: None
         """
-        net_name = ["sibling", "partner", "offspring", "household", "parent"]
         for member in self.neighbors.get("household").copy():
-            for net in net_name:
-                if self in member.neighbors.get(net):
-                    member.neighbors.get(net).remove(self)
-                if member in self.neighbors.get(net):
-                    self.neighbors.get(net).remove(member)
+            if self in member.neighbors.get("household"):
+                member.neighbors.get("household").remove(self)
+                self.neighbors.get("household").remove(member)
 
     def leave_school(self):
         """
