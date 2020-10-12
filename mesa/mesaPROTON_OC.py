@@ -207,7 +207,7 @@ class MesaPROTON_OC(Model):
                     agent.makeProfessionalLinks(employees)
 
             self.let_migrants_in()
-            # self.return_kids()
+            self.return_kids()
 
         self.ticks += 1
         self.datacollector.collect(self)
@@ -523,8 +523,21 @@ class MesaPROTON_OC(Model):
                         removed[2].father.neighbors.get("offspring").add(removed[2])
                         self.removed_fatherships.remove(removed)
             else:
-                pass
-
+                for father in self.removed_fatherships:
+                    conditions = list()
+                    for offspring_table in self.removed_fatherships[father]:
+                        # todo: what is the condition for the return of the father?
+                        # For now let's only return it in case all the children are over 18 years old.
+                        conditions.append(True if offspring_table[0].age() >= 18 and self.rng.random() < 6 / offspring_table[1] else False)
+                    if all(conditions):
+                        offsprings = [agent[0] for agent in self.removed_fatherships[father]]
+                        for offspring in offsprings:
+                            offspring.neighbors.get("household").add(father)
+                            father.neighbors.get("household").add(offspring)
+                returned_fathers = [father for father in self.removed_fatherships if father.neighbors.get("household")]
+                if returned_fathers:
+                    for father in  returned_fathers:
+                        del self.removed_fatherships[father]
 
 
     def make_friends(self):
@@ -1134,7 +1147,7 @@ class MesaPROTON_OC(Model):
             self.intervention_end = 9999
 
         if self.intervention == "preventive-strong":
-            self.family_intervention = "remove_if_OC_member"
+            self.family_intervention = "remove-if-OC-member"
             self.social_support = None
             self.welfare_support = None
             self.oc_boss_repression = False
@@ -1288,7 +1301,7 @@ staticmethod(conclude_wedding)
 
 if __name__ == "__main__":
 
-    model = MesaPROTON_OC(as_netlogo=True)
+    model = MesaPROTON_OC(as_netlogo=False)
     # model.initial_agents = 100
     # model.create_agents()
     # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
@@ -1311,21 +1324,9 @@ if __name__ == "__main__":
     for agent in chosen:
         agent.oc_member = True
 
-    for a in range(100):
+    for a in range(1000):
+        print(model.removed_fatherships)
         model.step()
-
-    # returned = list()
-    # if model.removed_fatherships:
-    #     if model.as_netlogo:
-    #         for removed in model.removed_fatherships:
-    #             father = removed[1]
-    #             if removed[2].age() >= 18 and model.rng.random() < 6 / removed[0]:
-    #                 removed[2].neighbors.get("parent").add(removed[2].father)
-    #                 removed[2].father.neighbors.get("offspring").add(removed[2])
-    #                 model.removed_fatherships.remove(removed)
-    #     else:
-    #         pass
-
 
 
 
