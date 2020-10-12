@@ -515,6 +515,10 @@ class MesaPROTON_OC(Model):
         return [x for x in self.schedule.agents if eval(reporter)]
 
     def return_kids(self):
+        """
+        If the conditions are respected, this procedure allows fathers to return to the household
+        :return: None
+        """
         if self.removed_fatherships:
             if self.as_netlogo:
                 for removed in self.removed_fatherships:
