@@ -774,8 +774,7 @@ class MesaPROTON_OC(Model):
             employees = employer.employees()
             conn = self.decide_conn_number(employees, 20)
             for employee in employees:
-                total_pool = employees.copy()
-                total_pool.remove(employee)
+                total_pool = [agent for agent in employees if agent != employee]
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.makeProfessionalLinks(conn_pool)
 
