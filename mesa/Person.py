@@ -242,7 +242,7 @@ class Person(Agent):
             self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
-    def get_link_list(self, net_name):
+    def get_neighbor_list(self, net_name):
         """
         Given the name of a network, this method returns a list of agents within the network.
         If the network is empty, it returns an empty list.
@@ -264,7 +264,7 @@ class Person(Agent):
         if not jobs_pool:
             jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.m.rng.choice(jobs_pool, 1)[0]
+            the_job = self.m.rng.choice(jobs_pool, None)
             self.my_job = the_job
             the_job.my_worker = self
 
