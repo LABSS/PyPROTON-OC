@@ -30,7 +30,7 @@ class Person(Agent):
         self.max_education_level = 0
         self.wealth_level = 0
         self.job_level = 0
-        self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
+        self.my_job = None               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = 0
         self.gender_is_male = False #True male False female
         self.father = None
@@ -243,6 +243,22 @@ class Person(Agent):
             return list(agent_net)
         else:
             return []
+    def find_job(self):
+        """
+        This method assigns a job to the Person based on those available and their level. Modify in-place the
+        my_worker attribute of Job and the my_job attribute of Person.
+        :return: None
+        """
+        jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level == self.job_level]
+        if not jobs_pool:
+            jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level < self.job_level]
+        if jobs_pool:
+            the_job = self.m.rng.choice(jobs_pool, None)
+            self.my_job = the_job
+            the_job.my_worker = self
+
+
+
 
 
 class Prisoner(Person):

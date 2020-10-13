@@ -25,7 +25,7 @@ class Employer():
         self.my_jobs.add(newjob)
         
     def employees(self):
-        return [x.worker for x in self.my_jobs]
+        return [x.my_worker for x in self.my_jobs if x.my_worker != None]
 
 
 #vjob_level:int, my_employer: Employer, my_worker: Person, m: mesaPROTON_OC.MesaPROTON_OC

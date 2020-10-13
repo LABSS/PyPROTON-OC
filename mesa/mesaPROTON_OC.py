@@ -211,8 +211,7 @@ class MesaPROTON_OC(Model):
             if pool:  # https://www.python-course.eu/weighted_choice_and_sample.php
                 partner = self.rng.choice(pool,
                                            p=extra.wedding_proximity_with(ego, pool),
-                                           size=1,
-                                           replace=False)[0]
+                                           replace=False)
                 conclude_wedding(ego, partner)
                 maritable.remove(partner)
                 num_wedding_this_month -= 1
@@ -248,15 +247,15 @@ class MesaPROTON_OC(Model):
         if support_set:
             chosen = self.rng.choice(support_set,
                                       p=[(1 - (y.age() - x.age()) / 120) for y in support_set],
-                                      size=1,
-                                      replace=False)[0]
+                                      size=None,
+                                      replace=False)
             chosen.makeFriends(x)
 
     def soc_add_more_friends(self, targets):
         for x in targets:
             support_set = limited.extraction(schedule.agents.remove(x))
             if support_set:
-                x.makeFriends(self.rng.choice(support_set, size=1,
+                x.makeFriends(self.rng.choice(support_set, size=None,
                                              p=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction
                                                 - y.criminal_tendency for y in support_set]))
 
@@ -697,6 +696,10 @@ class MesaPROTON_OC(Model):
         self.generate_households()
         self.setup_siblings()
         self.setup_employers_jobs()
+        for agent in [a for a in self.schedule.agent_buffer(shuffled=True) if
+                      a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
+                      and a.job_level > 1]:
+            agent.find_job()
 
     def assign_jobs_and_wealth(self):
         """
@@ -731,7 +734,7 @@ class MesaPROTON_OC(Model):
         self.jobs_target = len([a for a in self.schedule.agents if
                                 a.job_level > 1 and a.my_school == None and a.age() > 16 and a.age() < self.retirement_age]) * 1.2
         while len(self.jobs) < self.jobs_target:
-            n = int(self.rng.choice(self.job_counts, 1))
+            n = self.rng.choice(self.job_counts, size=None)
             new_employer = Employer(self)
             self.employers.append(new_employer)
             for job in range(n):
@@ -797,3 +800,5 @@ if __name__ == "__main__":
     # m.setup_siblings()
     print("num links:")
     print(m.total_num_links())
+
+
