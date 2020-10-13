@@ -80,7 +80,7 @@ class MesaPROTON_OC(Model):
         self.number_weddings = 0
         self.number_weddings_mean = 100
         self.number_weddings_sd = 0
-        self.criminal_tendency_addme_for_weighted_extraction = 0
+        self.criminal_tendency_addme = 0 # criminal_tendency_addme_for_weighted_extraction
         self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction = 0
         self.number_law_interventions_this_tick = 0
         self.correction_for_non_facilitators = 0
@@ -208,7 +208,8 @@ class MesaPROTON_OC(Model):
 
             self.let_migrants_in()
             self.return_kids()
-
+        self.cal_criminal_tendency_addme()
+        self.wedding()
         self.ticks += 1
         self.datacollector.collect(self)
 
@@ -281,29 +282,31 @@ class MesaPROTON_OC(Model):
 
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
-        num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
-        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and not x.neighbors.get("partner")]
-        print("marit size: " + str(len(maritable)))
-        while num_wedding_this_month > 0 and len(maritable) > 1:
-            ego = self.rng.choice(maritable)
-            poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(maritable)
-            poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & set(maritable)
-            pool = [x for x in (poolp | poolf) if
-                    x.gender_is_male != ego.gender_is_male and
-                    (x.age() - ego.age()) < 8 and
-                    x not in ego.neigh("sibling") and
-                    x not in ego.neigh("offspring") and ego not in x.neigh("offspring")  # directed network
-                    ]
+        num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)
+        marriable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and not x.neighbors.get("partner")]
+        while num_wedding_this_month > 0 and len(marriable) > 1:
+            ego = self.rng.choice(marriable)
+            poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(marriable)
+            poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & set(marriable)
+            pool = [agent for agent in (poolp | poolf) if
+                    agent.gender_is_male != ego.gender_is_male and
+                    (agent.age() - ego.age()) < 8 and
+                    agent not in ego.neighbors.get("sibling") and
+                    agent not in ego.neighbors.get("offspring") and
+                    ego not in agent.neighbors.get("offspring")] # directed network
             if pool:  # https://www.python-course.eu/weighted_choice_and_sample.php
-                partner = self.rng.choice(pool,
-                                           p=extra.wedding_proximity_with(ego, pool),
-                                           size=1,
-                                           replace=False)[0]
-                conclude_wedding(ego, partner)
-                maritable.remove(partner)
+                partner = self.rng.choice(pool, p=extra.wedding_proximity_with(ego, pool))
+                for agent in [ego, partner]:
+                    agent.remove_from_household()
+                ego.neighbors.get("household").add(partner)
+                partner.neighbors.get("household").add(ego)
+                ego.neighbors.get("partner").add(partner)
+                partner.neighbors.get("partner").add(ego)
+                marriable.remove(partner)
                 num_wedding_this_month -= 1
                 self.number_weddings += 1
-            maritable.remove(ego)  # removed in both cases, if married or if can't find a partner
+                self.new_couple.append([partner, ego])
+            marriable.remove(ego)  # removed in both cases, if married or if can't find a partner
 
     def intervention_on(self):
         return self.ticks % self.ticks_between_intervention == 0 and \
@@ -325,7 +328,7 @@ class MesaPROTON_OC(Model):
         potential_targets = [agent for agent in self.schedule.agents if
                              agent.age() <= 18 and agent.age() >= 6 and agent.my_school != None]
         how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(potential_targets)))
-        targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency, self.rng)
+        targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
 
         if self.social_support == "educational" or self.social_support == "all": self.soc_add_educational(targets)
         if self.social_support == "psychological" or self.social_support == "all": self.soc_add_psychological(targets)
@@ -1279,6 +1282,10 @@ class MesaPROTON_OC(Model):
                 new_agent.bird_tick = self.ticks - (self.rng.integers(0,20) + 18)  * self.ticks_per_year
                 new_agent.wealth_level = job.job_level
                 new_agent.migrant = True
+
+    def cal_criminal_tendency_addme(self):
+        min_criminal_tendencies = np.min([agent.criminal_tendency for agent in self.schedule.agents])
+        self.criminal_tendency_addme = -1 *  min_criminal_tendencies if  min_criminal_tendencies < 0 else 0
 
 
 # 778 / 1700

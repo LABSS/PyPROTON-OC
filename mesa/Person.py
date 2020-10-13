@@ -77,12 +77,8 @@ class Person(Agent):
         if random_relationships == True:
             self.random_links(exclude_partner_net)
 
-
     def networks_init(self):
         self.neighbors = {i: set() for i in Person.network_names}
-            
-    def neigh(self, netname):
-        return self.neighbors.get(netname)
 
     def neighbors_range(self, netname, dist):
         return extra.find_neighb(netname, dist, set(), {self}) - {self}

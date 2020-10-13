@@ -77,20 +77,16 @@ def test_generate_households():
             assert len([x for x in agent.neighbors["parent"] if x.gender_is_male == False]) <= 1
 
 def test_weddings():
-    m = MesaPROTON_OC()
-    m.initial_agents = 500
-    m.create_agents(random_relationships=True, exclude_partner_net=True)
-    print(len(m.schedule.agents) - len(pp.Person.persons))
-    print(m.number_weddings)
-    m.number_weddings_mean = 100
-    for i in range(1, 2):
-        m.wedding()
-    # print(Person.NumberOfLinks()-l)
-    for agent in m.schedule.agents:
+    model = MesaPROTON_OC()
+    model.setup(1000)
+    initial_wedding = len([x for x in model.schedule.agents if x.get_link_list("partner")])
+    for tick in range(100):
+        model.step()
+    for agent in model.schedule.agents:
         if agent.get_link_list("partner"):
             assert agent.get_link_list("partner")[0].get_link_list("partner")[0] == agent
-    assert m.number_weddings == len([x for x in m.schedule.agents if x.get_link_list("partner")]) / 2
-    assert m.number_weddings > 0
+    assert model.number_weddings == (len([x for x in model.schedule.agents if x.get_link_list("partner")]) - initial_wedding) / 2
+    assert model.number_weddings > 0
     # coherent state of weddings
 
 def test_inflate_deflate_network():
