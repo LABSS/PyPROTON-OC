@@ -1290,29 +1290,6 @@ class MesaPROTON_OC(Model):
         min_criminal_tendencies = np.min([agent.criminal_tendency for agent in self.schedule.agents])
         self.criminal_tendency_addme = -1 *  min_criminal_tendencies if  min_criminal_tendencies < 0 else 0
 
-
-# 778 / 1700
-# next: testing an intervention that removes kids and then returning them.   
-# test OC members formation
-
-# next code, needed to run: social proximity
-
-# next: repair the tests, stop pushing forward. Repair those tests!
-
-# end class. From here, static methods
-
-# warning: for now we don't load up the partner in the partner network
-def conclude_wedding(ego, partner):
-    for x in [ego, partner]:
-        for y in x.neighbors["household"]:
-            y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
-    ego.neighbors["household"].add(partner)
-    partner.neighbors["household"].add(ego)
-    ego.neighbors["partner"].add(partner)
-    partner.neighbors["partner"].add(ego)
-staticmethod(conclude_wedding)
-
-
 if __name__ == "__main__":
 
     model = MesaPROTON_OC(as_netlogo=False)
