@@ -599,7 +599,7 @@ class MesaPROTON_OC(Model):
         for head in oc_family_heads:
             head.oc_member = True
             candidates += [relative for relative in head.neighbors.get('household') if relative.age() >= 18]
-        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough #todo: here might be 0 >= 0, raise ValueError in weighted_n_of()
+        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
             for member in members_in_families:
