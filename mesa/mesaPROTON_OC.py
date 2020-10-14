@@ -281,6 +281,10 @@ class MesaPROTON_OC(Model):
         self.number_weddings_sd = marriage['std_marriages'][0]
 
     def wedding(self):
+        """
+        This procedure allows eligible agents (age > 25 and <55 without any partner) to get married and thus create a new household.
+        :return: None
+        """
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)
         marriable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and not x.neighbors.get("partner")]
@@ -305,7 +309,6 @@ class MesaPROTON_OC(Model):
                 marriable.remove(partner)
                 num_wedding_this_month -= 1
                 self.number_weddings += 1
-                self.new_couple.append([partner, ego])
             marriable.remove(ego)  # removed in both cases, if married or if can't find a partner
 
     def intervention_on(self):
@@ -596,7 +599,7 @@ class MesaPROTON_OC(Model):
         for head in oc_family_heads:
             head.oc_member = True
             candidates += [relative for relative in head.neighbors.get('household') if relative.age() >= 18]
-        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
+        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough #todo: here might be 0 >= 0, raise ValueError in weighted_n_of()
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
             for member in members_in_families:

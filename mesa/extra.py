@@ -27,14 +27,26 @@ def find_neighb(netname, togo, found, border):
         togo -= 1
         return find_neighb(netname, togo, found, nextlayer)
 
-def wedding_proximity_with(ego, pool): # returns a list of proximities with ego. Careful not to shuffle it!
+def wedding_proximity_with(ego, pool):
+    """
+    Given an agent and a pool of agents this function returns a list of proximities with ego. Careful not to shuffle it!
+    :param ego: Person
+    :param pool: list of Person objects
+    :return: list, list of proximities with ego.
+    """
     proximity = np.array([(social_proximity(ego,x) + (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool])
     if all([True for n in proximity if n <= 0]):
         proximity = np.ones(len(proximity))
-    proximity /= np.sum(proximity) # todo: here
+    proximity /= np.sum(proximity)
     return proximity
 
 def social_proximity(ego:Person, alter:Person):
+    """
+    This function calculates the social proximity between two agents based on age, gender, wealth level, education level and friendship
+    :param ego: Person
+    :param alter: Person
+    :return: int, social proximity
+    """
     acc = 0
     #normalization =  0
     acc += 1 - abs(alter.age() - ego.age()) / 18 if abs(alter.age() - ego.age()) < 18 else 0
@@ -51,11 +63,11 @@ def at_most(agentset, n, rng_istance):
         return list(rng_istance.choice(agentset,n, replace=False))
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):
-    # todo: check for positives
     p = [float(weight_function(x)) for x in agentset]
+    if any([True for i in p if i < 0]):
+        min_value = min(p)
+        p = [i-min_value for i in p]
     sump = sum(p)
-    #minp = min(p)
-    #maxp = max(p)
     p = [i/sump for i in p]
     return  rng_istance.choice(agentset, int(n), replace=False, p=p)
 
