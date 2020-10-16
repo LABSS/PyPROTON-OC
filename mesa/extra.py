@@ -352,7 +352,6 @@ def o16(model):
     """
     return model.number_offspring_recruited_this_tick
 
-
 #Numba functions
 @numba.jit(nopython=True)
 def _age(tick, birth_tick):

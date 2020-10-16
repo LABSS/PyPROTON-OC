@@ -38,7 +38,7 @@ class Person(Agent):
         self.mother = None
         self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
         self.oc_member = False
-        self.cached_oc_embeddedness = 0
+        self.cached_oc_embeddedness = None
         self.oc_embeddedness_fresh = 0
         self.retired = False
         self.number_of_children = 0
@@ -336,6 +336,49 @@ class Person(Agent):
         """
         self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][self.age()] else 1
 
+    def find_accomplices(self, n):
+        if n == 0:
+            return self
+        else:
+            d = 1 # start with a network distance of 1
+            accomplices = set()
+            if n >= self.model.threshold_use_facilitators and not self.facilitator:
+                n -= 1 # save a slot for the facilitator
+                while len(accomplices) < n and d <= self.model.max_accomplice_radius:
+                    in_distance = [agent for agent in self.neighbors] #todo:here get distance
+                    candidates = sorted(in_distance, key=lambda x: self.candidates_weight(x))
+                    break
+                    pass
+                pass
+            pass
+        pass
+
+
+    def candidates_weight(self, agent):
+        """
+        This is what in the paper is called r - this is r R is then operationalised as the proportion
+        of OC members among the social relations of each individual (comprising family, friendship, school,
+        working and co-offending relations)
+        :return:
+        """
+        return -1 * (extra.social_proximity(self,agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
+            else (extra.social_proximity(self,agent) * self.criminal_tendency)
+
+    def oc_embeddedness(self):
+        if self.cached_oc_embeddedness == None:
+            # only calculate oc-embeddedness if we don't have a cached value
+            for agent in self.model.agents:
+                pass
+            pass
+        pass
+
+    def agent_in_radius_and_reverse_radius(self,d):
+        agents_in_radius = set()
+        for net in Person.Person.network_names:
+            if agent.neighbors.get(net):
+                for agent in agent.neighbors.get(net):
+                    agents_in_radius.add(agent)
+        return agents_in_radius
 
 
 class Prisoner(Person):

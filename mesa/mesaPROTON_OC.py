@@ -121,6 +121,7 @@ class MesaPROTON_OC(Model):
         self.facilitator_repression_multiplier = 2.0
         self.percentage_of_facilitators = 0.005
         self.targets_addressed_percent = 10
+        self.threshold_use_facilitators = 4
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -209,6 +210,7 @@ class MesaPROTON_OC(Model):
             self.let_migrants_in()
             self.return_kids()
         self.cal_criminal_tendency_addme()
+        self.commit_crimes()
         self.wedding()
         self.ticks += 1
         self.datacollector.collect(self)
@@ -279,6 +281,7 @@ class MesaPROTON_OC(Model):
         marriage = pd.read_csv(os.path.join(self.general_data, "marriages_stats.csv"))
         self.number_weddings_mean = marriage['mean_marriages'][0]
         self.number_weddings_sd = marriage['std_marriages'][0]
+        self.num_co_offenders_dist = self.df_to_lists(pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv")), split_row=False)
 
     def wedding(self):
         """
@@ -1029,9 +1032,9 @@ class MesaPROTON_OC(Model):
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.makeProfessionalLinks(conn_pool)
 
-    def df_to_lists(self,df):
+    def df_to_lists(self,df, split_row=True):
         """
-        This function transforms a pandas DataRame into nested lists as follows:
+        This function transforms a pandas DataFrame into nested lists as follows:
         df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
 
         This transformation ensures a faster access to the values using the position in the list
@@ -1039,9 +1042,13 @@ class MesaPROTON_OC(Model):
         :return: list, a new list
         """
         output_list = list()
-        temp_list = df.iloc[:, :2].values.tolist()
-        for index, row in df.iterrows():
-            output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
+        if split_row:
+            temp_list = df.iloc[:, :2].values.tolist()
+            for index, row in df.iterrows():
+                output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
+        else:
+            output_list = df.values.tolist()
+
         return output_list
 
     def calculate_crime_multiplier(self):
@@ -1290,20 +1297,46 @@ class MesaPROTON_OC(Model):
         min_criminal_tendencies = np.min([agent.criminal_tendency for agent in self.schedule.agents])
         self.criminal_tendency_addme = -1 *  min_criminal_tendencies if  min_criminal_tendencies < 0 else 0
 
+    def commit_crimes(self):
+        co_offender_groups = list()
+        co_offender_started_by_OC = list()
+        for cell, value in self.c_range_by_age_and_sex:
+            people_in_cell = [agent for agent in self.schedule.agents if
+                              agent.age() >= cell[1] and agent.age() <= value[0] and agent.gender_is_male == cell[0]]
+            target_n_of_crimes = value[1]* len(people_in_cell)/ self.ticks_per_year * self.crime_multiplier
+            for x in np.arange(np.round(target_n_of_crimes)):
+                self.number_crimes += 1
+                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
+                accompliaces = agent.find_accomplices(self.number_of_accomplices())
+
+
+    def number_of_accomplices(self):
+        """
+        Pick a group size from the num. co-offenders distribution
+        and substract one to get the number of accomplices
+        :return:
+        """
+        return extra.pick_from_pair_list(self.num_co_offenders_dist, self.rng) - 1
+
+
+
 if __name__ == "__main__":
 
     model = MesaPROTON_OC(as_netlogo=False)
-    model.initial_agents = 100
-    model.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    model.initial_agents = 200
-    model.load_stats_tables()
-    model.setup_education_levels()
-    model.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(model.watts_strogatz)
-    print("num links:")
-    print(model.total_num_links())
-    # model.setup_siblings()
-    print("num links:")
-    print(model.total_num_links())
+    # model.initial_agents = 100
+    # model.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    # model.initial_agents = 200
+    # model.load_stats_tables()
+    # model.setup_education_levels()
+    # model.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(model.watts_strogatz)
+    # print("num links:")
+    # print(model.total_num_links())
+    # # model.setup_siblings()
+    # print("num links:")
+    # print(model.total_num_links())
+    model.setup(1000)
+    for a in range(100):
+        model.step()
