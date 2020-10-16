@@ -131,14 +131,12 @@ class Person(Agent):
         :param asker: agent
         :return: None
         """
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("professional").add(person)
-                person.neighbors.get("professional").add(self)
-        else:
-            self.neighbors.get("professional").add(asker)
-            asker.neighbors.get("professional").add(self)
-        
+        if type(asker) != list:
+            asker = [asker]
+        for person in asker:
+            self.neighbors.get("professional").add(person)
+            person.neighbors.get("professional").add(self)
+
     def addSiblingLinks(self, targets):
         for x in targets:
             if x != self:
@@ -242,7 +240,7 @@ class Person(Agent):
             self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
-    def get_link_list(self, net_name):
+    def get_neighbor_list(self, net_name):
         """
         Given the name of a network, this method returns a list of agents within the network.
         If the network is empty, it returns an empty list.
@@ -264,7 +262,7 @@ class Person(Agent):
         if not jobs_pool:
             jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.m.rng.choice(jobs_pool, 1)[0]
+            the_job = self.m.rng.choice(jobs_pool, None)
             self.my_job = the_job
             the_job.my_worker = self
 
