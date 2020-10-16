@@ -700,6 +700,7 @@ class MesaPROTON_OC(Model):
                       a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
                       and a.job_level > 1]:
             agent.find_job()
+        self.init_professional_links()
 
     def assign_jobs_and_wealth(self):
         """
@@ -760,6 +761,20 @@ class MesaPROTON_OC(Model):
                     most_similar_key = key
                     min_dist = abs(employer_size - key)
             return extra.pick_from_pair_list(self.jobs_by_company_size[most_similar_key], self.rng)
+
+    def init_professional_links(self):
+        """
+        Creates connections between agents within the same Employer.
+        :return: None
+        """
+        for employer in self.employers:
+            employees = employer.employees()
+            conn = self.decide_conn_number(employees, 20)
+            for employee in employees:
+                total_pool = [agent for agent in employees if agent != employee]
+                conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
+                employee.makeProfessionalLinks(conn_pool)
+
 
 
 # 778 / 1700
