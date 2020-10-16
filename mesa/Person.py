@@ -131,14 +131,12 @@ class Person(Agent):
         :param asker: agent
         :return: None
         """
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("professional").add(person)
-                person.neighbors.get("professional").add(self)
-        else:
-            self.neighbors.get("professional").add(asker)
-            asker.neighbors.get("professional").add(self)
-        
+        if type(asker) != list:
+            asker = [asker]
+        for person in asker:
+            self.neighbors.get("professional").add(person)
+            person.neighbors.get("professional").add(self)
+
     def addSiblingLinks(self, targets):
         for x in targets:
             if x != self:
