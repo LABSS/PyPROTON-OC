@@ -781,7 +781,7 @@ class MesaPROTON_OC(Model):
 
     def df_to_lists(self,df):
         """
-        This function transforms a pandas DataRame into nested lists as follows:
+        This function transforms a pandas DataFrame into nested lists as follows:
         df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
 
         This transformation ensures a faster access to the values using the position in the list
