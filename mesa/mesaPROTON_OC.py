@@ -210,8 +210,8 @@ class MesaPROTON_OC(Model):
             self.let_migrants_in()
             self.return_kids()
         self.cal_criminal_tendency_addme()
-        self.commit_crimes()
         self.wedding()
+
         self.ticks += 1
         self.datacollector.collect(self)
 

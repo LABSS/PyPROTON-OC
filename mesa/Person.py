@@ -345,7 +345,7 @@ class Person(Agent):
             if n >= self.model.threshold_use_facilitators and not self.facilitator:
                 n -= 1 # save a slot for the facilitator
                 while len(accomplices) < n and d <= self.model.max_accomplice_radius:
-                    in_distance = [agent for agent in self.neighbors] #todo:here get distance
+                    in_distance = [agent for agent in self.model.schedule.agents] #todo:here get distance
                     candidates = sorted(in_distance, key=lambda x: self.candidates_weight(x))
                     break
                     pass
@@ -367,7 +367,7 @@ class Person(Agent):
     def oc_embeddedness(self):
         if self.cached_oc_embeddedness == None:
             # only calculate oc-embeddedness if we don't have a cached value
-            for agent in self.model.agents:
+            for agent in self.model.schedule.agents:
                 pass
             pass
         pass
