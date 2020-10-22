@@ -352,6 +352,11 @@ class Person(Agent):
             self.age()] else 1
 
     def find_accomplices(self, n_of_accomplices):
+        """
+        This method is used to find accomplices during commit_crimes procedure
+        :param n_of_accomplices: int, number of accomplices
+        :return: list, of Person objects
+        """
         if n_of_accomplices == 0:
             return [self]
         else:
@@ -393,13 +398,18 @@ class Person(Agent):
         This is what in the paper is called r - this is r R is then operationalised as the proportion
         of OC members among the social relations of each individual (comprising family, friendship, school,
         working and co-offending relations)
-        :return:
+        :return: float, the candidates weight
         """
         return -1 * (extra.social_proximity(self,
                                             agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
             else (extra.social_proximity(self, agent) * self.criminal_tendency)
 
     def _agents_in_radius1(self, context=network_names):
+        """
+        It finds the agents distant 1 in the specified networks, by default it finds it on all networks.
+        :param context: list, of strings, limit to networks name
+        :return: set, of Person objects
+        """
         agents_in_radius = set()
         for net in context:
             if self.neighbors.get(net):
@@ -408,6 +418,12 @@ class Person(Agent):
         return agents_in_radius
 
     def agents_in_radius(self, d, context=network_names):
+        """
+        It finds the agents distant "d" in the specified networks "context", by default it finds it on all networks.
+        :param d: int, the distance
+        :param context: list, of strings, limit to networks name
+        :return: set, of Person objects
+        """
         # todo: This is neither efficient nor scalable, I am working to improve it.
         radius_1 = self._agents_in_radius1()
         if d == 1:
@@ -429,6 +445,10 @@ class Person(Agent):
                 return radius_3
 
     def oc_embeddedness(self):
+        """
+        Calculates the cached_oc_embeddedness of self.
+        :return: float, the cached_oc_embeddedness
+        """
         if self.cached_oc_embeddedness is None:
             # only calculate oc-embeddedness if we don't have a cached value
             self.cached_oc_embeddedness = 0
@@ -444,6 +464,11 @@ class Person(Agent):
         return self.cached_oc_embeddedness
 
     def find_oc_weight_distance(self, agents):
+        """
+        Based on the graph self.model.meta_graph calculates the distance of self from each agent passed to the agents parameter
+        :param agents: list or set, of Person objects
+        :return: float, the distance
+        """
         if self in agents:
             agents.remove(self)
         distance = 0
@@ -454,11 +479,19 @@ class Person(Agent):
         return distance
 
     def calculate_oc_member_position(self):
+        """
+        Calculate the oc-member position of self
+        :return: float, the oc-member-position
+        """
         n = len([agent for agent in self.agents_in_radius(1) if agent.oc_member])
         my_oc_crim = [agent for agent in self.neighbors.get("criminal") if agent.oc_member]
         return n + np.sum([self.num_co_offenses[agent] for agent in my_oc_crim]) - len(my_oc_crim)
 
     def get_caught(self):
+        """
+        When an agent is caught during a crime and goes to prison, this procedure is activated.
+        :return: None
+        """
         self.model.number_law_interventions_this_tick += 1
         self.model.people_jailed += 1
         self.prisoner = True

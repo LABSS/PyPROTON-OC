@@ -1294,6 +1294,13 @@ class MesaPROTON_OC(Model):
         self.criminal_tendency_addme = -1 *  min_criminal_tendencies if  min_criminal_tendencies < 0 else 0
 
     def commit_crimes(self):
+        """
+        This procedure is central in the model, allowing agents to find accomplices and commit crimes.
+        Based on the table self.c_range_by_age_and_sex , the number of crimes and the subset of the agents who commit them
+        is selected. For each crime a single agent is selected and if necessary activates the procedure that allows
+        the agent to find accomplices. Criminal groups are append within the list self.co_offender_groups
+        :return: None
+        """
         co_offender_groups = list()
         co_offender_started_by_OC = list()
         for cell, value in self.c_range_by_age_and_sex:
@@ -1346,6 +1353,11 @@ class MesaPROTON_OC(Model):
                 agent.get_caught()
 
     def calculate_oc_status(self, co_offenders):
+        """
+        This procedure modify in-place the arrest_weigh attribute of the Person objects passed to co_offenders
+        :param co_offenders: list, of Person object
+        :return: None
+        """
         for agent in co_offenders:
             agent.arrest_weight = agent.calculate_oc_member_position()
         min_score = np.min([agent.arrest_weight for agent in co_offenders])
@@ -1358,6 +1370,12 @@ class MesaPROTON_OC(Model):
 
 
     def commit_crime(self, co_offenders):
+        """
+        This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
+        attributes of the Person objects passed to co_offenders
+        :param co_offenders: list, of Person object
+        :return: None
+        """
         for co_offender in co_offenders:
             co_offender.num_crimes_committed += 1
             co_offender.num_crimes_committed_this_tick += 1
@@ -1383,11 +1401,16 @@ class MesaPROTON_OC(Model):
 
 
     def update_meta_links(self,agents):
+        """
+        This method creates a new temporal graph that is used to colculate the oc_embeddedness of an agent, the graph is stored
+        in the variable self.meta_graph
+        :param agents: list, of Person objects
+        :return: None
+        """
         self.meta_graph = nx.Graph()
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
-            for in_radius_agent in agent.agents_in_radius(
-                    1): # limit the context to the agents in the radius of interest
+            for in_radius_agent in agent.agents_in_radius(1): # limit the context to the agents in the radius of interest
                 self.meta_graph.add_node(in_radius_agent.unique_id)
                 w = 0
                 for net in Person.network_names:
@@ -1403,21 +1426,18 @@ class MesaPROTON_OC(Model):
 if __name__ == "__main__":
 
     model = MesaPROTON_OC(as_netlogo=False)
-    # model.initial_agents = 100
-    # model.create_agents()
-    # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    # model.initial_agents = 200
-    # model.load_stats_tables()
-    # model.setup_education_levels()
-    # model.setup_persons_and_friendship()
-    # # Visualize network
-    # nx.draw(model.watts_strogatz)
-    # print("num links:")
-    # print(model.total_num_links())
-    # # model.setup_siblings()
-    # print("num links:")
-    # print(model.total_num_links())
-    model.setup(1000)
-    for a in range(100):
-        model.step()
+    model.initial_agents = 100
+    model.create_agents()
+    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    model.initial_agents = 200
+    model.load_stats_tables()
+    model.setup_education_levels()
+    model.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(model.watts_strogatz)
+    print("num links:")
+    print(model.total_num_links())
+    # model.setup_siblings()
+    print("num links:")
+    print(model.total_num_links())
 
