@@ -3,13 +3,16 @@ import extra
 from mesa import Agent
 import mesaPROTON_OC
 import numpy as np
+import networkx as nx
+from itertools import chain
+
 
 class Person(Agent):
     max_id = 0
-    #https://stackoverflow.com/questions/12101958/how-to-keep-track-of-class-instances
+    # https://stackoverflow.com/questions/12101958/how-to-keep-track-of-class-instances
     # note that if we run multiple models, persons will be all the ones created in any of them
-    persons = [] 
-    network_names = [    
+    persons = []
+    network_names = [
         'sibling',
         'offspring',
         'parent',
@@ -18,22 +21,22 @@ class Person(Agent):
         'friendship',
         'criminal',
         'professional',
-        'school']      
-    
-    def __init__(self, m:mesaPROTON_OC):
+        'school']
+
+    def __init__(self, m: mesaPROTON_OC):
         # networks
         self.model = m
         self.networks_init()
         self.sentence_countdown = 0
         self.num_crimes_committed = 0
         self.num_crimes_committed_this_tick = 0
-        self.education_level = 0     # level: last school I finished (for example, 4: I finished university)
+        self.education_level = 0  # level: last school I finished (for example, 4: I finished university)
         self.max_education_level = 0
         self.wealth_level = 1
         self.job_level = 0
-        self.my_job = None               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
+        self.my_job = None  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = self.model.ticks
-        self.gender_is_male = self.model.rng.choice([True, False], 1) #True male False female
+        self.gender_is_male = self.model.rng.choice([True, False], 1)  # True male False female
         self.father = None
         self.mother = None
         self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
@@ -43,33 +46,38 @@ class Person(Agent):
         self.retired = False
         self.number_of_children = 0
         self.facilitator = None
-        self.hobby = self.model.rng.integers(low = 1,high = 5, endpoint=True)
+        self.hobby = self.model.rng.integers(low=1, high=5, endpoint=True)
         self.new_recruit = -2
         self.migrant = False
         self.criminal_tendency = 0
         self.my_school = None
         self.target_of_intervention = False
         self.arrest_weight = 0
-        self.criminal_net_weight = dict()
-        #super().__init__(self.unique_id, model)
+        self.num_co_offenses = dict()  # criminal-links
+        self.co_off_flag = dict()  # criminal-links
+        # super().__init__(self.unique_id, model)
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
         Person.persons.append(self)
-        #print(model)
-        #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.model)]))
+        self.co_off_flag = dict()
+        # print(model)
+        # print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.model)]))
+        #If imprisoned
+        self.prisoner = False
+        self.sentence_countdown = 0
 
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
 
     def age(self):
         return extra._age(self.model.ticks, self.birth_tick)
-        
-    def random_init(self, random_relationships = False, exclude_partner_net = False):
+
+    def random_init(self, random_relationships=False, exclude_partner_net=False):
         self.education_level = self.model.rng.choice(range(0, 4))
         self.max_education_level = self.education_level
         self.wealth_level = self.model.rng.choice(range(0, 4))
         self.job_level = self.model.rng.choice(range(0, 4))
-        self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
+        self.my_job = 0  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = -1 * self.model.rng.choice(range(0, 80 * 12))
         self.gender_is_male = self.model.rng.choice([True, False])
         self.hobby = 0
@@ -82,7 +90,7 @@ class Person(Agent):
 
     def neighbors_range(self, netname, dist):
         return extra.find_neighb(netname, dist, set(), {self}) - {self}
-    
+
     def isneighbor(self, other):
         return any([other in self.neighbors[x] for x in Person.network_names])
 
@@ -105,12 +113,12 @@ class Person(Agent):
 
     @staticmethod
     def NumberOfLinks():
-        return sum([ 
+        return sum([
             sum([
-                len(x.neighbors.get(net)) for x in Person.persons 
-                ])
+                len(x.neighbors.get(net)) for x in Person.persons
+            ])
             for net in Person.network_names])
-    
+
     def makeFriends(self, asker):
         """
         Create a two-way friend links in-place
@@ -133,7 +141,7 @@ class Person(Agent):
         else:
             self.neighbors.get("professional").add(asker)
             asker.neighbors.get("professional").add(self)
-        
+
     def addSiblingLinks(self, targets):
         for x in targets:
             if x != self:
@@ -146,7 +154,7 @@ class Person(Agent):
                 self.neighbors.get("household").add(x)
                 x.neighbors.get("household").add(self)
 
-    def makePartnerLinks(self,asker):
+    def makePartnerLinks(self, asker):
         self.neighbors.get("partner").add(asker)
         asker.neighbors.get("partner").add(self)
 
@@ -175,42 +183,48 @@ class Person(Agent):
         :return: None
         """
         self.neighbors.get("criminal").add(asker)
-        self.criminal_net_weight[asker] = 1
+        self.num_co_offenses[asker] = 1
         asker.neighbors.get("criminal").add(self)
-        asker.criminal_net_weight[self] = 1
-            
+        asker.num_co_offenses[self] = 1
+
     def remove_link(self, forlorn, kind):
         self.neighbors.get(kind).discard(forlorn)
-        forlorn.neighbors.get(kind).discard(self)    
-    
-    def remove_friendship(self, forlorn): self.remove_link(self, forlorn, 'friendship')
-    def remove_professional(self, forlorn): self.remove_link(self, forlorn, 'professional')
+        forlorn.neighbors.get(kind).discard(self)
+
+    def remove_friendship(self, forlorn):
+        self.remove_link(self, forlorn, 'friendship')
+
+    def remove_professional(self, forlorn):
+        self.remove_link(self, forlorn, 'professional')
 
     def age_between(self, low, high):
         return self.age() >= low and self.age() < high
 
     def potential_friends(self):
-        return self.family().union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(self.neighbors.get("friendship")) #minus self.. needed?
-    
+        return self.family().union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(
+            self.neighbors.get("friendship"))  # minus self.. needed?
+
     def dunbar_number(self):
-        return(150-abs(self.age()-30))
-    
-    def init_person(self): # person command
+        return (150 - abs(self.age() - 30))
+
+    def init_person(self):  # person command
         """
         This method modifies the attributes of the person instance based on the model's
         stats_tables as part of the initial setup of the model agents.
         """
-        row = extra.weighted_one_of(self.model.age_gender_dist, lambda x: x[-1], self.model.rng)  # select a row from our age_gender distribution
-        self.birth_tick =  0 - row[0] * self.model.ticks_per_year      # ...and set age... =
-        self.gender_is_male =  bool(row[1]) # ...and gender according to values in that row.
-        self.retired = self.age() >= self.model.retirement_age                 # persons older than retirement_age are retired
+        row = extra.weighted_one_of(self.model.age_gender_dist, lambda x: x[-1],
+                                    self.model.rng)  # select a row from our age_gender distribution
+        self.birth_tick = 0 - row[0] * self.model.ticks_per_year  # ...and set age... =
+        self.gender_is_male = bool(row[1])  # ...and gender according to values in that row.
+        self.retired = self.age() >= self.model.retirement_age  # persons older than retirement_age are retired
         # education level is chosen, job and wealth follow in a conditioned sequence
         self.max_education_level = extra.pick_from_pair_list(self.model.edu[self.gender_is_male], self.model.rng)
         # apply model-wide education modifier
         if self.model.education_modifier != 1.0:
             if self.model.rng.random() < abs(self.model.education_modifier - 1):
                 self.max_education_level = self.max_education_level + (1 if (self.model.education_modifier > 1) else -1)
-                self.max_education_level = len(self.model.edu[True]) if self.max_education_level > len(self.model.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
+                self.max_education_level = len(self.model.edu[True]) if self.max_education_level > len(
+                    self.model.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level
@@ -228,8 +242,8 @@ class Person(Agent):
         """
         self.potential_school = list()
         for school in [agent.my_school for agent in self.neighbors.get("household") if agent.my_school]:
-                if school.diploma_level == level:
-                    self.potential_school.append(school)
+            if school.diploma_level == level:
+                self.potential_school.append(school)
         if self.potential_school:
             self.my_school = self.model.rng.choice(self.potential_school)
         else:
@@ -326,7 +340,7 @@ class Person(Agent):
         If the agent has changed years during this tick this function returns true, otherwise it returns false.
         :return: bool,
         """
-        return np.floor((self.model.ticks - self.birth_tick)/ self.model.ticks_per_year) \
+        return np.floor((self.model.ticks - self.birth_tick) / self.model.ticks_per_year) \
                == ((self.model.ticks - self.birth_tick) / self.model.ticks_per_year)
 
     def update_unemployment_status(self):
@@ -334,25 +348,45 @@ class Person(Agent):
         This function modifies the job_level attribute in-place according to table model.labour_status_by_age_and_sex
         :return: None
         """
-        self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][self.age()] else 1
+        self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][
+            self.age()] else 1
 
-    def find_accomplices(self, n):
-        if n == 0:
-            return self
+    def find_accomplices(self, n_of_accomplices):
+        if n_of_accomplices == 0:
+            return [self]
         else:
-            d = 1 # start with a network distance of 1
+            d = 1  # start with a network distance of 1
             accomplices = set()
-            if n >= self.model.threshold_use_facilitators and not self.facilitator:
-                n -= 1 # save a slot for the facilitator
-                while len(accomplices) < n and d <= self.model.max_accomplice_radius:
-                    in_distance = [agent for agent in self.model.schedule.agents] #todo:here get distance
-                    candidates = sorted(in_distance, key=lambda x: self.candidates_weight(x))
-                    break
-                    pass
-                pass
-            pass
-        pass
-
+            facilitator_needed = n_of_accomplices >= self.model.threshold_use_facilitators and not self.facilitator
+            if facilitator_needed:
+                n_of_accomplices -= 1  # save a slot for the facilitator
+            while len(accomplices) < n_of_accomplices and d <= self.model.max_accomplice_radius:
+                # first create the group
+                candidates = sorted(self.agents_in_radius(d), key=lambda x: self.candidates_weight(x))
+                while len(accomplices) < n_of_accomplices and len(candidates) > 0:
+                    candidate = candidates[0]
+                    candidates.remove(candidate)
+                    accomplices.add(candidate)
+                    if candidate.facilitator:
+                        n_of_accomplices += 1
+                        facilitator_needed = False
+                d += 1
+            if facilitator_needed:
+                # Search a facilitator into my networks
+                available_facilitators = [facilitator for facilitator in set(chain.from_iterable(
+                    [agent.agents_in_radius(self.model.max_accomplice_radius) for agent in accomplices])) if
+                                          facilitator.facilitator]
+                if available_facilitators:
+                    accomplices.add(self.model.rng.choice(available_facilitators))
+            if len(accomplices) < n_of_accomplices:
+                self.model.crime_size_fails += 1
+            accomplices.add(self)
+            if n_of_accomplices >= self.model.threshold_use_facilitators:
+                if [agent for agent in accomplices if agent.facilitator]:
+                    self.model.facilitator_crimes += 1
+                else:
+                    self.model.facilitator_fails += 1
+        return list(accomplices)
 
     def candidates_weight(self, agent):
         """
@@ -361,34 +395,88 @@ class Person(Agent):
         working and co-offending relations)
         :return:
         """
-        return -1 * (extra.social_proximity(self,agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
-            else (extra.social_proximity(self,agent) * self.criminal_tendency)
+        return -1 * (extra.social_proximity(self,
+                                            agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
+            else (extra.social_proximity(self, agent) * self.criminal_tendency)
 
-    def oc_embeddedness(self):
-        if self.cached_oc_embeddedness == None:
-            # only calculate oc-embeddedness if we don't have a cached value
-            for agent in self.model.schedule.agents:
-                pass
-            pass
-        pass
-
-    def agent_in_radius_and_reverse_radius(self,d):
+    def _agents_in_radius1(self, context=network_names):
         agents_in_radius = set()
-        for net in Person.Person.network_names:
-            if agent.neighbors.get(net):
-                for agent in agent.neighbors.get(net):
+        for net in context:
+            if self.neighbors.get(net):
+                for agent in self.neighbors.get(net):
                     agents_in_radius.add(agent)
         return agents_in_radius
 
+    def agents_in_radius(self, d, context=network_names):
+        # todo: This is neither efficient nor scalable, I am working to improve it.
+        radius_1 = self._agents_in_radius1()
+        if d == 1:
+            return radius_1
+        if d >= 2:
+            radius_2 = set().union(radius_1)
+            for agent_lv1 in radius_1:
+                for agent_lv2 in agent_lv1._agents_in_radius1(context):
+                    radius_2.add(agent_lv2)
+            if d == 2:
+                radius_2.remove(self)
+                return radius_2
+        if d >= 3:
+            radius_3 = set().union(radius_2)
+            for agent_lv2 in radius_2:
+                for agent_lv3 in agent_lv2._agents_in_radius1(context):
+                    radius_3.add(agent_lv3)
+            if d == 3:
+                return radius_3
 
-class Prisoner(Person):
-    sentence_countdown = 0
+    def oc_embeddedness(self):
+        if self.cached_oc_embeddedness is None:
+            # only calculate oc-embeddedness if we don't have a cached value
+            self.cached_oc_embeddedness = 0
+            # start with an hypothesis of 0
+            agents = self.agents_in_radius(self.model.oc_embeddedness_radius)
+            oc_members = [agent for agent in agents if agent.oc_member]
+            # this needs to include the caller
+            agents.add(self)
+            if oc_members:
+                self.model.update_meta_links(agents)
+                self.cached_oc_embeddedness = self.find_oc_weight_distance(oc_members) / self.find_oc_weight_distance(
+                    agents)
+        return self.cached_oc_embeddedness
 
-    def __init__(self):
-        self.sentence_countdown = 0
-        #super().__init__(self.unique_id, model)
-        
+    def find_oc_weight_distance(self, agents):
+        if self in agents:
+            agents.remove(self)
+        distance = 0
+        for agent in agents:
+            distance += 1 / nx.algorithms.shortest_paths.weighted.dijkstra_path_length(self.model.meta_graph,
+                                                                                       self.unique_id, agent.unique_id,
+                                                                                       weight='weight')
+        return distance
+
+    def calculate_oc_member_position(self):
+        n = len([agent for agent in self.agents_in_radius(1) if agent.oc_member])
+        my_oc_crim = [agent for agent in self.neighbors.get("criminal") if agent.oc_member]
+        return n + np.sum([self.num_co_offenses[agent] for agent in my_oc_crim]) - len(my_oc_crim)
+
+    def get_caught(self):
+        self.model.number_law_interventions_this_tick += 1
+        self.model.people_jailed += 1
+        self.prisoner = True
+        if self.gender_is_male:
+            self.sentence_countdown = extra.pick_from_pair_list(self.model.male_punishment_length, self.model.rng)
+        else:
+            self.sentence_countdown = extra.pick_from_pair_list(self.model.female_punishment_length, self.model.rng)
+        self.sentence_countdown = self.sentence_countdown * self.model.punishment_length
+        if self.my_job:
+            self.my_job.my_worker = None
+            self.my_job = None
+            self.job_level = 1
+        if self.my_school:
+            self.leave_school()
+        self.neighbors.get("professional").clear()
+        self.neighbors.get("school").clear()
+        # we keep the friendship links and the family links
+
+
 if __name__ == "__main__":
     pass
-
-
