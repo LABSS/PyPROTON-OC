@@ -122,6 +122,7 @@ class MesaPROTON_OC(Model):
         self.oc_embeddedness_radius = 2
         self.oc_boss_repression = False
         self.punishment_length = 1
+        self.constant_population = False
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -212,6 +213,8 @@ class MesaPROTON_OC(Model):
         self.cal_criminal_tendency_addme()
         self.wedding()
         self.commit_crimes()
+        self.retire_persons()
+        self.make_baby()
 
         self.ticks += 1
         self.datacollector.collect(self)
@@ -261,7 +264,7 @@ class MesaPROTON_OC(Model):
 
     def load_stats_tables(self):
         self.num_co_offenders_dist = pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv"))
-        self.fertility_table = self.read_csv_city("initial_fertility_rates")
+        self.fertility_table = self.df_to_dict(self.read_csv_city("initial_fertility_rates"), extra_depth=True)
         self.mortality_table = self.read_csv_city("initial_mortality_rates")
         self.edu = self.df_to_dict(self.read_csv_city("edu"))
         self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
@@ -1421,6 +1424,37 @@ class MesaPROTON_OC(Model):
                         else:
                             w += 1
                 self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=w)
+
+    def retire_persons(self):
+        """
+        Agents that reach the self.retirement_age are retired.
+        :return: None
+        """
+        to_retire = [agent for agent in self.schedule.agents if agent.age() >= self.retirement_age and not agent.retired]
+        for agent in to_retire:
+            agent.retired = True
+            if agent.my_job != None:
+                agent.my_job.my_worker = None
+                agent.my_job = None
+                agent.neighbors.get("professional").clear()
+                # Figure out how to preserve socio-economic status (see issue #22)
+
+    def make_baby(self):
+        """
+        Based on the self.fertility_table this procedure create new agents taking into account the possibility
+        that the model is set to self.constant_population
+        :return: None
+        """
+        if self.constant_population:
+            breeding_target = self.initial_agents - len(self.schedule.agents)
+            if breeding_target > 0:
+                breeding_pool = self.rng.choice([agent for agent in self.schedule.agents if agent.age() >= 14 and agent.age() <= 50 and not agent.gender_is_male], size=breeding_target*10, replace=False)
+                for agent in extra.weighted_n_of(breeding_target, breeding_pool, lambda x: x.p_fertility(), self.rng):
+                    agent.init_baby()
+        else:
+            for agent in [agent for agent in self.schedule.agents if agent.age() >= 14 and agent.age() <= 50 and not agent.gender_is_male]:
+                if self.rng.random() < agent.p_fertility():
+                    agent.init_baby()
 
 
 if __name__ == "__main__":

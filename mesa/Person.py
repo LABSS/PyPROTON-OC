@@ -36,7 +36,7 @@ class Person(Agent):
         self.job_level = 0
         self.my_job = None  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
         self.birth_tick = self.model.ticks
-        self.gender_is_male = self.model.rng.choice([True, False], 1)  # True male False female
+        self.gender_is_male = self.model.rng.choice([True, False])  # True male False female
         self.father = None
         self.mother = None
         self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
@@ -509,6 +509,43 @@ class Person(Agent):
         self.neighbors.get("professional").clear()
         self.neighbors.get("school").clear()
         # we keep the friendship links and the family links
+
+    def p_fertility(self):
+        """
+        Calculate the fertility
+        :return: flot, the fertility
+        """
+        if np.min([self.number_of_children, 2]) in self.model.fertility_table[self.age()]:
+            return self.model.fertility_table[self.age()][np.min([self.number_of_children, 2])] / self.model.ticks_per_year
+        else:
+            return 0
+
+    def init_baby(self):
+        """
+        This method is for mothers only and allows to create new agents
+        :return: None
+        """
+        self.number_of_children += 1
+        self.model.number_born += 1
+        new_agent = Person(self.model)
+        self.model.schedule.agents.append(new_agent)
+        new_agent.wealth_level = self.wealth_level
+        new_agent.birth_tick = self.model.ticks
+        new_agent.mother = self
+        if self.get_link_list("offspring"):
+            new_agent.addSiblingLinks(self.get_link_list("offspring"))
+        self.makeParent_OffspringsLinks(new_agent)
+        if self.get_link_list("partner"):
+            dad = self.get_link_list("partner")[0]
+            dad.makeParent_OffspringsLinks(new_agent)
+            new_agent.father = dad
+            new_agent.max_education_level = dad.max_education_level
+        else:
+            new_agent.max_education_level = self.max_education_level
+        new_agent.makeHouseholdLinks(self.get_link_list("household"))
+
+
+
 
 
 if __name__ == "__main__":
