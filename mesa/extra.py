@@ -64,12 +64,24 @@ def at_most(agentset, n, rng_istance):
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):
     p = [float(weight_function(x)) for x in agentset]
+    n = np.min([len(agentset), n])
+    #Check for negative
     if any([True for i in p if i < 0]):
         min_value = min(p)
         p = [i-min_value for i in p]
     sump = sum(p)
-    p = [i/sump for i in p]
-    return  rng_istance.choice(agentset, int(n), replace=False, p=p)
+    #if there are more zeros than n required in p
+    if np.count_nonzero(p) < n:
+        n = np.count_nonzero(p)
+    #If there are only zeros
+    if sump == 0:
+        p = None
+    else:
+        p = [i/sump for i in p]
+    #If the type is wrong
+    if type(agentset) != list:
+        agentset = list(agentset)
+    return rng_istance.choice(agentset, int(n), replace=False, p=p)
 
 def weighted_one_of(agentset, weight_function, rng_istance):
     return weighted_n_of(1, agentset, weight_function, rng_istance)[0]

@@ -212,9 +212,14 @@ class MesaPROTON_OC(Model):
             self.return_kids()
         self.cal_criminal_tendency_addme()
         self.wedding()
+        self.reset_oc_embeddedness()
         self.commit_crimes()
         self.retire_persons()
         self.make_baby()
+        self.remove_excess_friends()
+        self.remove_excess_professional_links()
+        self.make_friends()
+
 
         self.ticks += 1
         self.datacollector.collect(self)
@@ -553,31 +558,34 @@ class MesaPROTON_OC(Model):
 
 
     def make_friends(self):
-        for a in self.schedule.agent_buffer(shuffled=True):
-            p_friends = a.potential_friends()
-            num_new_friends = min(len(p_friends), self.rng.poisson(3))
-            chosen = self.rng.choice(p_friends,
-                                        size=num_new_friends,
-                                        p=[extra.social_proximity(x) for x in p_friends],
-                                        replace=False)
-            for c in chosen:
-                c.makeFriends(a)
+        for agent in self.schedule.agent_buffer(shuffled=True):
+            p_friends = agent.potential_friends()
+            if len(p_friends) > 0:
+                friends = extra.weighted_n_of(np.min([len(p_friends), self.rng.poisson(3)]), p_friends, lambda x: extra.social_proximity(agent, x), self.rng)
+                for chosen in friends:
+                    chosen.makeFriends(agent)
 
     def remove_excess_friends(self):
-        for a in self.schedule.agents:
-            friends = a.neighbors.get('friendship')
-            nf = len(friends)
-            if nf > a.dunbar_number():
-                for c in self.rng.choice(friends, nf - a.dunbar_number(), replace=False):
-                    c.remove_friendship(a)
+        """
+        Given the dunbar_number this procedure cut the excess friendship links
+        :return: None
+        """
+        for agent in self.schedule.agents:
+            friends = agent.neighbors.get('friendship')
+            if len(friends) > agent.dunbar_number():
+                for friend in self.rng.choice(friends, len(friends) - agent.dunbar_number(), replace=False):
+                    friend.remove_friendship(agent)
 
     def remove_excess_professional_links(self):
-        for a in self.schedule.agents:
-            friends = a.neighbors.get('friendship')
-            nf = len(friends)
-            if nf > 30:
-                for c in self.rng.choice(friends, nf - 30, replace=False):
-                    c.remove_professional(a)
+        """
+        Given a max number (30) this procedure cut the excess professional links
+        :return: None
+        """
+        for agent in self.schedule.agents:
+            friends = agent.get_link_list('professional')
+            if len(friends) > 30:
+                for friend in self.rng.choice(friends, int(len(friends) - 30), replace=False):
+                    friend.remove_professional(agent)
 
     def total_num_links(self):
         return sum([
