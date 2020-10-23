@@ -211,6 +211,7 @@ class MesaPROTON_OC(Model):
             self.return_kids()
         self.cal_criminal_tendency_addme()
         self.wedding()
+        self.reset_oc_embeddedness()
         self.commit_crimes()
 
         self.ticks += 1
