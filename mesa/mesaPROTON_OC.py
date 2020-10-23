@@ -958,6 +958,9 @@ class MesaPROTON_OC(Model):
         for agent in self.schedule.agent_buffer(shuffled=True):
             agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
         self.calc_correction_for_non_facilitators()
+        for agent in self.schedule.agents:
+            if not agent.gender_is_male and agent.get_link_list("offspring"):
+                agent.number_of_children = len(agent.get_link_list("offspring"))
         elapsed_time = time.time() - start
         hours = elapsed_time // 3600
         temp = elapsed_time - 3600 * hours
