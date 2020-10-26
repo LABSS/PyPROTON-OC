@@ -45,7 +45,7 @@ class Person(Agent):
         self.oc_embeddedness_fresh = 0
         self.retired = False
         self.number_of_children = 0
-        self.facilitator = None
+        self.facilitator = False
         self.hobby = self.model.rng.integers(low=1, high=5, endpoint=True)
         self.new_recruit = -2
         self.migrant = False
@@ -438,7 +438,8 @@ class Person(Agent):
                 for agent_lv2 in agent_lv1._agents_in_radius1(context):
                     radius_2.add(agent_lv2)
             if d == 2:
-                radius_2.remove(self)
+                if self in radius_2:
+                    radius_2.remove(self)
                 return radius_2
         if d >= 3:
             radius_3 = set().union(radius_2)
@@ -524,6 +525,18 @@ class Person(Agent):
         else:
             return 0
 
+    def p_mortality(self):
+        """
+        Base on the table self.model.mortality_table calculate a probability that this agent die
+        :return:
+        """
+        if self.age() in self.model.mortality_table:
+            p = self.model.mortality_table[self.age()][self.gender_is_male] / self.model.ticks_per_year
+        else:
+            # if there's no key, we remove the agent
+            p = 1
+        return p
+
     def init_baby(self):
         """
         This method is for mothers only and allows to create new agents
@@ -532,7 +545,7 @@ class Person(Agent):
         self.number_of_children += 1
         self.model.number_born += 1
         new_agent = Person(self.model)
-        self.model.schedule.agents.append(new_agent)
+        self.model.schedule.add(new_agent)
         new_agent.wealth_level = self.wealth_level
         new_agent.birth_tick = self.model.ticks
         new_agent.mother = self
@@ -548,7 +561,16 @@ class Person(Agent):
             new_agent.max_education_level = self.max_education_level
         new_agent.makeHouseholdLinks(self.get_link_list("household"))
 
-
+    def die(self):
+        """
+        When an agent dies all his links cease to exist.
+        :return: None
+        """
+        neighbors = self.agents_in_radius(1)
+        for agent in neighbors:
+            for net in self.network_names:
+                if self in agent.neighbors.get(net):
+                    agent.neighbors.get(net).remove(self)
 
 
 if __name__ == "__main__":
