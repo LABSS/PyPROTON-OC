@@ -106,15 +106,15 @@ def test_oc_creation():
     # m.setup_oc_groups()
     # print(m.total_num_links())
 
-def test_big_crimes_for_small_fish():
-    m = MesaPROTON_OC()
-    m.max_accomplice_radius = 6
-    m.setup(500)
-    m.num_co_offenders_dist = [[5, 0.5], [6, 0.5], [10, 0.5]]
-    for tick in range(1, 20):
-        m.step()
+def test_big_crimes_from_small_fish():
+    model = MesaPROTON_OC(as_netlogo=True)
+    model.max_accomplice_radius = 3 #should be 6 but first i have to fix Person.agents_in_radius
+    model.setup(500)
+    model.num_co_offenders_dist = [[5, 0.5], [6, 0.5], [10, 0.5]]
+    for tick in range(20):
+        model.step()
     # todo: fix this routine
-    # assert m.big_crime_from_small_fish < 0
+    assert model.big_crime_from_small_fish > 0
 
 def test_oc_crime_net_init():
     m = MesaPROTON_OC()
