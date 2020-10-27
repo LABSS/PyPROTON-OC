@@ -289,10 +289,10 @@ class Person(Agent):
                 len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
             self.family_link_neighbors())) > 0.5 else 1.0
         # crim-neigh
-        self.criminal_tendency *= 1.81 if self.get_link_list("friendship") or self.get_link_list("professional") and (
-                len([agent for agent in self.get_link_list("friendship") if agent.num_crimes_committed > 0]
-                    + [agent for agent in self.get_link_list("professional") if agent.num_crimes_committed > 0]) / len(
-            [agent for agent in self.get_link_list("friendship")] + [agent for agent in self.get_link_list(
+        self.criminal_tendency *= 1.81 if self.get_neighbor_list("friendship") or self.get_neighbor_list("professional") and (
+                len([agent for agent in self.get_neighbor_list("friendship") if agent.num_crimes_committed > 0]
+                    + [agent for agent in self.get_neighbor_list("professional") if agent.num_crimes_committed > 0]) / len(
+            [agent for agent in self.get_neighbor_list("friendship")] + [agent for agent in self.get_neighbor_list(
                 "professional")])) > 0.5 else 1.0
         # oc-member
         self.criminal_tendency *= 4.50 if self.oc_member and not (
@@ -303,7 +303,7 @@ class Person(Agent):
         This function returns a list of all agents that have sibling,offspring,partner type connection with the agent.
         :return: list, the agents
         """
-        return self.get_link_list("sibling") + self.get_link_list("offspring") + self.get_link_list("partner")
+        return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
 
 
 
