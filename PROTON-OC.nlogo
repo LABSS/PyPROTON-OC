@@ -1424,8 +1424,7 @@ to-report factors-c
           professional-link-neighbors with [ num-crimes-committed > 0 ])) /
         (count (turtle-set friendship-link-neighbors professional-link-neighbors)) > 0.5)
                                                                              [ 1.81 ] [ 1.0 ] ])
-    (list "oc-member"   [ -> ifelse-value
-      (oc-member? and not (intervention-on? and OC-members-scrutinize?))     [ 4.50 ] [ 1.0 ] ])
+    (list "oc-member"   [ -> ifelse-value (oc-member?)                       [ 4.50 ] [ 1.0 ] ])
   )
 end
 
@@ -2181,17 +2180,6 @@ SWITCH
 340
 785
 373
-OC-members-scrutinize?
-OC-members-scrutinize?
-1
-1
--1000
-
-SWITCH
-540
-375
-785
-408
 OC-boss-repression?
 OC-boss-repression?
 1
@@ -2433,10 +2421,10 @@ unemployment-multiplier
 3
 
 MONITOR
-540
-495
-750
-540
+575
+510
+785
+555
 unemployed rate (level, percent)
 count all-persons with [ job-level = 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2481,10 +2469,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-540
-545
-750
-590
+575
+560
+785
+605
 Not looking for work (percent)
 count all-persons with [ job-level = 0 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2492,10 +2480,10 @@ count all-persons with [ job-level = 0 and age > 16 and age < 65 and my-school =
 11
 
 MONITOR
-540
-595
-750
-640
+575
+610
+785
+655
 occupied (level, percent)
 count all-persons with [ job-level > 1 and age > 16 and age < 65 and my-school = nobody ] / count all-persons with [ my-school = nobody and age > 16 and age < 65 ] * 100
 2
@@ -2514,9 +2502,9 @@ data-folder
 
 SWITCH
 540
-410
+375
 785
-443
+408
 facilitator-repression?
 facilitator-repression?
 1
@@ -2525,9 +2513,9 @@ facilitator-repression?
 
 SLIDER
 540
-445
+410
 785
-478
+443
 facilitator-repression-multiplier
 facilitator-repression-multiplier
 1
