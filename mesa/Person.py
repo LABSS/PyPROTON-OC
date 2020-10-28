@@ -267,10 +267,12 @@ class Person(Agent):
             self.my_job = the_job
             the_job.my_worker = self
 
-    def factors_c(self):
+    def update_criminal_tendency(self):
         """
-        This procedure modifies the attribute self.criminal_tendency in-place, based on the characteristics of the agent.
-        [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        This procedure modifies the attribute self.criminal_tendency in-place, based on the individual characteristics of the agent.
+        The original nomenclature of the model in Netlogo is: [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        More information on criminal tendency modeling can be found on PROTON-Simulator-Report, page 30, 2.3.2 MODELLING CRIMINAL ACTIVITY (C):
+        [https://www.projectproton.eu/wp-content/uploads/2019/10/D5.1-PROTON-Simulator-Report.pdf]
         :return: None
         """
         # employment
@@ -295,8 +297,7 @@ class Person(Agent):
             [agent for agent in self.get_neighbor_list("friendship")] + [agent for agent in self.get_neighbor_list(
                 "professional")])) > 0.5 else 1.0
         # oc-member
-        self.criminal_tendency *= 4.50 if self.oc_member and not (
-                    self.m.intervention_is_on() and self.m.oc_members_scrutinize) else 1.0
+        self.criminal_tendency *= 4.50 if self.oc_member else 1.0
 
     def family_link_neighbors(self):
         """

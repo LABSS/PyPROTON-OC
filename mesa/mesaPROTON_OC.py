@@ -835,7 +835,7 @@ class MesaPROTON_OC(Model):
                 #c is the cell value. Now we calculate criminal-tendency with the factors.
                 for agent in subpop:
                     agent.criminal_tendency = c
-                    agent.factors_c()
+                    agent.update_criminal_tendency()
                 #then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
                 epsilon = c - np.mean([agent.criminal_tendency for agent in subpop])
                 for agent in subpop:

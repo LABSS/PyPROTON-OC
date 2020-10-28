@@ -137,6 +137,10 @@ def test_population_generator():
     pass
 
 def test_criminal_propensity_setup():
+    """
+    Check if the criminal_tendency of the agents diverges from the theoretical value.
+    :return: None
+    """
     m = MesaPROTON_OC()
     m.setup(1000)
     for line in m.c_range_by_age_and_sex:
