@@ -147,7 +147,6 @@ def test_oc_crime_stats():
                 assert result
 
 def test_oc_embeddedness():
-
     def test1(model):
         """
         A single non-OC person
@@ -168,7 +167,7 @@ def test_oc_embeddedness():
         agent2.oc_member = True
         agent1.addSiblingLinks([agent2])
         assert agent1.oc_embeddedness() == 1
-        assert agent1.find_oc_weight_distance([agent2]) == 1
+        assert agent1.find_oc_distance([agent2]) == 1
 
     def test3(model):
         """
@@ -188,7 +187,7 @@ def test_oc_embeddedness():
         assert father.oc_embeddedness() == 0.5
         distances = list()
         for agent in pool:
-            distances.append(father.find_oc_weight_distance([agent]))
+            distances.append(father.find_oc_distance([agent]))
         assert distances == list(np.full(10,1))
 
     def test4(model):
@@ -197,7 +196,88 @@ def test_oc_embeddedness():
         :param model: The model
         :return: None
         """
-        pass
+        pool = list()
+        for i in range(3):
+            agent = pp.Person(model)
+            pool.append(agent)
+        pool[2].oc_member = True
+        pool[0].addSiblingLinks([pool[1]])
+        pool[0].makePartnerLinks(pool[2])
+        pool[0].makeFriends(pool[2])
+        assert pool[0].oc_embeddedness() == 2 / 3
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [0.5, 1.0]
+
+    def test5(model):
+        """
+        A non-OC person with one double link to a non-OC member
+        :param model: The model
+        :return: None
+        """
+        pool = list()
+        for i in range(3):
+            agent = pp.Person(model)
+            pool.append(agent)
+        pool[2].oc_member = True
+        pool[0].makePartnerLinks(pool[1])
+        pool[0].makeFriends(pool[1])
+        pool[0].makeFriends(pool[2])
+        assert pool[0].oc_embeddedness() == 1 / 3
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [0.5, 1.0]
+
+    def test6(model):
+        """
+        A non-OC person with a strong co-offending link to an OC member
+        :param model: The model
+        :return: None
+        """
+        pool = list()
+        for i in range(3):
+            agent = pp.Person(model)
+            pool.append(agent)
+        pool[0].addSiblingLinks([pool[1]])
+        pool[0].makeParent_OffspringsLinks(pool[2])
+        pool[0].addCriminalLink(pool[2])
+        pool[0].num_co_offenses[pool[2]] = 4
+        pool[2].num_co_offenses[pool[0]] = 4
+        pool[2].oc_member = True
+        assert pool[0].oc_embeddedness() == 5 / 6
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [0.2, 1.0]
+
+    def test7(model):
+        """
+        A non-OC person with all types of links
+        :param model: The model
+        :return: None
+        """
+        pool = list()
+        for i in range(6):
+            agent = pp.Person(model)
+            pool.append(agent)
+
+        pool[0].makePartnerLinks(pool[1])
+        pool[0].makeFriends(pool[2])
+        pool[0].makeProfessionalLinks(pool[3])
+        pool[0].makeSchoolLinks(pool[4])
+        pool[0].addCriminalLink(pool[5])
+        pool[0].num_co_offenses[pool[5]] = 5
+        pool[5].num_co_offenses[pool[0]] = 5
+        pool[0].makeParent_OffspringsLinks(pool[5])
+        pool[5].oc_member = True
+
+        assert pool[0].oc_embeddedness() == 0.6
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [1/6, 1.0, 1.0, 1.0, 1.0]
 
 
     #Test
@@ -206,6 +286,12 @@ def test_oc_embeddedness():
     test1(model) # A single non-OC person
     test2(model) # A single non-OC person with one family OC member
     test3(model) # A non-OC person with its family being OC member
+    test4(model) # A non-OC person with one double link to an OC member
+    test5(model) # A non-OC person with one double link to a non-OC member
+    test6(model) # A non-OC person with a strong co-offending link to an OC member
+    test7(model) # A non-OC person with all types of links
+
+
 
 
 

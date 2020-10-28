@@ -1430,7 +1430,7 @@ class MesaPROTON_OC(Model):
                                 w += agent.num_co_offenses[in_radius_agent]
                         else:
                             w += 1
-                self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=w)
+                self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=1/w)
 
     def retire_persons(self):
         """
@@ -1522,22 +1522,7 @@ if __name__ == "__main__":
     # for a in range(10):
     #     model.step()
 
-    pool = list()
-    for i in range(3):
-        agent = Person(model)
-        pool.append(agent)
-
-    pool[2].oc_member = True
-    pool[0].addSiblingLinks([pool[1]])
-    pool[0].makePartnerLinks(pool[2])
-    pool[0].makeFriends(pool[2])
 
 
-    print(pool[0].oc_embeddedness())
-
-    distances = list()
-    for agent in pool:
-        distances.append(pool[0].find_oc_weight_distance([agent]))
-    print(distances)
 
 

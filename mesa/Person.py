@@ -310,8 +310,7 @@ class Person(Agent):
             [agent for agent in self.get_link_list("friendship")] + [agent for agent in self.get_link_list(
                 "professional")])) > 0.5 else 1.0
         # oc-member
-        self.criminal_tendency *= 4.50 if self.oc_member and not (
-                self.model.intervention_is_on() and self.model.oc_members_scrutinize) else 1.0
+        self.criminal_tendency *= 4.50 if self.oc_member else 1.0
 
     def family_link_neighbors(self):
         """
@@ -461,7 +460,7 @@ class Person(Agent):
 
     def find_oc_weight_distance(self, agents):
         """
-        Based on the graph self.model.meta_graph calculates the distance of self from each agent passed to the agents parameter
+        Based on the graph self.model.meta_graph calculates the weighted distance of self from each agent passed to the agents parameter
         :param agents: list or set, of Person objects
         :return: float, the distance
         """
@@ -473,6 +472,22 @@ class Person(Agent):
                                                                                        self.unique_id, agent.unique_id,
                                                                                        weight='weight')
         return distance
+
+    def find_oc_distance(self, agents):
+        """
+        Based on the graph self.model.meta_graph calculates the weighted distance of self from each agent passed to the agents parameter
+        :param agents: list or set, of Person objects
+        :return: float, the distance
+        """
+        if self in agents:
+            agents.remove(self)
+        distance = 0
+        for agent in agents:
+                distance += self.model.meta_graph[self.unique_id][agent.unique_id]["weight"]
+        return distance
+
+
+
 
     def calculate_oc_member_position(self):
         """
