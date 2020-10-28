@@ -132,3 +132,21 @@ def test_population_generator():
     m.facilitator_crimes = 0
     m.setup_persons_and_friendship()
     pass
+
+def test_criminal_propensity_setup():
+    """
+    Check if the criminal_tendency of the agents diverges from the theoretical value.
+    :return: None
+    """
+    m = MesaPROTON_OC()
+    m.setup(1000)
+    for line in m.c_range_by_age_and_sex:
+        # the line variable is composed as follows:
+        # [[bool(gender_is_male), int(minimum age range)], [int(maximum age range), float(c value)]]
+        subpop = [agent for agent in m.schedule.agents if
+                  agent.age() >= line[0][1] and agent.age() <= line[1][0] and agent.gender_is_male == line[0][0]]
+        if subpop:
+            total_c = 0
+            for agent in subpop:
+                total_c += agent.criminal_tendency
+            assert ((total_c - len(subpop) * line[1][1]) / total_c < 1.0E-10)

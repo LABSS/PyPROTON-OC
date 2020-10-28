@@ -22,6 +22,7 @@ class Person(Agent):
     
     def __init__(self, m:mesaPROTON_OC):
         # networks
+        self.m = m
         self.networks_init()
         self.sentence_countdown = 0
         self.num_crimes_committed = 0
@@ -41,7 +42,7 @@ class Person(Agent):
         self.oc_embeddedness_fresh = 0
         self.retired = False
         self.number_of_children = 0
-        self.facilitator = 0
+        self.facilitator = None
         self.hobby = 0
         self.new_recruit = 0
         self.migrant = 0
@@ -54,7 +55,6 @@ class Person(Agent):
         Person.max_id = Person.max_id + 1
         Person.persons.append(self)
         #print(m)
-        self.m=m
         #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.m)]))
 
     def __repr__(self):
@@ -221,6 +221,7 @@ class Person(Agent):
             max_age = self.m.education_levels.get(level)[1]
             if self.age() <= max_age:
                 self.education_level = level - 1
+        self.propensity = self.m.lognormal(self.m.nat_propensity_m, self.m.nat_propensity_sigma)
 
     def enroll_to_school(self, level):
         """
@@ -260,8 +261,44 @@ class Person(Agent):
             self.my_job = the_job
             the_job.my_worker = self
 
+    def update_criminal_tendency(self):
+        """
+        This procedure modifies the attribute self.criminal_tendency in-place, based on the individual characteristics of the agent.
+        The original nomenclature of the model in Netlogo is: [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        More information on criminal tendency modeling can be found on PROTON-Simulator-Report, page 30, 2.3.2 MODELLING CRIMINAL ACTIVITY (C):
+        [https://www.projectproton.eu/wp-content/uploads/2019/10/D5.1-PROTON-Simulator-Report.pdf]
+        :return: None
+        """
+        # employment
+        self.criminal_tendency *= 1.30 if self.job_level == 1 else 1.0
+        # education
+        self.criminal_tendency *= 0.94 if self.education_level >= 2 else 1.0
+        # propensity
+        self.criminal_tendency *= 1.97 if self.propensity > (np.exp(
+            self.m.nat_propensity_m - self.m.nat_propensity_sigma ** 2 / 2) + self.m.nat_propensity_threshold * np.sqrt(
+            np.exp(self.m.nat_propensity_sigma) ** 2 - 1) * np.exp(
+            self.m.nat_propensity_m + self.m.nat_propensity_sigma ** 2 / 2)) else 1.0
+        # crim-hist
+        self.criminal_tendency *= 1.62 if self.num_crimes_committed >= 0 else 1.0
+        # crim-fam
+        self.criminal_tendency *= 1.45 if self.family_link_neighbors() and (
+                len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
+            self.family_link_neighbors())) > 0.5 else 1.0
+        # crim-neigh
+        self.criminal_tendency *= 1.81 if self.get_neighbor_list("friendship") or self.get_neighbor_list("professional") and (
+                len([agent for agent in self.get_neighbor_list("friendship") if agent.num_crimes_committed > 0]
+                    + [agent for agent in self.get_neighbor_list("professional") if agent.num_crimes_committed > 0]) / len(
+            [agent for agent in self.get_neighbor_list("friendship")] + [agent for agent in self.get_neighbor_list(
+                "professional")])) > 0.5 else 1.0
+        # oc-member
+        self.criminal_tendency *= 4.50 if self.oc_member else 1.0
 
-
+    def family_link_neighbors(self):
+        """
+        This function returns a list of all agents that have sibling,offspring,partner type connection with the agent.
+        :return: list, the agents
+        """
+        return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
 
 
 class Prisoner(Person):
