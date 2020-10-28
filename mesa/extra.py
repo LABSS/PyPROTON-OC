@@ -48,8 +48,8 @@ def social_proximity(ego:Person, alter:Person):
                  ] else 0
     return acc
 
-def at_most(n, a, rng_istance):
-    return a if len(a) < n else rng_istance.choice(a,n)
+def at_most(n, a, rng_istance, replace=True):
+    return a if len(a) < n else rng_istance.choice(a,n,replace=replace)
 
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):

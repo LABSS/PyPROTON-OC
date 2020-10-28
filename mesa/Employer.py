@@ -9,14 +9,12 @@ import Person
 
 class Employer():
     max_id = 0
-    employers = list()
 
     def __init__(self, m: mesaPROTON_OC):
         self.my_jobs = list()
         self.m = m
         self.unique_id = Employer.max_id
         Employer.max_id = Employer.max_id + 1
-        Employer.employers.append(self)
 
     def __repr__(self):
         return "Employer: " + str(self.unique_id)

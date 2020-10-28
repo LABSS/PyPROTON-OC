@@ -132,14 +132,12 @@ class Person(Agent):
         :param asker: agent
         :return: None
         """
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("professional").add(person)
-                person.neighbors.get("professional").add(self)
-        else:
-            self.neighbors.get("professional").add(asker)
-            asker.neighbors.get("professional").add(self)
-        
+        if type(asker) != list:
+            asker = [asker]
+        for person in asker:
+            self.neighbors.get("professional").add(person)
+            person.neighbors.get("professional").add(self)
+
     def addSiblingLinks(self, targets):
         for x in targets:
             if x != self:
@@ -166,13 +164,9 @@ class Person(Agent):
             asker.neighbors.get("parent").add(self)
 
     def makeSchoolLinks(self, asker):
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("school").add(person)
-                person.neighbors.get("school").add(self)
-        else:
-            self.neighbors.get("school").add(asker)
-            asker.neighbors.get("school").add(self)
+        for person in asker:
+            self.neighbors.get("school").add(person)
+            person.neighbors.get("school").add(self)
 
     def addCriminalLink(self, asker):
         """
@@ -210,7 +204,7 @@ class Person(Agent):
         stats_tables as part of the initial setup of the model agents.
         """
         row = extra.weighted_one_of(self.m.age_gender_dist, lambda x: x[-1], self.m.rng)  # select a row from our age_gender distribution
-        self.birth_tick =  0 - row[0] * self.m.ticks_per_year      # ...and set age... =
+        self.birth_tick =  0 - row[0] * self.m.ticks_per_year      # ...and set age...
         self.gender_is_male =  bool(row[1]) # ...and gender according to values in that row.
         self.retired = self.age() >= self.m.retirement_age                 # persons older than retirement_age are retired
         # education level is chosen, job and wealth follow in a conditioned sequence
@@ -236,14 +230,12 @@ class Person(Agent):
         :param level: int, level of education to enroll
         """
         self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == level]
-        if self.potential_school:
-            self.my_school = self.m.rng.choice(self.potential_school)
-        else:
+        if not self.potential_school:
             self.potential_school = [x for x in self.m.schools if x.diploma_level == level]
-            self.my_school = self.m.rng.choice(self.potential_school)
+        self.my_school = self.m.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
-    def get_link_list(self, net_name):
+    def get_neighbor_list(self, net_name):
         """
         Given the name of a network, this method returns a list of agents within the network.
         If the network is empty, it returns an empty list.
@@ -265,14 +257,16 @@ class Person(Agent):
         if not jobs_pool:
             jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.m.rng.choice(jobs_pool, 1)[0]
+            the_job = self.m.rng.choice(jobs_pool, None)
             self.my_job = the_job
             the_job.my_worker = self
 
-    def factors_c(self):
+    def update_criminal_tendency(self):
         """
-        This procedure modifies the attribute self.criminal_tendency in-place, based on the characteristics of the agent.
-        [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        This procedure modifies the attribute self.criminal_tendency in-place, based on the individual characteristics of the agent.
+        The original nomenclature of the model in Netlogo is: [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        More information on criminal tendency modeling can be found on PROTON-Simulator-Report, page 30, 2.3.2 MODELLING CRIMINAL ACTIVITY (C):
+        [https://www.projectproton.eu/wp-content/uploads/2019/10/D5.1-PROTON-Simulator-Report.pdf]
         :return: None
         """
         # employment
@@ -291,22 +285,20 @@ class Person(Agent):
                 len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
             self.family_link_neighbors())) > 0.5 else 1.0
         # crim-neigh
-        self.criminal_tendency *= 1.81 if self.get_link_list("friendship") or self.get_link_list("professional") and (
-                len([agent for agent in self.get_link_list("friendship") if agent.num_crimes_committed > 0]
-                    + [agent for agent in self.get_link_list("professional") if agent.num_crimes_committed > 0]) / len(
-            [agent for agent in self.get_link_list("friendship")] + [agent for agent in self.get_link_list(
+        self.criminal_tendency *= 1.81 if self.get_neighbor_list("friendship") or self.get_neighbor_list("professional") and (
+                len([agent for agent in self.get_neighbor_list("friendship") if agent.num_crimes_committed > 0]
+                    + [agent for agent in self.get_neighbor_list("professional") if agent.num_crimes_committed > 0]) / len(
+            [agent for agent in self.get_neighbor_list("friendship")] + [agent for agent in self.get_neighbor_list(
                 "professional")])) > 0.5 else 1.0
         # oc-member
-        self.criminal_tendency *= 4.50 if self.oc_member and not (
-                    self.m.intervention_is_on() and self.m.oc_members_scrutinize) else 1.0
+        self.criminal_tendency *= 4.50 if self.oc_member else 1.0
 
     def family_link_neighbors(self):
         """
         This function returns a list of all agents that have sibling,offspring,partner type connection with the agent.
         :return: list, the agents
         """
-        return self.get_link_list("sibling") + self.get_link_list("offspring") + self.get_link_list("partner")
-
+        return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
 
 
 class Prisoner(Person):
