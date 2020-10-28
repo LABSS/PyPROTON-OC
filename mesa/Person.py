@@ -50,7 +50,7 @@ class Person(Agent):
         self.my_school = None
         self.target_of_intervention = 0
         self.arrest_weight = 0
-        self.criminal_net_weight = dict()
+        self.num_co_offenses = dict()
         #super().__init__(self.unique_id, model)
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
@@ -175,9 +175,9 @@ class Person(Agent):
         :return: None
         """
         self.neighbors.get("criminal").add(asker)
-        self.criminal_net_weight[asker] = 1
+        self.num_co_offenses[asker] = 1
         asker.neighbors.get("criminal").add(self)
-        asker.criminal_net_weight[self] = 1
+        asker.num_co_offenses[self] = 1
             
     def remove_link(self, forlorn, kind):
         self.neighbors.get(kind).discard(forlorn)
