@@ -408,7 +408,7 @@ class Person(Agent):
                                             agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
             else (extra.social_proximity(self, agent) * self.criminal_tendency)
 
-    def _agents_in_radius1(self, context=network_names):
+    def _agents_in_radius(self, context=network_names):
         """
         It finds the agents distant 1 in the specified networks, by default it finds it on all networks.
         :param context: list, of strings, limit to networks name
@@ -428,26 +428,17 @@ class Person(Agent):
         :param context: list, of strings, limit to networks name
         :return: set, of Person objects
         """
-        # todo: This is neither efficient nor scalable, I am working to improve it.
-        radius_1 = self._agents_in_radius1()
+        # todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
+        radius = self._agents_in_radius(context)
         if d == 1:
-            return radius_1
-        if d >= 2:
-            radius_2 = set().union(radius_1)
-            for agent_lv1 in radius_1:
-                for agent_lv2 in agent_lv1._agents_in_radius1(context):
-                    radius_2.add(agent_lv2)
-            if d == 2:
-                if self in radius_2:
-                    radius_2.remove(self)
-                return radius_2
-        if d >= 3:
-            radius_3 = set().union(radius_2)
-            for agent_lv2 in radius_2:
-                for agent_lv3 in agent_lv2._agents_in_radius1(context):
-                    radius_3.add(agent_lv3)
-            if d == 3:
-                return radius_3
+            return radius
+        else:
+            for di in range(d - 1):
+                for agent_in_radius in radius:
+                    radius = radius.union(agent_in_radius._agents_in_radius(context))
+            if self in radius:
+                radius.remove(self)
+            return radius
 
     def oc_embeddedness(self):
         """

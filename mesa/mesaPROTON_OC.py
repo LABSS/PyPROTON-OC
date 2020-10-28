@@ -1504,18 +1504,40 @@ class MesaPROTON_OC(Model):
 if __name__ == "__main__":
 
     model = MesaPROTON_OC(as_netlogo=True)
-    model.initial_agents = 100
-    model.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    model.initial_agents = 200
-    model.load_stats_tables()
-    model.setup_education_levels()
-    model.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(model.watts_strogatz)
-    print("num links:")
-    print(model.total_num_links())
-    # model.setup_siblings()
-    print("num links:")
-    print(model.total_num_links())
+    # model.initial_agents = 100
+    # model.create_agents()
+    # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    # model.initial_agents = 200
+    # model.load_stats_tables()
+    # model.setup_education_levels()
+    # model.setup_persons_and_friendship()
+    # # Visualize network
+    # nx.draw(model.watts_strogatz)
+    # print("num links:")
+    # print(model.total_num_links())
+    # # model.setup_siblings()
+    # print("num links:")
+    # print(model.total_num_links())
+    model.setup(1000)
+    # for a in range(10):
+    #     model.step()
+
+    pool = list()
+    for i in range(3):
+        agent = Person(model)
+        pool.append(agent)
+
+    pool[2].oc_member = True
+    pool[0].addSiblingLinks([pool[1]])
+    pool[0].makePartnerLinks(pool[2])
+    pool[0].makeFriends(pool[2])
+
+
+    print(pool[0].oc_embeddedness())
+
+    distances = list()
+    for agent in pool:
+        distances.append(pool[0].find_oc_weight_distance([agent]))
+    print(distances)
+
 
