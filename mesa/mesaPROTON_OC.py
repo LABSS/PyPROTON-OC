@@ -1430,7 +1430,7 @@ class MesaPROTON_OC(Model):
                                 w += agent.num_co_offenses[in_radius_agent]
                         else:
                             w += 1
-                self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=w)
+                self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=1/w)
 
     def retire_persons(self):
         """
