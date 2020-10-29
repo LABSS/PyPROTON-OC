@@ -3,6 +3,7 @@ import pytest
 from mesaPROTON_OC import MesaPROTON_OC
 import Person as pp
 import numpy as np
+import extra
 
 
 def test_random():
@@ -147,6 +148,10 @@ def test_oc_crime_stats():
                 assert result
 
 def test_oc_embeddedness():
+    """
+    Tests oc_embeddedness in various contexts
+    :return: None
+    """
     def test1(model):
         """
         A single non-OC person
@@ -290,6 +295,53 @@ def test_oc_embeddedness():
     test5(model) # A non-OC person with one double link to a non-OC member
     test6(model) # A non-OC person with a strong co-offending link to an OC member
     test7(model) # A non-OC person with all types of links
+
+def test_oc_intervention():
+    def test_version(as_netlogo):
+        model = MesaPROTON_OC(as_netlogo=as_netlogo)
+        model.setup(550)
+        for agent in model.schedule.agents:
+            agent.oc_member = False
+        agelist = np.arange(0, 12 * 4, 4)
+        kingpin = pp.Person(model)
+        kingpin.birth_tick = -1 * model.ticks_per_year * 50
+        kingpin.oc_member = True
+        kingpin.gender_is_male = True
+        model.schedule.add(kingpin)
+        the_family = list()
+        for i in range(12):
+            new_agent = pp.Person(model)
+            new_agent.father = kingpin
+            the_family.append(new_agent)
+            model.schedule.add(new_agent)
+            age = model.rng.choice(np.arange(agelist.size))
+            new_agent.birth_tick = -1 * agelist[age] * model.ticks_per_year
+            agelist = np.delete(agelist, age)
+            new_agent.propensity = 0
+            new_agent.gender_is_male = True
+            kingpin.makeParent_OffspringsLinks(new_agent)
+        for agent in the_family:
+            agent.addSiblingLinks(the_family)
+        baby = [agent for agent in the_family if agent.age() == 0]
+        model.targets_addressed_percent = 100
+        model.family_intervention = "remove-if-OC-member"
+        model.cal_criminal_tendency_addme()
+        if as_netlogo:
+            model.family_intervene_netlogo_version()
+        else:
+            model.family_intervene_mesa_version()
+
+        assert np.sum([len(agent.neighbors.get("friendship")) for agent in the_family]) >= 40
+        assert len(extra.weighted_one_of(model.schedule.agents, lambda x: x.age() == 16 and x.propensity == 0,
+                                         model.rng).neighbors.get("sibling")) == 11
+        assert len([agent for agent in baby[0].neighbors.get("sibling") if agent.my_job != None]) == 8
+        assert np.sum([agent.max_education_level for agent in the_family]) == 8
+
+
+    test_version(as_netlogo=True)
+    #todo: this fails
+    test_version(as_netlogo=False)
+
 
 
 

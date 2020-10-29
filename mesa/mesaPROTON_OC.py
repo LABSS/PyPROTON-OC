@@ -486,7 +486,7 @@ class MesaPROTON_OC(Model):
         :return: None
         """
         father_to_remove_pool = set()
-        for agent in model.schedule.agents:
+        for agent in self.schedule.agents:
             if agent.gender_is_male and agent.neighbors.get("offspring"):
                 for age_condition in [offspring.age() < 18 and offspring.age() >= 12 for offspring in
                                       agent.neighbors.get("offspring")]:
@@ -1521,6 +1521,10 @@ if __name__ == "__main__":
     model.setup(1000)
     # for a in range(10):
     #     model.step()
+
+
+
+
 
 
 
