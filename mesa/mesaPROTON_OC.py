@@ -20,7 +20,7 @@ class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
     """
 
-    def __init__(self, seed=None, as_netlogo=False):
+    def __init__(self, seed=None):
         super().__init__(seed=seed)
         self.seed = seed
         self.rng = default_rng(seed)
@@ -53,11 +53,8 @@ class MesaPROTON_OC(Model):
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
-        self.as_netlogo = as_netlogo
-        if self.as_netlogo:
-            self.removed_fatherships = list()
-        else:
-            self.removed_fatherships = dict()
+        self.removed_fatherships = list()
+
 
         #Intervention
         self.family_intervention = None
@@ -171,10 +168,7 @@ class MesaPROTON_OC(Model):
         self.number_law_interventions_this_tick = 0
         if self.intervention_on():
             if self.family_intervention:
-                if self.as_netlogo:
-                    self.family_intervene_netlogo_version()
-                else:
-                    self.family_intervene_mesa_version()
+                self.family_intervene()
             if self.social_support:
                 self.socialization_intervene()
             if self.welfare_support:
@@ -388,7 +382,7 @@ class MesaPROTON_OC(Model):
 
     # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network?
     # for now I think I'll just add another network and keep the redundancy, then we'll see.
-    def family_intervene_netlogo_version(self):
+    def family_intervene(self):
         """
         This procedure is active when the self.family_intervention attribute is different from None. There are 3
         possible family interventions: remove_if_caught, remove_if_OC_member and remove_if_caught_and_OC_member.
@@ -427,62 +421,6 @@ class MesaPROTON_OC(Model):
                 # family_links_neighbors also include siblings that could be assigned during setup through the setup_siblings procedure,
                 # we do not need these in this procedure
                 family = [kid] + kid.family_link_neighbors()
-                self.welfare_createjobs(
-                    [agent for agent in family if agent.age() >= 16 and not agent.my_job and not agent.my_school])
-                self.soc_add_educational([agent for agent in family if agent.age() < 18 and not agent.my_job])
-                self.soc_add_psychological(family)
-                self.soc_add_more_friends(family)
-
-    def family_intervene_mesa_version(self):
-        """
-        This procedure is active when the self.family_intervention attribute is different from None. There are 3
-        possible family interventions: remove_if_caught, remove_if_OC_member and remove_if_caught_and_OC_member.
-        These parameters determine the portion of the population on which the intervention will have effect.
-
-        Differences with netlogo implementation (family_intervene_netlogo_version):
-        The selection of members is done in a different way, instead of selecting the children and from them to the fathers,
-        the fathers are selected directly. Since the interventions act on the whole family except the fathers this avoids double calls.
-        Also in this procedure the fathers are completely removed from the nets, This does not happen in the netlogo version.
-        Causing possible bugs and maintaining an inconsistent network structure.
-
-        The intervention consists of the application of 5 procedures on eligible family members:
-        1. Fathers who comply with the conditions are removed from their families (Removed fathers are stored within the
-        removed_fatherships attribute so it is possible at any time to reintroduce them into the family.)
-        2. welfare_createjobs, new jobs are created and assigned to eligible members.
-        3. soc_add_educational, the max_education_level attribute of the eligible members is increased by one
-        4. soc_add_psychological, a new support member (who has not committed crimes) is added to the friends network
-        5. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
-        :return: None
-        """
-        father_to_remove_pool = set()
-        for agent in model.schedule.agents:
-            if agent.gender_is_male and agent.neighbors.get("offspring"):
-                for age_condition in [offspring.age() < 18 and offspring.age() >= 12 for offspring in
-                                      agent.neighbors.get("offspring")]:
-                    if age_condition:
-                        father_to_remove_pool.add(agent)
-
-        if self.family_intervention == "remove-if-caught":
-            father_to_remove_pool = [agent for agent in father_to_remove_pool if type(agent) == Prisoner]
-        if self.family_intervention == "remove-if-OC-member":
-            father_to_remove_pool = [agent for agent in father_to_remove_pool if agent.oc_member]
-        if self.family_intervention == "remove-if-caught-and-OC-member":
-            father_to_remove_pool = [agent for agent in father_to_remove_pool if
-                                     type(agent) == Prisoner and agent.oc_member]
-        if father_to_remove_pool:
-            how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(father_to_remove_pool)))
-            father_to_remove = list(self.rng.choice(father_to_remove_pool, how_many, replace=False))
-            for father in father_to_remove:
-                self.removed_fatherships[father] = list()
-                self.kids_intervention_counter += 1
-                for kid in father.neighbors.get("offspring"):
-                    if kid.age() < 18 and kid.age() >= 12:
-                        self.removed_fatherships[father].append(
-                            [kid, ((18 * self.ticks_per_year + kid.birth_tick) - self.ticks)])
-
-                # we only want households
-                family = father.neighbors.get("household").copy()
-                father.remove_from_household()
                 self.welfare_createjobs(
                     [agent for agent in family if agent.age() >= 16 and not agent.my_job and not agent.my_school])
                 self.soc_add_educational([agent for agent in family if agent.age() < 18 and not agent.my_job])
