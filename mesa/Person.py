@@ -175,9 +175,11 @@ class Person(Agent):
         :return: None
         """
         self.neighbors.get("criminal").add(asker)
-        self.num_co_offenses[asker] = 1
+        if asker not in self.num_co_offenses:
+            self.num_co_offenses[asker] = 1
         asker.neighbors.get("criminal").add(self)
-        asker.num_co_offenses[self] = 1
+        if self not in asker.num_co_offenses:
+            asker.num_co_offenses[self] = 1
             
     def remove_link(self, forlorn, kind):
         self.neighbors.get(kind).discard(forlorn)

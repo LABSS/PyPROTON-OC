@@ -100,7 +100,7 @@ class MesaPROTON_OC(Model):
         self.oc_members_scrutinize = False
         self.facilitator_repression = False
         self.facilitator_repression_multiplier = 2.0
-        self.percentage_of_facilitators = 0.005
+        self.likelihood_of_facilitators = 0.005
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -168,7 +168,7 @@ class MesaPROTON_OC(Model):
 
     def setup_facilitators(self):
         for agent in self.schedule.agents:
-            agent.facilitator = True if not agent.oc_member and agent.age() > 18 and (self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+            agent.facilitator = True if not agent.oc_member and agent.age() > 18 and (self.rng.uniform(0, 1) < self.likelihood_of_facilitators) else False
 
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
