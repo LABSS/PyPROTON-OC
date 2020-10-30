@@ -100,6 +100,7 @@ class MesaPROTON_OC(Model):
         self.oc_members_scrutinize = False
         self.facilitator_repression = False
         self.facilitator_repression_multiplier = 2.0
+        self.likelihood_of_facilitators = 0.005
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -166,8 +167,8 @@ class MesaPROTON_OC(Model):
                 x.job_level = 2 if self.rng.uniform(0, 1) < ratio_on else 0
 
     def setup_facilitators(self):
-        for x in self.schedule.agents:
-            x.facilitator = True if not x.oc_member and x.age() > 18 and (self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+        for agent in self.schedule.agents:
+            agent.facilitator = True if not agent.oc_member and agent.age() > 18 and (self.rng.uniform(0, 1) < self.likelihood_of_facilitators) else False
 
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
@@ -367,30 +368,38 @@ class MesaPROTON_OC(Model):
             for a in self.schedule.agents]) / 2
 
     def setup_oc_groups(self):
+        """
+        This procedure creates "criminal" type links within the families, in case there are not enough members
+        takes members from outside.
+        :return: None
+        """
         # OC members are scaled down if we don't have 10K agents
-        scaled_num_oc_families = math.ceil(
-            self.num_oc_families * self.initial_agents / 10000 * self.num_oc_persons / 30)
-        scaled_num_oc_persons = math.ceil(self.num_oc_persons * self.initial_agents / 10000)
-        # families first. Note that it could extract the same family twice. This could be improved to force exactly the number of families needed.
+        scaled_num_oc_families = np.ceil(self.num_oc_families * self.initial_agents / 10000 * self.num_oc_persons / 30)
+        scaled_num_oc_persons = np.ceil(self.num_oc_persons * self.initial_agents / 10000)
+        # families first.
         # we assume here that we'll never get a negative criminal tendency.
-        oc_family_head = extra.weighted_n_of(scaled_num_oc_families,
-                                             self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
-        for x in oc_family_head: x.oc_member = True
-        candidates_in_families = [y for y in x.neighbors.get('household') if y.age() >= 18 for x in oc_family_head]
-        if len(candidates_in_families) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
-            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families,
-                                                      candidates_in_families, lambda x: x.criminal_tendency, self.rng)
+        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
+        for head in oc_family_heads:
+            head.oc_member = True
+        candidates = [relative for oc_family_head in oc_family_heads for relative in oc_family_head.neighbors.get('household')
+                          if relative.age() >= 18]
+        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
+            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
-            for z in members_in_families: z.oc_member = True
+            for member in members_in_families:
+                member.oc_member = True
         else:  # take more as needed (note that this modifies the count of families)
-            for z in candidates_in_families: z.oc_member = True
-            non_oc = [z for z in self.schedule.agents if not z.oc_member]
-            extras = extra.weighted_n_of(scaled_num_oc_persons - len(candidates_in_families) - len(oc_family_head),
-                                         non_oc, lambda x: x.criminal_tendency, self.rng)
-            for x in extras: x.oc_member = True
+            for candidate in candidates:
+                candidate.oc_member = True
+            out_of_family_candidates = [agent for agent in self.schedule.agents if not agent.oc_member]
+            out_of_family_candidates = extra.weighted_n_of(scaled_num_oc_persons - len(candidates) - len(oc_family_heads),
+                                                           out_of_family_candidates, lambda x: x.criminal_tendency, self.rng)
+            for out_of_family_candidate in out_of_family_candidates:
+                out_of_family_candidate.oc_member = True
         # and now, the network with its weights..
-        oc_members = [x for x in self.schedule.agents if x.oc_member]
-        for (i, j) in combinations(oc_members, 2): i.addCriminalLink(j)
+        oc_members_pool = [oc_member for oc_member in self.schedule.agents if oc_member.oc_member]
+        for (i, j) in combinations(oc_members_pool, 2):
+            i.addCriminalLink(j)
 
     def reset_oc_embeddedness(self):
         for x in self.schedule.agents: x.cached_oc_embeddedness = None
@@ -671,7 +680,7 @@ class MesaPROTON_OC(Model):
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
                 total_pool = school.my_students.difference({student})
-                conn_pool = list(extra.at_most(conn, list(total_pool), m.rng, replace=False))
+                conn_pool = list(extra.at_most(conn, list(total_pool), self.rng, replace=False))
                 student.makeSchoolLinks(conn_pool)
 
     def decide_conn_number(self, agents, max_lim):
@@ -712,6 +721,8 @@ class MesaPROTON_OC(Model):
         self.calculate_crime_multiplier()
         self.calculate_criminal_tendency()
         self.calculate_arrest_rate()
+        self.setup_oc_groups()
+        self.setup_facilitators()
 
     def assign_jobs_and_wealth(self):
         """
@@ -857,6 +868,7 @@ class MesaPROTON_OC(Model):
         :return: float, sample
         """
         return np.exp(mu + sigma * self.rng.normal())
+
     def calculate_arrest_rate(self):
         """
         This gives the base probability of arrest, proportionally to the number of expected crimes in the first year.
