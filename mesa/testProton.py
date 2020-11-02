@@ -113,7 +113,7 @@ def test_big_crimes_from_small_fish():
     A large crime organized by a small fish is reported
     :return: None
     """
-    model = MesaPROTON_OC(as_netlogo=True)
+    model = MesaPROTON_OC()
     model.max_accomplice_radius = 6
     model.setup(500)
     model.num_co_offenders_dist = [[5, 0.5], [6, 0.5], [10, 0.5]]
@@ -126,7 +126,7 @@ def test_oc_crime_net_init():
     All OC links have weight >= 1
     :return: None
     """
-    model = MesaPROTON_OC(as_netlogo=True)
+    model = MesaPROTON_OC()
     model.setup(1000)
     for agent in model.schedule.agents:
         if agent.neighbors.get("criminal"):
@@ -134,7 +134,7 @@ def test_oc_crime_net_init():
                 assert agent.num_co_offenses[criminal] >= 1
 
 def test_oc_crime_stats():
-    model = MesaPROTON_OC(as_netlogo=True)
+    model = MesaPROTON_OC()
     model.setup(1500)
     for n in range(20):
         model.step()
@@ -286,7 +286,7 @@ def test_oc_embeddedness():
 
 
     #Test
-    model = MesaPROTON_OC(as_netlogo=True)
+    model = MesaPROTON_OC()
     model.setup(1000)
     test1(model) # A single non-OC person
     test2(model) # A single non-OC person with one family OC member
@@ -297,8 +297,12 @@ def test_oc_embeddedness():
     test7(model) # A non-OC person with all types of links
 
 def test_oc_intervention():
-    def test_version(as_netlogo):
-        model = MesaPROTON_OC(as_netlogo=as_netlogo)
+    def test1():
+        """
+        Test the Intervention on OC families
+        :return: None
+        """
+        model = MesaPROTON_OC()
         model.setup(550)
         for agent in model.schedule.agents:
             agent.oc_member = False
@@ -326,10 +330,7 @@ def test_oc_intervention():
         model.targets_addressed_percent = 100
         model.family_intervention = "remove-if-OC-member"
         model.cal_criminal_tendency_addme()
-        if as_netlogo:
-            model.family_intervene_netlogo_version()
-        else:
-            model.family_intervene_mesa_version()
+        model.family_intervene()
 
         assert np.sum([len(agent.neighbors.get("friendship")) for agent in the_family]) >= 40
         assert len(extra.weighted_one_of(model.schedule.agents, lambda x: x.age() == 16 and x.propensity == 0,
@@ -337,13 +338,77 @@ def test_oc_intervention():
         assert len([agent for agent in baby[0].neighbors.get("sibling") if agent.my_job != None]) == 8
         assert np.sum([agent.max_education_level for agent in the_family]) == 8
 
+    def test2():
+        """
+        Test Educational intervention
+        :return: None
+        """
+        def target_educational():
+            """
+            Get the mean of max_education_level
+            :return: float
+            """
+            return np.mean([agent.max_education_level for agent in model.schedule.agents
+                           if agent.age() <= 18 and agent.age() >= 12 and agent.my_school is not None])
 
-    test_version(as_netlogo=True)
-    #todo: this fails
-    test_version(as_netlogo=False)
+        def target_psychological():
+            """
+            Get the sum of friends
+            :return: int
+            """
+            return np.sum([len(agent.neighbors.get("friendship")) for agent in model.schedule.agents
+                         if agent.age() <= 18 and agent.age() >= 12 and agent.my_school is not None])
 
+        model = MesaPROTON_OC()
+        model.setup(1000)
+        model.targets_addressed_percent = 0
+        for i in range(5):
+            model.step()
+        model.social_support = "educational"
+        model.ticks_between_intervention = 2
+        model.targets_addressed_percent = 20
 
+        #Test Educational
+        before = target_educational()
+        for i in range(10):
+            model.socialization_intervene()
+        after = target_educational()
+        assert after > before
 
+        #Test psychological
+        model.social_support = "psychological"
+        before = target_psychological()
+        for i in range(10):
+            model.socialization_intervene()
+        after = target_psychological()
+        assert after > before
+
+        #Test target_psychological()
+        model.social_support = "more-friends"
+        before = target_psychological()
+        for i in range(10):
+            model.socialization_intervene()
+        after = target_psychological()
+        assert after > before
+
+    test1() #Test the Intervention on OC families
+    test2() #Test Educational intervention
+
+def test_oc_job():
+    """
+    Work system stays coherent
+    :return: None
+    """
+    model = MesaPROTON_OC()
+    model.setup(1000)
+    for i in range(36):
+        model.step()
+        # No minor working
+        assert any([agent for agent in model.schedule.agents if agent.age() < 16 and agent.my_job is not None]) == False
+        # Unemployed stay so
+        assert any([agent for agent in model.schedule.agents if (agent.job_level == 1 or agent.job_level) == 0 and agent.my_job is not None]) == False
+        # Nobody has two jobs
+        assert len([agent for agent in model.schedule.agents if agent.my_job is not None]) == len([job for job in model.jobs if job.my_worker is not None])
 
 
 
