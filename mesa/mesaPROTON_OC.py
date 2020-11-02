@@ -1414,32 +1414,20 @@ class MesaPROTON_OC(Model):
 if __name__ == "__main__":
 
     model = MesaPROTON_OC()
-    # model.initial_agents = 100
-    # model.create_agents()
-    # num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    # model.initial_agents = 200
-    # model.load_stats_tables()
-    # model.setup_education_levels()
-    # model.setup_persons_and_friendship()
-    # # Visualize network
-    # nx.draw(model.watts_strogatz)
-    # print("num links:")
-    # print(model.total_num_links())
-    # # model.setup_siblings()
-    # print("num links:")
-    # print(model.total_num_links())
-    model.intervention = "baseline"
-    model.setup(1000)
-    for a in range(100):
-        model.step()
-        print(model.ticks)
-        print([agent for agent in model.schedule.agents if agent.age() < 18 and agent.my_job])
-        # # Unemployed stay so
-        # print(any([agent for agent in model.schedule.agents if
-        #             (agent.job_level == 1 or agent.job_level) == 0 and agent.my_job is not None]))
-        # # Nobody has two jobs
-        # print(len([agent for agent in model.schedule.agents if agent.my_job is not None]) == len(
-        #     [job for job in model.jobs if job.my_worker is not None]))
+    model.initial_agents = 100
+    model.create_agents()
+    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
+    model.initial_agents = 200
+    model.load_stats_tables()
+    model.setup_education_levels()
+    model.setup_persons_and_friendship()
+    # Visualize network
+    nx.draw(model.watts_strogatz)
+    print("num links:")
+    print(model.total_num_links())
+    # model.setup_siblings()
+    print("num links:")
+    print(model.total_num_links())
 
 
 
