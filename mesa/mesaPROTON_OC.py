@@ -30,8 +30,8 @@ class MesaPROTON_OC(Model):
         self.network_saving_list = 0  # the networks that should be saved
         self.model_saving_interval = 0  # every how many we save model structure
         self.breed_colors = 0  # a table from breeds to turtle colors
-        self.this_is_a_big_crime = 0
-        self.good_guy_threshold = 0
+        self.this_is_a_big_crime = 3
+        self.good_guy_threshold = 0.6
         self.big_crime_from_small_fish = 0  # checking anomalous crimes
         # statistics tables
         self.num_co_offenders_dist = 0  # a list of probability for different crime sizes
@@ -61,7 +61,7 @@ class MesaPROTON_OC(Model):
         self.number_weddings = 0
         self.number_weddings_mean = 100
         self.number_weddings_sd = 0
-        self.removed_fatherships = 0
+        self.removed_fatherships = list()
         self.criminal_tendency_addme_for_weighted_extraction = 0
         self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction = 0
         self.number_law_interventions_this_tick = 0
@@ -734,6 +734,9 @@ class MesaPROTON_OC(Model):
         self.setup_oc_groups()
         self.setup_facilitators()
         self.datacollector.collect(self)
+        for agent in self.schedule.agents:
+            agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
+        self.calc_correction_for_non_facilitators()
 
     def assign_jobs_and_wealth(self):
         """
