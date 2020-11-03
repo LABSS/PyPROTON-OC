@@ -261,7 +261,7 @@ class Person(Agent):
         if not jobs_pool:
             jobs_pool = [j for j in self.model.jobs if j.my_worker == None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.model.rng.choice(jobs_pool, 1)[0]
+            the_job = self.model.rng.choice(jobs_pool)
             self.my_job = the_job
             the_job.my_worker = self
 
