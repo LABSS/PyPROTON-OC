@@ -22,7 +22,7 @@ class Person(Agent):
     
     def __init__(self, m:mesaPROTON_OC):
         # networks
-        self.m = m
+        self.model = m
         self.networks_init()
         self.sentence_countdown = 0
         self.num_crimes_committed = 0
@@ -55,27 +55,27 @@ class Person(Agent):
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
         Person.persons.append(self)
-        #print(m)
-        #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.m)]))
+        #print(model)
+        #print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.model)]))
 
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
 
     
     def age(self):
-        return np.floor((self.m.ticks - self.birth_tick) / 12)
+        return np.floor((self.model.ticks - self.birth_tick) / 12)
 
         
     def random_init(self, random_relationships = False, exclude_partner_net = False):
-        self.education_level = self.m.rng.choice(range(0,4))
+        self.education_level = self.model.rng.choice(range(0, 4))
         self.max_education_level = self.education_level
-        self.wealth_level = self.m.rng.choice(range(0,4))
-        self.job_level = self.m.rng.choice(range(0,4))
+        self.wealth_level = self.model.rng.choice(range(0, 4))
+        self.job_level = self.model.rng.choice(range(0, 4))
         self.my_job = 0               # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick = -1 * self.m.rng.choice(range(0,80*12))
-        self.gender_is_male = self.m.rng.choice([True,False])
+        self.birth_tick = -1 * self.model.rng.choice(range(0, 80 * 12))
+        self.gender_is_male = self.model.rng.choice([True, False])
         self.hobby = 0
-        self.criminal_tendency = self.m.rng.uniform(0, 1)
+        self.criminal_tendency = self.model.rng.uniform(0, 1)
         if random_relationships == True:
             self.random_links(exclude_partner_net)
 
@@ -105,8 +105,8 @@ class Person(Agent):
         if exclude_partner_net:
             networks.remove("partner")
         for net in networks:
-            for i in range(0,self.m.rng.integers(0,min(len(Person.persons), 100))):
-                self.neighbors.get(net).add(self.m.rng.choice(Person.persons))
+            for i in range(0, self.model.rng.integers(0, min(len(Person.persons), 100))):
+                self.neighbors.get(net).add(self.model.rng.choice(Person.persons))
             self.neighbors.get(net).discard(self)
 
     @staticmethod
@@ -205,25 +205,25 @@ class Person(Agent):
         This method modifies the attributes of the person instance based on the model's
         stats_tables as part of the initial setup of the model agents.
         """
-        row = extra.weighted_one_of(self.m.age_gender_dist, lambda x: x[-1], self.m.rng)  # select a row from our age_gender distribution
-        self.birth_tick =  0 - row[0] * self.m.ticks_per_year      # ...and set age...
+        row = extra.weighted_one_of(self.model.age_gender_dist, lambda x: x[-1], self.model.rng)  # select a row from our age_gender distribution
+        self.birth_tick =  0 - row[0] * self.model.ticks_per_year      # ...and set age... =
         self.gender_is_male =  bool(row[1]) # ...and gender according to values in that row.
-        self.retired = self.age() >= self.m.retirement_age                 # persons older than retirement_age are retired
+        self.retired = self.age() >= self.model.retirement_age                 # persons older than retirement_age are retired
         # education level is chosen, job and wealth follow in a conditioned sequence
-        self.max_education_level = extra.pick_from_pair_list(self.m.edu[self.gender_is_male], self.m.rng)
+        self.max_education_level = extra.pick_from_pair_list(self.model.edu[self.gender_is_male], self.model.rng)
         # apply model-wide education modifier
-        if self.m.education_modifier != 1.0:
-            if self.m.rng.random() < abs(self.m.education_modifier - 1):
-                self.max_education_level = self.max_education_level + (1 if (self.m.education_modifier > 1) else -1)
-                self.max_education_level = len(self.m.edu[True]) if self.max_education_level > len(self.m.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
+        if self.model.education_modifier != 1.0:
+            if self.model.rng.random() < abs(self.model.education_modifier - 1):
+                self.max_education_level = self.max_education_level + (1 if (self.model.education_modifier > 1) else -1)
+                self.max_education_level = len(self.model.edu[True]) if self.max_education_level > len(self.model.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level
-        for level in sorted(list(self.m.education_levels.keys()), reverse=True):
-            max_age = self.m.education_levels.get(level)[1]
+        for level in sorted(list(self.model.education_levels.keys()), reverse=True):
+            max_age = self.model.education_levels.get(level)[1]
             if self.age() <= max_age:
                 self.education_level = level - 1
-        self.propensity = self.m.lognormal(self.m.nat_propensity_m, self.m.nat_propensity_sigma)
+        self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
 
     def enroll_to_school(self, level):
         """
@@ -232,9 +232,11 @@ class Person(Agent):
         :param level: int, level of education to enroll
         """
         self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == level]
-        if not self.potential_school:
-            self.potential_school = [x for x in self.m.schools if x.diploma_level == level]
-        self.my_school = self.m.rng.choice(self.potential_school)
+        if self.potential_school:
+            self.my_school = self.model.rng.choice(self.potential_school)
+        else:
+            self.potential_school = [x for x in self.model.schools if x.diploma_level == level]
+            self.my_school = self.model.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
     def get_neighbor_list(self, net_name):
@@ -255,11 +257,11 @@ class Person(Agent):
         my_worker attribute of Job and the my_job attribute of Person.
         :return: None
         """
-        jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level == self.job_level]
+        jobs_pool = [j for j in self.model.jobs if j.my_worker == None and j.job_level == self.job_level]
         if not jobs_pool:
-            jobs_pool = [j for j in self.m.jobs if j.my_worker == None and j.job_level < self.job_level]
+            jobs_pool = [j for j in self.model.jobs if j.my_worker == None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.m.rng.choice(jobs_pool, None)
+            the_job = self.model.rng.choice(jobs_pool)
             self.my_job = the_job
             the_job.my_worker = self
 
@@ -277,9 +279,9 @@ class Person(Agent):
         self.criminal_tendency *= 0.94 if self.education_level >= 2 else 1.0
         # propensity
         self.criminal_tendency *= 1.97 if self.propensity > (np.exp(
-            self.m.nat_propensity_m - self.m.nat_propensity_sigma ** 2 / 2) + self.m.nat_propensity_threshold * np.sqrt(
-            np.exp(self.m.nat_propensity_sigma) ** 2 - 1) * np.exp(
-            self.m.nat_propensity_m + self.m.nat_propensity_sigma ** 2 / 2)) else 1.0
+            self.model.nat_propensity_m - self.model.nat_propensity_sigma ** 2 / 2) + self.model.nat_propensity_threshold * np.sqrt(
+            np.exp(self.model.nat_propensity_sigma) ** 2 - 1) * np.exp(
+            self.model.nat_propensity_m + self.model.nat_propensity_sigma ** 2 / 2)) else 1.0
         # crim-hist
         self.criminal_tendency *= 1.62 if self.num_crimes_committed >= 0 else 1.0
         # crim-fam
