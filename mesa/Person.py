@@ -65,7 +65,6 @@ class Person(Agent):
         # print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.model)]))
         #If imprisoned
         self.prisoner = False
-        self.sentence_countdown = 0
 
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
@@ -246,15 +245,15 @@ class Person(Agent):
         and modifies my_school atribute in-place.
         :param level: int, level of education to enroll
         """
-        self.potential_school = list()
+        potential_school = list()
         for school in [agent.my_school for agent in self.neighbors.get("household") if agent.my_school]:
             if school.diploma_level == level:
-                self.potential_school.append(school)
-        if self.potential_school:
-            self.my_school = self.model.rng.choice(self.potential_school)
+                potential_school.append(school)
+        if potential_school:
+            self.my_school = self.model.rng.choice(potential_school)
         else:
-            self.potential_school = [x for x in self.model.schools if x.diploma_level == level]
-            self.my_school = self.model.rng.choice(self.potential_school)
+            potential_school = [x for x in self.model.schools if x.diploma_level == level]
+            self.my_school = self.model.rng.choice(potential_school)
         self.my_school.my_students.add(self)
 
     def get_link_list(self, net_name):

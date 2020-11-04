@@ -10,6 +10,7 @@ from School import School
 from Employer import Employer
 from Job import Job
 import timeit
+from tqdm import tqdm
 # import testProton
 from itertools import combinations, chain
 import os
@@ -129,35 +130,15 @@ class MesaPROTON_OC(Model):
         self.data_folder = os.path.join(self.palermo_inputs, "data")
         self.load_stats_tables()
 
-        #Data Colletor
-        self.datacollector = DataCollector(
-            model_reporters={"n_agents": extra.get_n_agents,
-                             "o1": extra.o1,
-                             "o2" : extra.o2,
-                             "o3" : extra.o3,
-                             "o4" : extra.o4,
-                             "05a" : extra.o5a,
-                             "o6a": extra.o6a,
-                             "o11": extra.o11,
-                             "o13" : extra.o13,
-                             "015": extra.o15,
-                             "o16" : extra.o16},
-            agent_reporters={"household_links": extra.get_n_household_links,
-                             "friendship_links":extra.get_n_friendship_links,
-                             "criminal_links": extra.get_n_criminal_links,
-                             "professional_links":extra.get_n_professional_links,
-                             "school_links":extra.get_n_school_links,
-                             "sibling_links": extra.get_n_sibling_links,
-                             "offspring_links": extra.get_n_offspring_links,
-                             "partner_links": extra.get_n_partner_links,
-                             "criminal_tendency": extra.get_criminal_tendency})
-
-
-        # Create agents(
-        # mesaConfigCreateAgents.configAgents(self)
-        # print(MesaFin4.creation_frequency)
-        # self.running = True
-        # self.datacollector.collect(self)
+    def init_collector(self):
+        """
+        Instantiate a DataCollector
+        :return: None
+        """
+        model_reporters = {key: key for key in self.__dict__.keys()}
+        agent_reporters = {key: key for key in self.schedule.agents[0].__dict__.keys()}
+        # agent_reporters["cached_oc_embeddedness"] = lambda x: x.oc_embeddedness()
+        self.datacollector = DataCollector(model_reporters=model_reporters,agent_reporters=agent_reporters)
 
     def create_agents(self, random_relationships=False, exclude_partner_net=False):
         for i_agent in range(0, self.initial_agents):
@@ -215,18 +196,15 @@ class MesaPROTON_OC(Model):
                 if agent.sentence_countdown == 0:
                     agent.prisoner = False
         self.make_people_die()
-        self.ticks += 1
         self.datacollector.collect(self)
+        # The datacollector assume that agents have a step method
+        self.schedule.step()
+        self.ticks += 1
 
-    def run_model(self, n):
-        for self.ticks in range(n):
-            print("step: " + str(self.ticks))
+    def run(self, n_agents, ticks):
+        self.setup(n_agents)
+        for i in tqdm(range(ticks)):
             self.step()
-        # timeit.timeit(
-        #    'print("step: " + str(self.current_step)); self.step()',
-        #    setup = 'gc.enable()', number=10)
-        # if i % MesaFin4.creation_frequency == 0:
-        # random.choice(self.schedule.agents).create_pat()
 
     def fix_unemployment(self, correction):
         available = [x for x in self.schedule.agents if x.age > 16 and x.age < 65 and x.my_school == None]
@@ -380,15 +358,14 @@ class MesaPROTON_OC(Model):
         1. new jobs are created and assigned to eligible members (mothers or children)
         :return: None
         """
+        targets = list()
         if self.welfare_support == "job-mother":
-            targets = list()
             for mother in [agent.mother for agent in self.schedule.agents if agent.mother]:
                 if not mother.my_job and mother.neighbors.get("partner"):
                     if mother.get_link_list("partner")[0].oc_member:
                         targets.append(mother)
 
         if self.welfare_support == "job-child":
-            targets = list()
             for agent in self.schedule.agents:
                 if agent.age > 16 and agent.age < 24 and not agent.my_school and not agent.my_job and agent.father:
                     if agent.father.oc_member:
@@ -873,6 +850,7 @@ class MesaPROTON_OC(Model):
         self.calculate_arrest_rate()
         self.setup_oc_groups()
         self.setup_facilitators()
+        self.init_collector()
         self.datacollector.collect(self)
         for agent in self.schedule.agent_buffer(shuffled=True):
             agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
