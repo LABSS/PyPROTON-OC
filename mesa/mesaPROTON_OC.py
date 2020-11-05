@@ -14,6 +14,7 @@ import timeit
 from itertools import combinations
 import os
 from numpy.random import default_rng
+import time
 
 class MesaPROTON_OC(Model):
     """A simple model of an economy of intentional agents and tokens.
@@ -177,7 +178,7 @@ class MesaPROTON_OC(Model):
                 x.job_level = 2 if self.rng.uniform(0, 1) < ratio_on else 0
 
     def setup_facilitators(self):
-        for agent in self.schedule.agents:
+        for agent in self.schedule.agent_buffer(shuffled=True):
             agent.facilitator = True if not agent.oc_member and agent.age() > 18 and (self.rng.uniform(0, 1) < self.likelihood_of_facilitators) else False
 
     def read_csv_city(self, filename):
@@ -345,7 +346,7 @@ class MesaPROTON_OC(Model):
                     removed.fatherships.remove(a)
 
     def make_friends(self):
-        for a in self.schedule.agents:
+        for a in self.schedule.agent_buffer(shuffled=True):
             p_friends = a.potential_friends()
             num_new_friends = min(len(p_friends), self.rng.poisson(3))
             chosen = self.rng.choice(p_friends,
@@ -707,10 +708,10 @@ class MesaPROTON_OC(Model):
 
     def setup(self, n_agent):
         """
-        Warning: At the moment this procedure is partial, it has been added for testing in the development phase.
         Standard setup of the model
         :param n_agent: int, number of initial agents
         """
+        start = time.time()
         self.initial_agents = n_agent
         self.setup_education_levels()
         self.setup_persons_and_friendship()
@@ -734,16 +735,22 @@ class MesaPROTON_OC(Model):
         self.setup_oc_groups()
         self.setup_facilitators()
         self.datacollector.collect(self)
-        for agent in self.schedule.agents:
+        for agent in self.schedule.agent_buffer(shuffled=True):
             agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
         self.calc_correction_for_non_facilitators()
+        elapsed_time = time.time() - start
+        hours = elapsed_time // 3600
+        temp = elapsed_time - 3600 * hours
+        minutes = temp // 60
+        seconds = temp - 60 * minutes
+        print("Setup Completed in: " + "%d:%d:%d" %(hours, minutes, seconds))
 
     def assign_jobs_and_wealth(self):
         """
         This procedure modifies the job_level and wealth_level attributes of agents in-place. This is just a first
         assignment, and will be modified first by the multiplier then by adding neet status.
         """
-        for agent in self.schedule.agents:
+        for agent in self.schedule.agent_buffer(shuffled=True):
             if agent.age() > 16:
                 agent.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],self.rng)
                 agent.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male],self.rng)
@@ -755,7 +762,7 @@ class MesaPROTON_OC(Model):
         """
         Based on labour_status_by_age_and_sex table, this method modifies the job_level attribute of the agents in-place.
         """
-        for agent in self.schedule.agents:
+        for agent in self.schedule.agent_buffer(shuffled=True):
             if agent.age() > 14 and agent.age() < 65 and agent.job_level == 1 and self.rng.random() < \
                     self.labour_status_by_age_and_sex[agent.gender_is_male][agent.age()]:
                 agent.job_level = 0
