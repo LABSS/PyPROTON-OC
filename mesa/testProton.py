@@ -33,7 +33,7 @@ def test_generate_households():
     2. Take a random household and check if all the members of the household are in the other members' network
     3. Take the first simple family (we're sure it's in the first 5) and check if all the networks work.
     4. wealth must be the same for all members of the household
-    5. nobody should have more than one father and one mather
+    5. nobody should have more than one father and one mother
     """
     m = MesaPROTON_OC()
     m.initial_agents = 1000
@@ -55,16 +55,13 @@ def test_generate_households():
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
     #3
-    for test_simple_family in m.families[:5]:
+    for test_simple_family in m.families:
         if len(test_simple_family) >= 3 and test_family[0].neighbors["partner"] == test_family[1] and test_family[1].neighbors["partner"]  == test_family[0]:
             assert set(test_simple_family[1:]) == test_simple_family[0].neighbors["household"]
             assert test_simple_family[-1] in test_simple_family[0].neighbors["offspring"]
             assert test_simple_family[-1] in test_simple_family[1].neighbors["offspring"]
-            if type(test_simple_family[2:]) == list:
-                for son in test_simple_family[2:]:
-                    assert son.neighbors["parent"] == set(test_simple_family[:2])
-            else:
-                assert test_simple_family[-1].neighbors["parent"] == set(test_simple_family[:2])
+            for son in test_simple_family[2:]:
+                assert son.neighbors["parent"] == set(test_simple_family[:2])
     #4
     for agent in m.schedule.agents:
         for household in agent.neighbors["household"]:
@@ -78,17 +75,18 @@ def test_generate_households():
 
 def test_weddings():
     m = MesaPROTON_OC()
+    m.initial_agents = 500
     m.create_agents(random_relationships=True, exclude_partner_net=True)
     print(len(m.schedule.agents) - len(pp.Person.persons))
     print(m.number_weddings)
     m.number_weddings_mean = 100
-    for i in range(1, 5):
+    for i in range(1, 2):
         m.wedding()
     # print(Person.NumberOfLinks()-l)
     for agent in m.schedule.agents:
-        if agent.get_link_list("partner"):
-            assert agent.get_link_list("partner")[0].get_link_list("partner")[0] == agent
-    assert m.number_weddings == len([x for x in m.schedule.agents if x.get_link_list("partner")]) / 2
+        if agent.get_neighbor_list("partner"):
+            assert agent.get_neighbor_list("partner")[0].get_neighbor_list("partner")[0] == agent
+    assert m.number_weddings == len([x for x in m.schedule.agents if x.get_neighbor_list("partner")]) / 2
     assert m.number_weddings > 0
     # coherent state of weddings
 
@@ -134,3 +132,21 @@ def test_population_generator():
     m.facilitator_crimes = 0
     m.setup_persons_and_friendship()
     pass
+
+def test_criminal_propensity_setup():
+    """
+    Check if the criminal_tendency of the agents diverges from the theoretical value.
+    :return: None
+    """
+    m = MesaPROTON_OC()
+    m.setup(1000)
+    for line in m.c_range_by_age_and_sex:
+        # the line variable is composed as follows:
+        # [[bool(gender_is_male), int(minimum age range)], [int(maximum age range), float(c value)]]
+        subpop = [agent for agent in m.schedule.agents if
+                  agent.age() >= line[0][1] and agent.age() <= line[1][0] and agent.gender_is_male == line[0][0]]
+        if subpop:
+            total_c = 0
+            for agent in subpop:
+                total_c += agent.criminal_tendency
+            assert ((total_c - len(subpop) * line[1][1]) / total_c < 1.0E-10)
