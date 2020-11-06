@@ -44,7 +44,7 @@ class Person(Agent):
         self.number_of_children = 0
         self.facilitator = None
         self.hobby = 0
-        self.new_recruit = 0
+        self.new_recruit = -2
         self.migrant = 0
         self.criminal_tendency = 0
         self.my_school = None

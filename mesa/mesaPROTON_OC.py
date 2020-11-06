@@ -34,6 +34,7 @@ class MesaPROTON_OC(Model):
         self.this_is_a_big_crime = 3
         self.good_guy_threshold = 0.6
         self.big_crime_from_small_fish = 0  # checking anomalous crimes
+
         # statistics tables
         self.num_co_offenders_dist = 0  # a list of probability for different crime sizes
         self.fertility_table = 0  # a list of fertility rates
@@ -82,6 +83,7 @@ class MesaPROTON_OC(Model):
 
         # from graphical interface
         self.initial_agents = 100
+        self.intervention = None
         self.max_accomplice_radius = 2
         self.number_arrests_per_year = 30
         self.ticks_per_year = 12
@@ -115,20 +117,6 @@ class MesaPROTON_OC(Model):
         # loading data from tables and making first calculations
         self.data_folder = os.path.join(self.palermo_inputs, "data")
         self.load_stats_tables()
-
-        #Data Colletor
-        self.datacollector = DataCollector(
-            model_reporters={"n_agents": extra.get_n_agents},
-            agent_reporters={"household_links": extra.get_n_household_links,
-                             "friendship_links":extra.get_n_friendship_links,
-                             "criminal_links": extra.get_n_criminal_links,
-                             "professional_links":extra.get_n_professional_links,
-                             "school_links":extra.get_n_school_links,
-                             "sibling_links": extra.get_n_sibling_links,
-                             "offspring_links": extra.get_n_offspring_links,
-                             "partner_links": extra.get_n_partner_links,
-                             "criminal_tendency": extra.get_criminal_tendency})
-
 
         # Create agents(
         # mesaConfigCreateAgents.configAgents(self)
@@ -711,6 +699,7 @@ class MesaPROTON_OC(Model):
         Standard setup of the model
         :param n_agent: int, number of initial agents
         """
+        self.choose_intervention_setting()
         start = time.time()
         self.initial_agents = n_agent
         self.setup_education_levels()
@@ -723,6 +712,7 @@ class MesaPROTON_OC(Model):
             self.fix_unemployment(self.unemployment_multiplier)
         self.generate_households()
         self.setup_siblings()
+        self.assing_parents()
         self.setup_employers_jobs()
         for agent in [a for a in self.schedule.agent_buffer(shuffled=True) if
                       a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
@@ -734,7 +724,6 @@ class MesaPROTON_OC(Model):
         self.calculate_arrest_rate()
         self.setup_oc_groups()
         self.setup_facilitators()
-        self.datacollector.collect(self)
         for agent in self.schedule.agent_buffer(shuffled=True):
             agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
         self.calc_correction_for_non_facilitators()
@@ -898,8 +887,127 @@ class MesaPROTON_OC(Model):
         """
         self.arrest_rate = self.number_arrests_per_year / self.ticks_per_year / self.number_crimes_yearly_per10k / 10000 * self.initial_agents
 
+    def assing_parents(self):
+        """
+        This function modifies in-place the Person.mother and Person.father attribute of agents, based on networks.
+        :return: None
+        """
+        for agent in self.schedule.agents:
+            if agent.neighbors.get("parent"):
+                for parent in agent.neighbors.get("parent"):
+                    if parent.gender_is_male:
+                        agent.father = parent
+                    else:
+                        agent.mother = parent
 
-# 778 / 1700
+    def choose_intervention_setting(self):
+        """
+        Selecting the intervention setting, modifies the model attributes in-place
+        :return: None
+        """
+        if self.intervention == "baseline":
+            self.family_intervention = None
+            self.social_support = None
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = False
+            self.targets_addressed_percent = 10
+            self.ticks_between_intervention = 12
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "preventive":
+            self.family_intervention = "remove-if-OC-member"
+            self.social_support = None
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = False
+            self.targets_addressed_percent = 10
+            self.ticks_between_intervention = 1
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "preventive-strong":
+            self.family_intervention = "remove-if-OC-member"
+            self.social_support = None
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = False
+            self.targets_addressed_percent = 100
+            self.ticks_between_intervention = 1
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "disruptive":
+            self.family_intervention = None
+            self.social_support = None
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = False
+            self.targets_addressed_percent = 10
+            self.ticks_between_intervention = 1
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "disruptive-strong":
+            self.family_intervention = None
+            self.social_support = None
+            self.welfare_support = None
+            self.oc_boss_repression = True
+            self.facilitator_repression = False
+            self.targets_addressed_percent = 10
+            self.ticks_between_intervention = 1
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "students":
+            self.family_intervention = None
+            self.social_support = "all"
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = False
+            self.targets_addressed_percent = 10
+            self.ticks_between_intervention = 12
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "students-strong":
+            self.family_intervention = None
+            self.social_support = "all"
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = False
+            self.targets_addressed_percent = 100
+            self.ticks_between_intervention = 1
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "facilitators":
+            self.family_intervention = None
+            self.social_support = None
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = True
+            self.facilitator_repression_multiplier = 3
+            self.targets_addressed_percent = 10
+            self.ticks_between_intervention = 1
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+        if self.intervention == "facilitators-strong":
+            self.family_intervention = None
+            self.social_support = None
+            self.welfare_support = None
+            self.oc_boss_repression = False
+            self.facilitator_repression = True
+            self.facilitator_repression_multiplier = 20
+            self.targets_addressed_percent = 10
+            self.ticks_between_intervention = 1
+            self.intervention_start = 13
+            self.intervention_end = 9999
+
+
+        # 778 / 1700
 # next: testing an intervention that removes kids and then returning them.   
 # test OC members formation
 
