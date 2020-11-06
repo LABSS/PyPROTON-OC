@@ -50,7 +50,7 @@ class Person(Agent):
         self.my_school = None
         self.target_of_intervention = 0
         self.arrest_weight = 0
-        self.criminal_net_weight = dict()
+        self.num_co_offenses = dict()
         #super().__init__(self.unique_id, model)
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
@@ -130,14 +130,12 @@ class Person(Agent):
         :param asker: agent
         :return: None
         """
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("professional").add(person)
-                person.neighbors.get("professional").add(self)
-        else:
-            self.neighbors.get("professional").add(asker)
-            asker.neighbors.get("professional").add(self)
-        
+        if type(asker) != list:
+            asker = [asker]
+        for person in asker:
+            self.neighbors.get("professional").add(person)
+            person.neighbors.get("professional").add(self)
+
     def addSiblingLinks(self, targets):
         for x in targets:
             if x != self:
@@ -164,13 +162,9 @@ class Person(Agent):
             asker.neighbors.get("parent").add(self)
 
     def makeSchoolLinks(self, asker):
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("school").add(person)
-                person.neighbors.get("school").add(self)
-        else:
-            self.neighbors.get("school").add(asker)
-            asker.neighbors.get("school").add(self)
+        for person in asker:
+            self.neighbors.get("school").add(person)
+            person.neighbors.get("school").add(self)
 
     def addCriminalLink(self, asker):
         """
@@ -179,9 +173,11 @@ class Person(Agent):
         :return: None
         """
         self.neighbors.get("criminal").add(asker)
-        self.criminal_net_weight[asker] = 1
+        if asker not in self.num_co_offenses:
+            self.num_co_offenses[asker] = 1
         asker.neighbors.get("criminal").add(self)
-        asker.criminal_net_weight[self] = 1
+        if self not in asker.num_co_offenses:
+            asker.num_co_offenses[self] = 1
             
     def remove_link(self, forlorn, kind):
         self.neighbors.get(kind).discard(forlorn)
@@ -238,7 +234,7 @@ class Person(Agent):
             self.my_school = self.model.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
-    def get_link_list(self, net_name):
+    def get_neighbor_list(self, net_name):
         """
         Given the name of a network, this method returns a list of agents within the network.
         If the network is empty, it returns an empty list.
@@ -260,14 +256,16 @@ class Person(Agent):
         if not jobs_pool:
             jobs_pool = [j for j in self.model.jobs if j.my_worker == None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.model.rng.choice(jobs_pool, 1)[0]
+            the_job = self.model.rng.choice(jobs_pool)
             self.my_job = the_job
             the_job.my_worker = self
 
-    def factors_c(self):
+    def update_criminal_tendency(self):
         """
-        This procedure modifies the attribute self.criminal_tendency in-place, based on the characteristics of the agent.
-        [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        This procedure modifies the attribute self.criminal_tendency in-place, based on the individual characteristics of the agent.
+        The original nomenclature of the model in Netlogo is: [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        More information on criminal tendency modeling can be found on PROTON-Simulator-Report, page 30, 2.3.2 MODELLING CRIMINAL ACTIVITY (C):
+        [https://www.projectproton.eu/wp-content/uploads/2019/10/D5.1-PROTON-Simulator-Report.pdf]
         :return: None
         """
         # employment
@@ -286,21 +284,20 @@ class Person(Agent):
                 len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
             self.family_link_neighbors())) > 0.5 else 1.0
         # crim-neigh
-        self.criminal_tendency *= 1.81 if self.get_link_list("friendship") or self.get_link_list("professional") and (
-                len([agent for agent in self.get_link_list("friendship") if agent.num_crimes_committed > 0]
-                    + [agent for agent in self.get_link_list("professional") if agent.num_crimes_committed > 0]) / len(
-            [agent for agent in self.get_link_list("friendship")] + [agent for agent in self.get_link_list(
+        self.criminal_tendency *= 1.81 if self.get_neighbor_list("friendship") or self.get_neighbor_list("professional") and (
+                len([agent for agent in self.get_neighbor_list("friendship") if agent.num_crimes_committed > 0]
+                    + [agent for agent in self.get_neighbor_list("professional") if agent.num_crimes_committed > 0]) / len(
+            [agent for agent in self.get_neighbor_list("friendship")] + [agent for agent in self.get_neighbor_list(
                 "professional")])) > 0.5 else 1.0
         # oc-member
-        self.criminal_tendency *= 4.50 if self.oc_member and not (
-                self.model.intervention_is_on() and self.model.oc_members_scrutinize) else 1.0
+        self.criminal_tendency *= 4.50 if self.oc_member else 1.0
 
     def family_link_neighbors(self):
         """
         This function returns a list of all agents that have sibling,offspring,partner type connection with the agent.
         :return: list, the agents
         """
-        return self.get_link_list("sibling") + self.get_link_list("offspring") + self.get_link_list("partner")
+        return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
 
     def remove_from_household(self):
         """
@@ -312,8 +309,6 @@ class Person(Agent):
             if self in member.neighbors.get("household"):
                 member.neighbors.get("household").remove(self)
                 self.neighbors.get("household").remove(member)
-
-
 
 class Prisoner(Person):
     sentence_countdown = 0
