@@ -43,3 +43,4 @@ traitlets==4.3.3
 urllib3==1.25.9
 wcwidth==0.2.4
 wincertstore==0.2
+numba==0.51.2

@@ -103,7 +103,7 @@ class MesaPROTON_OC(Model):
         self.oc_members_scrutinize = False
         self.facilitator_repression = False
         self.facilitator_repression_multiplier = 2.0
-        self.percentage_of_facilitators = 0.005
+        self.likelihood_of_facilitators = 0.005
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -191,7 +191,7 @@ class MesaPROTON_OC(Model):
 
     def setup_facilitators(self):
         for agent in self.schedule.agent_buffer(shuffled=True):
-            agent.facilitator = True if not agent.oc_member and agent.age() > 18 and (self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+            agent.facilitator = True if not agent.oc_member and agent.age() > 18 and (self.rng.uniform(0, 1) < self.likelihood_of_facilitators) else False
 
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
@@ -226,7 +226,7 @@ class MesaPROTON_OC(Model):
     def wedding(self):
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)  # if num-wedding-this-month < 0 [ set num-wedding-this-month 0 ] ???
-        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and x.neighbors.get("partner")]
+        maritable = [x for x in self.schedule.agents if x.age() > 25 and x.age() < 55 and not x.neighbors.get("partner")]
         print("marit size: " + str(len(maritable)))
         while num_wedding_this_month > 0 and len(maritable) > 1:
             ego = self.rng.choice(maritable)
@@ -241,18 +241,19 @@ class MesaPROTON_OC(Model):
             if pool:  # https://www.python-course.eu/weighted_choice_and_sample.php
                 partner = self.rng.choice(pool,
                                            p=extra.wedding_proximity_with(ego, pool),
-                                           size=1,
-                                           replace=False)[0]
+                                           replace=False)
                 conclude_wedding(ego, partner)
                 maritable.remove(partner)
                 num_wedding_this_month -= 1
                 self.number_weddings += 1
             maritable.remove(ego)  # removed in both cases, if married or if can't find a partner
 
-    def intervention_on(self):
-        return self.ticks % self.ticks_between_intervention == 0 and \
-               self.ticks >= self.intervention_start and \
-               self.ticks < self.intervention_end
+    def intervention_is_on(self):
+        """
+        Returns True if there is an active intervention False otherwise.
+        :return: bool
+        """
+        return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
     def socialization_intervene(self):
         potential_targets = [x for x in schedule.agents if x.age() < 18 and x.age >= 6 and x.my_school != None]
@@ -278,15 +279,15 @@ class MesaPROTON_OC(Model):
         if support_set:
             chosen = self.rng.choice(support_set,
                                       p=[(1 - (y.age() - x.age()) / 120) for y in support_set],
-                                      size=1,
-                                      replace=False)[0]
+                                      size=None,
+                                      replace=False)
             chosen.makeFriends(x)
 
     def soc_add_more_friends(self, targets):
         for x in targets:
             support_set = limited.extraction(schedule.agents.remove(x))
             if support_set:
-                x.makeFriends(self.rng.choice(support_set, size=1,
+                x.makeFriends(self.rng.choice(support_set, size=None,
                                              p=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction
                                                 - y.criminal_tendency for y in support_set]))
 
@@ -401,10 +402,10 @@ class MesaPROTON_OC(Model):
         # families first.
         # we assume here that we'll never get a negative criminal tendency.
         oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
-        candidates = list()
         for head in oc_family_heads:
             head.oc_member = True
-            candidates += [relative for relative in head.neighbors.get('household') if relative.age() >= 18]
+        candidates = [relative for oc_family_head in oc_family_heads for relative in oc_family_head.neighbors.get('household')
+                          if relative.age() >= 18]
         if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
@@ -442,7 +443,7 @@ class MesaPROTON_OC(Model):
         # nx.draw(watts_strogatz, with_labels=True)
         # plt.show()
 
-    def incestuos(self, ego, candidates):
+    def list_contains_problems(self, ego, candidates):
         """
         This procedure checks if there are any links between partners within the candidate pool.
         Returns True if there are, None if there are not.
@@ -451,9 +452,9 @@ class MesaPROTON_OC(Model):
         :param candidates: list of Person objects
         :return: bool, True if there are links between partners, None otherwise.
         """
-        all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
+        all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
         for sibling in all_potential_siblings:
-            if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
+            if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[0] in all_potential_siblings:
                 return True
 
     def setup_siblings(self):
@@ -473,9 +474,9 @@ class MesaPROTON_OC(Model):
             # remove couples from candidates and their neighborhoods (siblings)
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
-            while len(candidates) > 0 and self.incestuos(agent, candidates):
+            while len(candidates) > 0 and self.list_contains_problems(agent, candidates):
                 # trouble should exist, or check-all-siblings would fail
-                potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
+                potential_trouble = [x for x in candidates if agent.get_neighbor_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
             targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
@@ -645,19 +646,16 @@ class MesaPROTON_OC(Model):
         :return: dict, a new dictionary
         """
         dic = dict()
-        extra_depth_modifier = 0
-        if extra_depth:
-            extra_depth_modifier = 1
+        extra_depth_modifier = 1 if extra_depth else 0
 
-        if len(df.columns) + extra_depth_modifier == 2:
-            for col in np.unique(df.iloc[:,0]):
+        for col in np.unique(df.iloc[:, 0]):
+            if len(df.columns) + extra_depth_modifier == 2:
                 dic[col] = df[df.iloc[:,0] == col].iloc[:,1].values
-        if len(df.columns) + extra_depth_modifier == 3:
-            for col in np.unique(df.iloc[:,0]):
+            if len(df.columns) + extra_depth_modifier == 3:
                 dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
-        if len(df.columns) + extra_depth_modifier == 4:
-            for col in np.unique(df.iloc[:, 0]):
+            if len(df.columns) + extra_depth_modifier == 4:
                 dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+        if len(df.columns) + extra_depth_modifier == 4:
             for key in dic:
                 subdic = dict()
                 for subcol in np.unique(dic[key].iloc[:, 0]):
@@ -705,7 +703,7 @@ class MesaPROTON_OC(Model):
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
                 total_pool = school.my_students.difference({student})
-                conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
+                conn_pool = list(extra.at_most(conn, list(total_pool), self.rng, replace=False))
                 student.makeSchoolLinks(conn_pool)
 
     def decide_conn_number(self, agents, max_lim):
@@ -740,7 +738,7 @@ class MesaPROTON_OC(Model):
         self.setup_siblings()
         self.assing_parents()
         self.setup_employers_jobs()
-        for agent in [a for a in self.schedule.agents if
+        for agent in [a for a in self.schedule.agent_buffer(shuffled=True) if
                       a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
                       and a.job_level > 1]:
             agent.find_job()
@@ -794,7 +792,7 @@ class MesaPROTON_OC(Model):
         self.jobs_target = len([a for a in self.schedule.agents if
                                 a.job_level > 1 and a.my_school == None and a.age() > 16 and a.age() < self.retirement_age]) * 1.2
         while len(self.jobs) < self.jobs_target:
-            n = int(self.rng.choice(self.job_counts, 1))
+            n = self.rng.choice(self.job_counts, size=None)
             new_employer = Employer(self)
             self.employers.append(new_employer)
             for job in range(n):
@@ -830,14 +828,13 @@ class MesaPROTON_OC(Model):
             employees = employer.employees()
             conn = self.decide_conn_number(employees, 20)
             for employee in employees:
-                total_pool = employees.copy()
-                total_pool.remove(employee)
+                total_pool = [agent for agent in employees if agent != employee]
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.makeProfessionalLinks(conn_pool)
 
     def df_to_lists(self,df):
         """
-        This function transforms a pandas DataRame into nested lists as follows:
+        This function transforms a pandas DataFrame into nested lists as follows:
         df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
 
         This transformation ensures a faster access to the values using the position in the list
@@ -880,7 +877,7 @@ class MesaPROTON_OC(Model):
                 #c is the cell value. Now we calculate criminal-tendency with the factors.
                 for agent in subpop:
                     agent.criminal_tendency = c
-                    agent.factors_c()
+                    agent.update_criminal_tendency()
                 #then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
                 epsilon = c - np.mean([agent.criminal_tendency for agent in subpop])
                 for agent in subpop:
@@ -897,13 +894,6 @@ class MesaPROTON_OC(Model):
         n = len(self.schedule.agents)
         self.correction_for_non_facilitators = [
             (n - self.facilitator_repression_multiplier * f) / (n - f)] if f > 0 else 1.0
-
-    def intervention_is_on(self):
-        """
-        Returns True if there is an active intervention False otherwise.
-        :return: bool
-        """
-        return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
     def lognormal(self, mu, sigma):
         """
@@ -1057,12 +1047,11 @@ def conclude_wedding(ego, partner):
     for x in [ego, partner]:
         for y in x.neighbors["household"]:
             y.neighbors["household"].discard(x)  # should be remove(x) once we finish tests
-    ego.neighbors["household"] = {partner}
-    partner.neighbors["household"] = {ego}
-    ego.neighbors.get("partner").add(partner)
-    partner.neighbors.get("partner").add(ego)
+    ego.neighbors["household"].add(partner)
+    partner.neighbors["household"].add(ego)
+    ego.neighbors["partner"].add(partner)
+    partner.neighbors["partner"].add(ego)
 staticmethod(conclude_wedding)
-
 
 if __name__ == "__main__":
 
