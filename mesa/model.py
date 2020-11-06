@@ -5,126 +5,134 @@ from mesa.datacollection import DataCollector
 import pandas as pd
 import numpy as np
 import networkx as nx
-from Person import *
-from School import School
-from Employer import Employer
-from Job import Job
-import timeit
 from tqdm import tqdm
 from itertools import combinations, chain
 import os
 from numpy.random import default_rng
 import time
+from entities import Person, School, Employer, Job
+from typing import List, Set, Dict, Tuple, Optional, Union, Any
 
 
-class MesaPROTON_OC(Model):
+class ProtonOC(Model):
     """
     Simulation of recruitment to terrorism.
     Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu
     """
 
-    def __init__(self, seed=None):
+    def __init__(self, seed: int = int(time.time())) -> None:
         super().__init__(seed=seed)
-        self.seed = seed
-        self.rng = default_rng(seed)
+        self.seed: int = seed
+        self.rng: np.random.default_rng = default_rng(seed)
         self.check_random = [self.rng.random(), self.random.random()]
-        self.this_is_a_big_crime = 3
-        self.good_guy_threshold = 0.6
-        self.big_crime_from_small_fish = 0  # checking anomalous crimes
-        self.education_levels = dict()  # table from education level to data
-        self.removed_fatherships = list()
-        self.migration_on = False
-        self.schools = list()
-        self.jobs = list()
-        self.employers = list()
+        self.education_levels: dict = dict()  # table from education level to data
+        self.removed_fatherships: list = list()
+        self.schools: List[School] = list()
+        self.jobs: List[Job] = list()
+        self.employers: List[Employer] = list()
+        self.datacollector: DataCollector or None = None
 
         # Intervention
-        self.family_intervention = None
-        self.social_support = None
-        self.welfare_support = None
+        self.family_intervention: str or None = None
+        self.social_support: str or None = None
+        self.welfare_support: str or None = None
 
         # outputs
-        self.number_deceased = 0
-        self.facilitator_fails = 0
-        self.facilitator_crimes = 0
-        self.crime_size_fails = 0
-        self.number_born = 0
-        self.number_migrants = 0
-        self.number_weddings = 0
-        self.number_weddings_mean = 100
-        self.number_weddings_sd = 0
-        self.criminal_tendency_addme = 0  # criminal_tendency_addme_for_weighted_extraction
-        self.number_law_interventions_this_tick = 0
-        self.correction_for_non_facilitators = 0
-        self.number_protected_recruited_this_tick = 0
-        self.number_offspring_recruited_this_tick = 0
-        self.people_jailed = 0
-        self.number_crimes = 0
-        self.crime_multiplier = 0
-        self.kids_intervention_counter = 0
+        self.this_is_a_big_crime: int = 3
+        self.good_guy_threshold: float = 0.6
+        self.number_deceased: float = 0
+        self.facilitator_fails: float = 0
+        self.facilitator_crimes: float = 0
+        self.crime_size_fails: float = 0
+        self.number_born: int = 0
+        self.number_migrants: int = 0
+        self.number_weddings: int = 0
+        self.number_weddings_mean: float = 100
+        self.number_weddings_sd: float = 0
+        self.criminal_tendency_addme: float = 0  # criminal_tendency_addme_for_weighted_extraction
+        self.number_law_interventions_this_tick: int = 0
+        self.correction_for_non_facilitators: float = 0
+        self.number_protected_recruited_this_tick: int = 0
+        self.number_offspring_recruited_this_tick: int = 0
+        self.people_jailed: int = 0
+        self.number_crimes: int = 0
+        self.crime_multiplier: float = 0
+        self.kids_intervention_counter: int = 0
+        self.big_crime_from_small_fish: int = 0  # checking anomalous crimes
 
-        self.schedule = RandomActivation(self)
+        #Scheduler
+        self.schedule: RandomActivation = RandomActivation(self)
 
         # from graphical interface
-        self.initial_agents = 100
-        self.intervention = None
-        self.max_accomplice_radius = 2
-        self.number_arrests_per_year = 30
-        self.ticks_per_year = 12
-        self.number_crimes_yearly_per10k = 2000
-        self.ticks = 0
-        self.ticks_between_intervention = 1
-        self.intervention_start = 13
-        self.intervention_end = 999
-        self.num_oc_persons = 30
-        self.num_oc_families = 8
-        self.education_modifier = 1.0  # education-rate in Netlogo model
-        self.retirement_age = 65
-        self.unemployment_multiplier = "base"
-        self.nat_propensity_m = 1.0
-        self.nat_propensity_sigma = 0.25
-        self.nat_propensity_threshold = 1.0
-        self.facilitator_repression = False
-        self.facilitator_repression_multiplier = 2.0
-        self.percentage_of_facilitators = 0.005
-        self.targets_addressed_percent = 10
-        self.threshold_use_facilitators = 4
-        self.oc_embeddedness_radius = 2
-        self.oc_boss_repression = False
-        self.punishment_length = 1
-        self.constant_population = False
+        self.migration_on: bool = False
+        self.initial_agents: int = 100
+        self.intervention: str = "baseline"
+        self.max_accomplice_radius: int = 2
+        self.number_arrests_per_year: int = 30
+        self.ticks_per_year: int = 12
+        self.number_crimes_yearly_per10k: int = 2000
+        self.ticks: int = 0
+        self.ticks_between_intervention: int = 1
+        self.intervention_start: int = 13
+        self.intervention_end: int = 999
+        self.num_oc_persons: int = 30
+        self.num_oc_families: int = 8
+        self.education_modifier: float = 1.0  # education-rate in Netlogo model
+        self.retirement_age: int = 65
+        self.unemployment_multiplier: int or str = "base"
+        self.nat_propensity_m: float = 1.0
+        self.nat_propensity_sigma: float = 0.25
+        self.nat_propensity_threshold: float = 1.0
+        self.facilitator_repression: bool = False
+        self.facilitator_repression_multiplier: float = 2.0
+        self.percentage_of_facilitators: float = 0.005
+        self.targets_addressed_percent: float = 10
+        self.threshold_use_facilitators: float = 4
+        self.oc_embeddedness_radius: int = 2
+        self.oc_boss_repression: bool = False
+        self.punishment_length: int = 1
+        self.constant_population: bool = False
+
         # Folders definition
-        self.mesa_dir = os.getcwd()
-        self.cwd = os.path.dirname(self.mesa_dir)
-        self.input_directory = os.path.join(self.cwd, "inputs")
-        self.palermo_inputs = os.path.join(self.input_directory, "palermo")
-        self.eindhoven = os.path.join(self.input_directory, "eindhoven")
-        self.general = os.path.join(self.input_directory, "general")
-        self.general_data = os.path.join(self.general, "data")
-        self.data_folder = os.path.join(self.palermo_inputs, "data")
+        self.mesa_dir: str = os.getcwd()
+        self.cwd: str = os.path.dirname(self.mesa_dir)
+        self.input_directory: str = os.path.join(self.cwd, "inputs")
+        self.palermo_inputs: str = os.path.join(self.input_directory, "palermo")
+        self.eindhoven: str = os.path.join(self.input_directory, "eindhoven")
+        self.general: str = os.path.join(self.input_directory, "general")
+        self.general_data: str = os.path.join(self.general, "data")
+        self.data_folder: str = os.path.join(self.palermo_inputs, "data")
         # loading data from tables and making first calculations
         self.load_stats_tables()
 
 
-    def init_collector(self):
+    def init_collector(self, complete: bool = False) -> None:
         """
-        Instantiate a DataCollector
+        This function instantiates a mesa.datacollection.DataCollector object.
+        This object allows to collect the data generated by the model. It is accessed at the end of the setup
+        and at the end of each step, all attributes of the model and all attributes of all agents are collected each call.
+        If complete is True, additional information are collected that need to be calculated and therefore
+        may slow down the model (e.g. oc_embeddedness that call the function Person.oc_embeddedness())
+        The collected data is stored in a dictionary and transformed into a Dataframe when get_model_vars_dataframe() or
+        get_agents_vars_dataframe() are called.
+        :param complete: bool, if True extra data are collected
         :return: None
         """
         model_reporters = {key: key for key in self.__dict__.keys()}
         agent_reporters = {key: key for key in self.schedule.agents[0].__dict__.keys()}
-        # agent_reporters["cached_oc_embeddedness"] = lambda x: x.oc_embeddedness()
+        if complete:
+            agent_reporters["oc_embeddedness"] = lambda x: x.oc_embeddedness()
         self.datacollector = DataCollector(model_reporters=model_reporters, agent_reporters=agent_reporters)
 
 
-    def create_agents(self, random_relationships=False, exclude_partner_net=False):
-        for i_agent in range(0, self.initial_agents):
-            i_agent = Person(self)
-            self.schedule.add(i_agent)
-            i_agent.random_init(random_relationships, exclude_partner_net)
-
-
-    def step(self):
+    def step(self) -> None:
+        """
+        This procedure is the step or rather a single tick of the model. The mesa package is designed so that the
+        step function of the model should activate the step function of individual agents through the scheduler.
+        In this model on the contrary agents do not have a step function (or rather they do but it does nothing),
+        everything is managed by the step function of the model.
+        :return: None
+        """
         for agent in self.schedule.agents:
             agent.num_crimes_committed_this_tick = 0
             agent.calculate_age()
@@ -137,19 +145,17 @@ class MesaPROTON_OC(Model):
             if self.welfare_support:
                 self.welfare_intervene()
             # OC-members-repression works in arrest-probability-with-intervention in commmit-crime
-            # thing that happen yearly
+        # things we only update yearly
         if (self.ticks % self.ticks_per_year) == 0:
             self.calculate_criminal_tendency()
             self.calculate_crime_multiplier()  # we should update it, if population change
             self.graduate_and_enter_jobmarket()
-            for agent in [agent for agent in self.schedule.agents
-                          if agent.job_level < 2
-                             and agent.just_changed_age()
-                             and agent.age in self.labour_status_range[agent.gender_is_male].keys()]:
+            # updates neet status only when changing age range (the age is a key of the table)
+            for agent in [agent for agent in self.schedule.agents if agent.job_level < 2 and agent.just_changed_age() and agent.age in self.labour_status_range[agent.gender_is_male].keys()]:
                 agent.update_unemployment_status()
-            for agent in [agent for agent in self.schedule.agents if not agent.my_school and agent.age >= 18 \
-                                                                     and agent.age < self.retirement_age and not agent.my_job \
-                                                                     and not agent.retired and agent.job_level > 1]:
+            for agent in [agent for agent in self.schedule.agents
+                          if not agent.my_school and agent.age >= 18 and agent.age < self.retirement_age
+                          and not agent.my_job and not agent.retired and agent.job_level > 1]:
                 agent.find_job()
                 if agent.my_job:
                     total_pool = [candidate for candidate in agent.my_job.my_employer.employees() if candidate != agent]
@@ -176,38 +182,58 @@ class MesaPROTON_OC(Model):
                     agent.prisoner = False
         self.make_people_die()
         self.datacollector.collect(self)
-        # The datacollector assume that agents have a step method
         self.schedule.step()
         self.ticks += 1
 
 
-    def run(self, n_agents, ticks):
+    def run(self, n_agents: int, ticks: int) -> None:
+        """
+        Run the model setup with @n_agents agents and execute @ticks tick.
+        :param n_agents: int, number of agents
+        :param ticks:int, number of agents
+        :return:
+        """
         self.setup(n_agents)
-        for i in tqdm(range(ticks)):
+        pbar = tqdm(np.arange(0, ticks))
+        for tick in pbar:
             self.step()
+            pbar.set_description("tick: %s" % tick)
 
 
-    def fix_unemployment(self, correction):
-        available = [x for x in self.schedule.agents if x.age > 16 and x.age < 65 and x.my_school == None]
-        unemployed = [x for x in available if x.job_level == 1]
-        occupied = [x for x in available if x.job_level > 1]
-        notlooking = [x for x in available if x.job_level == 0]
+    def fix_unemployment(self, correction: Union[float, int, str]) -> None:
+        """
+        This function strictly depends on the Proton_OC.unemployment_multiplier parameter.
+        If this parameter is different from "base" a correction to unemployment is activated;
+        with a correction > 1 increase unemployment otherwise decrease unemployment.
+        This policy is applied by modifying in-place the Person.job_level attribute of the eligible agents
+        :param correction: Union[float, int, str], the correction
+        :return: None
+        """
+        available = [agent for agent in self.schedule.agents if agent.age > 16 and agent.age < 65 and agent.my_school is None]
+        unemployed = [agent for agent in available if agent.job_level == 1]
+        occupied = [agent for agent in available if agent.job_level > 1]
+        notlooking = [agent for agent in available if agent.job_level == 0]
         ratio_on = len(occupied) / (len(occupied) + len(notlooking))
-        if correction > 1.0:
+        if correction > 1:
             # increase unemployment
             for x in self.rng.choice(
-                    occupied, ((correction - 1) * len(unemployed) * ratio_on), replace=False):
-                x.job_level = 1,  # no need to resciss job links as they haven't been created yet.
+                    occupied, int(((correction - 1) * len(unemployed) * ratio_on)), replace=False):
+                x.job_level = 1  # no need to resciss job links as they haven't been created yet.
             for x in self.rng.choice(
-                    notlooking, (correction - 1) * len(unemployed) * (1 - ratio_on), replace=False):
-                x.job_level = 1,  # no need to resciss job links as they haven't been created yet.
+                    notlooking, int((correction - 1) * len(unemployed) * (1 - ratio_on)), replace=False):
+                x.job_level = 1  # no need to resciss job links as they haven't been created yet.
         else:
             # decrease unemployment
-            for x in self.rng.choice(unemployed, (1 - correction) * len(unemployed), replace=False):
+            for x in self.rng.choice(unemployed, int((1 - correction) * len(unemployed)), replace=False):
                 x.job_level = 2 if self.rng.uniform(0, 1) < ratio_on else 0
 
 
-    def setup_facilitators(self):
+    def setup_facilitators(self) -> None:
+        """
+        Based on parameter ProtonOc.percentage_of_facilitators this function gives a number of agents to become facilitators,
+        modifying the Person.facilitator attribute in-place.
+        :return: None
+        """
         for agent in self.schedule.agent_buffer(shuffled=True):
             agent.facilitator = True if not agent.oc_member and agent.age > 18 and (
                         self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
@@ -216,17 +242,12 @@ class MesaPROTON_OC(Model):
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
 
-    # but-first?          to-report read-csv [ base-file-name ]
-    # report but-first csv:from-file (word data-folder base-file-name ".csv")
-
 
     def load_stats_tables(self):
-        self.num_co_offenders_dist = pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv"))
         self.fertility_table = self.df_to_dict(self.read_csv_city("initial_fertility_rates"), extra_depth=True)
         self.mortality_table = self.df_to_dict(self.read_csv_city("initial_mortality_rates"), extra_depth=True)
         self.edu = self.df_to_dict(self.read_csv_city("edu"))
         self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
-
         self.edu_by_wealth_lvl = self.read_csv_city("edu_by_wealth_lvl")
         self.work_status_by_edu_lvl = self.df_to_dict(self.read_csv_city("work_status_by_edu_lvl"))
         self.wealth_quintile_by_work_status = self.df_to_dict(self.read_csv_city("wealth_quintile_by_work_status"))
@@ -238,8 +259,6 @@ class MesaPROTON_OC(Model):
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
         self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), extra_depth=True)
         self.labour_status_range = self.df_to_dict(self.read_csv_city("labour_status_range"), extra_depth=True)
-        # further sources:
-        # schools.csv table goes into education_levels
         marriage = pd.read_csv(os.path.join(self.general_data, "marriages_stats.csv"))
         self.number_weddings_mean = marriage['mean_marriages'][0]
         self.number_weddings_sd = marriage['std_marriages'][0]
@@ -950,6 +969,7 @@ class MesaPROTON_OC(Model):
         :param employer_size: float,
         :return: int,
         """
+        global most_similar_key
         if employer_size in list(self.jobs_by_company_size.keys()):
             return extra.pick_from_pair_list(self.jobs_by_company_size[employer_size], self.rng)
         else:
@@ -1448,18 +1468,6 @@ class MesaPROTON_OC(Model):
 
 
 if __name__ == "__main__":
-    model = MesaPROTON_OC()
-    model.initial_agents = 100
-    model.create_agents()
-    num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
-    model.initial_agents = 200
-    model.load_stats_tables()
-    model.setup_education_levels()
-    model.setup_persons_and_friendship()
-    # Visualize network
-    nx.draw(model.watts_strogatz)
-    print("num links:")
-    print(model.total_num_links())
-    # model.setup_siblings()
-    print("num links:")
-    print(model.total_num_links())
+    model = ProtonOC()
+    model.unemployment_multiplier = 4
+    model.run(1000,600)

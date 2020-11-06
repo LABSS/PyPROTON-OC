@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
-import extra
+from __future__ import annotations
+import typing
+if typing.TYPE_CHECKING:
+    from model import ProtonOC
 from mesa import Agent
-import mesaPROTON_OC
 import numpy as np
 import networkx as nx
 from itertools import chain
-
+import extra
 
 class Person(Agent):
     max_id = 0
-    persons = []
     network_names = [
         'sibling',
         'offspring',
@@ -21,7 +21,7 @@ class Person(Agent):
         'professional',
         'school']
 
-    def __init__(self, model: mesaPROTON_OC):
+    def __init__(self, model: ProtonOC):
         self.model = model
         self.prisoner = False
         # networks
@@ -57,7 +57,6 @@ class Person(Agent):
         self.co_off_flag = dict()  # criminal-links
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
-        Person.persons.append(self)
         self.co_off_flag = dict()
 
     def __repr__(self):
@@ -66,7 +65,7 @@ class Person(Agent):
     def calculate_age(self):
         self.age = extra._age(self.model.ticks, self.birth_tick)
 
-    def random_init(self, random_relationships=False, exclude_partner_net=False):
+    def random_init(self, random_relationships : bool = False, exclude_partner_net: bool = False):
         self.education_level = self.model.rng.choice(range(0, 4))
         self.max_education_level = self.education_level
         self.wealth_level = self.model.rng.choice(range(0, 4))
@@ -572,6 +571,54 @@ class Person(Agent):
             for net in self.network_names:
                 if self in agent.neighbors.get(net):
                     agent.neighbors.get(net).remove(self)
+
+
+class Job():
+    max_id = 0
+    def __init__(self, m):
+        self.m = m
+        self.job_level = 0
+        self.my_employer = 0
+        self.my_worker = None
+        self.unique_id = Job.max_id
+        Job.max_id = Job.max_id + 1
+
+    def __repr__(self):
+        return "Job: " + str(self.unique_id) + " Level: " + str(self.job_level)
+
+
+class Employer():
+    max_id = 0
+    def __init__(self, model: ProtonOC):
+        self.my_jobs = list()
+        self.model = model
+        self.unique_id = Employer.max_id
+        Employer.max_id = Employer.max_id + 1
+
+    def __repr__(self):
+        return "Employer: " + str(self.unique_id)
+
+    def create_job(self, level: int, worker):
+        newjob = Job(self.model)
+        newjob.level = level
+        worker.my_job = newjob
+        self.my_jobs.append(newjob)
+
+    def employees(self):
+        return [x.my_worker for x in self.my_jobs if x.my_worker != None]
+
+
+class School():
+    max_id = 0
+    def __init__(self, model: ProtonOC, diploma_level: int):
+        self.model = model
+        self.diploma_level = diploma_level
+        self.my_students = set()
+        self.unique_id = School.max_id
+        School.max_id = School.max_id + 1
+
+    def __repr__(self):
+        return "School: " + str(self.unique_id) + " Level: " + str(self.diploma_level)
 
 
 if __name__ == "__main__":
