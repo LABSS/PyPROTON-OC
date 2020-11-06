@@ -138,11 +138,10 @@ class MesaPROTON_OC(Model):
         for agent in self.schedule.agents:
             agent.num_crimes_committed_this_tick = 0
         self.number_law_interventions_this_tick = 0
-        if self.intervention_on():
+        if self.intervention_is_on():
             if self.family_intervention:
                 self.family_intervene()
         self.ticks += 1
-        self.datacollector.collect(self)
 
 
         # self.schedule.step()
@@ -726,7 +725,7 @@ class MesaPROTON_OC(Model):
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
                 total_pool = school.my_students.difference({student})
-                conn_pool = list(extra.at_most(conn, list(total_pool), self.rng, replace=False))
+                conn_pool = list(extra.at_most(list(total_pool), conn, self.rng))
                 student.makeSchoolLinks(conn_pool)
 
     def decide_conn_number(self, agents, max_lim):

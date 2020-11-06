@@ -299,17 +299,6 @@ class Person(Agent):
         """
         return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
 
-    def remove_from_household(self):
-        """
-        This method removes the agent from household, keeping the networks consistent.
-        Modify the Person.neighbors attribute in-place
-        :return: None
-        """
-        for member in self.neighbors.get("household").copy():
-            if self in member.neighbors.get("household"):
-                member.neighbors.get("household").remove(self)
-                self.neighbors.get("household").remove(member)
-
 class Prisoner(Person):
     sentence_countdown = 0
 
