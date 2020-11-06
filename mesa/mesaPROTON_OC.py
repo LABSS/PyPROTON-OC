@@ -118,30 +118,6 @@ class MesaPROTON_OC(Model):
         self.data_folder = os.path.join(self.palermo_inputs, "data")
         self.load_stats_tables()
 
-        #Data Colletor
-        self.datacollector = DataCollector(
-            model_reporters={"n_agents": extra.get_n_agents,
-                             "o1": extra.o1,
-                             "o2" : extra.o2,
-                             "o3" : extra.o3,
-                             "o4" : extra.o4,
-                             "05a" : extra.o5a,
-                             "o6a": extra.o6a,
-                             "o11": extra.o11,
-                             "o13" : extra.o13,
-                             "015": extra.o15,
-                             "o16" : extra.o16},
-            agent_reporters={"household_links": extra.get_n_household_links,
-                             "friendship_links":extra.get_n_friendship_links,
-                             "criminal_links": extra.get_n_criminal_links,
-                             "professional_links":extra.get_n_professional_links,
-                             "school_links":extra.get_n_school_links,
-                             "sibling_links": extra.get_n_sibling_links,
-                             "offspring_links": extra.get_n_offspring_links,
-                             "partner_links": extra.get_n_partner_links,
-                             "criminal_tendency": extra.get_criminal_tendency})
-
-
         # Create agents(
         # mesaConfigCreateAgents.configAgents(self)
         # print(MesaFin4.creation_frequency)
