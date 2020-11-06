@@ -9,8 +9,6 @@ from itertools import chain
 
 class Person(Agent):
     max_id = 0
-    # https://stackoverflow.com/questions/12101958/how-to-keep-track-of-class-instances
-    # note that if we run multiple models, persons will be all the ones created in any of them
     persons = []
     network_names = [
         'sibling',
@@ -23,9 +21,10 @@ class Person(Agent):
         'professional',
         'school']
 
-    def __init__(self, m: mesaPROTON_OC):
+    def __init__(self, model: mesaPROTON_OC):
+        self.model = model
+        self.prisoner = False
         # networks
-        self.model = m
         self.networks_init()
         self.age = 0
         self.sentence_countdown = 0
@@ -56,15 +55,10 @@ class Person(Agent):
         self.arrest_weight = 0
         self.num_co_offenses = dict()  # criminal-links
         self.co_off_flag = dict()  # criminal-links
-        # super().__init__(self.unique_id, model)
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
         Person.persons.append(self)
         self.co_off_flag = dict()
-        # print(model)
-        # print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.model)]))
-        #If imprisoned
-        self.prisoner = False
 
     def __repr__(self):
         return "Agent: " + str(self.unique_id)

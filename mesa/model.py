@@ -11,14 +11,16 @@ from Employer import Employer
 from Job import Job
 import timeit
 from tqdm import tqdm
-# import testProton
 from itertools import combinations, chain
 import os
 from numpy.random import default_rng
 import time
 
+
 class MesaPROTON_OC(Model):
-    """A simple model of an economy of intentional agents and tokens.
+    """
+    Simulation of recruitment to terrorism.
+    Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu
     """
 
     def __init__(self, seed=None):
@@ -26,36 +28,17 @@ class MesaPROTON_OC(Model):
         self.seed = seed
         self.rng = default_rng(seed)
         self.check_random = [self.rng.random(), self.random.random()]
-        # operation
-        self.initial_random_seed = 0
-        self.network_saving_interval = 0  # every how many we save networks structure
-        self.network_saving_list = 0  # the networks that should be saved
-        self.model_saving_interval = 0  # every how many we save model structure
-        self.breed_colors = 0  # a table from breeds to turtle colors
         self.this_is_a_big_crime = 3
         self.good_guy_threshold = 0.6
         self.big_crime_from_small_fish = 0  # checking anomalous crimes
-
-        # statistics tables
-        self.num_co_offenders_dist = 0  # a list of probability for different crime sizes
-        self.fertility_table = 0  # a list of fertility rates
-        self.mortality_table = 0
-        self.edu_by_wealth_lvl = 0
-        self.work_status_by_edu_lvl = 0
-        self.wealth_quintile_by_work_status = 0
-        self.criminal_propensity_by_wealth_quintile = 0
-        self.edu = 0
-        self.arrest_rate = 0
         self.education_levels = dict()  # table from education level to data
-        self.c_by_age_and_sex = 0
-        self.labour_status_by_age_and_sex = 0
-        self.labour_status_range = 0
-
-        #switches
         self.removed_fatherships = list()
         self.migration_on = False
+        self.schools = list()
+        self.jobs = list()
+        self.employers = list()
 
-        #Intervention
+        # Intervention
         self.family_intervention = None
         self.social_support = None
         self.welfare_support = None
@@ -70,20 +53,15 @@ class MesaPROTON_OC(Model):
         self.number_weddings = 0
         self.number_weddings_mean = 100
         self.number_weddings_sd = 0
-        self.criminal_tendency_addme = 0 # criminal_tendency_addme_for_weighted_extraction
-        self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction = 0
+        self.criminal_tendency_addme = 0  # criminal_tendency_addme_for_weighted_extraction
         self.number_law_interventions_this_tick = 0
         self.correction_for_non_facilitators = 0
         self.number_protected_recruited_this_tick = 0
         self.number_offspring_recruited_this_tick = 0
-        self.co_offender_group_histo = 0
         self.people_jailed = 0
         self.number_crimes = 0
         self.crime_multiplier = 0
         self.kids_intervention_counter = 0
-        self.schools = list()
-        self.jobs = list()
-        self.employers = list()
 
         self.schedule = RandomActivation(self)
 
@@ -100,13 +78,12 @@ class MesaPROTON_OC(Model):
         self.intervention_end = 999
         self.num_oc_persons = 30
         self.num_oc_families = 8
-        self.education_modifier = 1.0 #education-rate in Netlogo model
+        self.education_modifier = 1.0  # education-rate in Netlogo model
         self.retirement_age = 65
         self.unemployment_multiplier = "base"
         self.nat_propensity_m = 1.0
         self.nat_propensity_sigma = 0.25
         self.nat_propensity_threshold = 1.0
-        self.oc_members_scrutinize = False
         self.facilitator_repression = False
         self.facilitator_repression_multiplier = 2.0
         self.percentage_of_facilitators = 0.005
@@ -116,7 +93,6 @@ class MesaPROTON_OC(Model):
         self.oc_boss_repression = False
         self.punishment_length = 1
         self.constant_population = False
-
         # Folders definition
         self.mesa_dir = os.getcwd()
         self.cwd = os.path.dirname(self.mesa_dir)
@@ -125,10 +101,10 @@ class MesaPROTON_OC(Model):
         self.eindhoven = os.path.join(self.input_directory, "eindhoven")
         self.general = os.path.join(self.input_directory, "general")
         self.general_data = os.path.join(self.general, "data")
-
-        # loading data from tables and making first calculations
         self.data_folder = os.path.join(self.palermo_inputs, "data")
+        # loading data from tables and making first calculations
         self.load_stats_tables()
+
 
     def init_collector(self):
         """
@@ -138,13 +114,15 @@ class MesaPROTON_OC(Model):
         model_reporters = {key: key for key in self.__dict__.keys()}
         agent_reporters = {key: key for key in self.schedule.agents[0].__dict__.keys()}
         # agent_reporters["cached_oc_embeddedness"] = lambda x: x.oc_embeddedness()
-        self.datacollector = DataCollector(model_reporters=model_reporters,agent_reporters=agent_reporters)
+        self.datacollector = DataCollector(model_reporters=model_reporters, agent_reporters=agent_reporters)
+
 
     def create_agents(self, random_relationships=False, exclude_partner_net=False):
         for i_agent in range(0, self.initial_agents):
             i_agent = Person(self)
             self.schedule.add(i_agent)
             i_agent.random_init(random_relationships, exclude_partner_net)
+
 
     def step(self):
         for agent in self.schedule.agents:
@@ -162,12 +140,13 @@ class MesaPROTON_OC(Model):
             # thing that happen yearly
         if (self.ticks % self.ticks_per_year) == 0:
             self.calculate_criminal_tendency()
-            self.calculate_crime_multiplier() # we should update it, if population change
+            self.calculate_crime_multiplier()  # we should update it, if population change
             self.graduate_and_enter_jobmarket()
-            for agent in [agent for agent in self.schedule.agents if agent.job_level < 2 and agent.just_changed_age() \
-                                                                     and agent.age in self.labour_status_range[agent.gender_is_male].keys()]:
+            for agent in [agent for agent in self.schedule.agents
+                          if agent.job_level < 2
+                             and agent.just_changed_age()
+                             and agent.age in self.labour_status_range[agent.gender_is_male].keys()]:
                 agent.update_unemployment_status()
-
             for agent in [agent for agent in self.schedule.agents if not agent.my_school and agent.age >= 18 \
                                                                      and agent.age < self.retirement_age and not agent.my_job \
                                                                      and not agent.retired and agent.job_level > 1]:
@@ -176,7 +155,7 @@ class MesaPROTON_OC(Model):
                     total_pool = [candidate for candidate in agent.my_job.my_employer.employees() if candidate != agent]
                     employees = list(
                         self.rng.choice(total_pool, self.decide_conn_number(total_pool, 20, also_me=False),
-                                              replace=False))
+                                        replace=False))
                     agent.makeProfessionalLinks(employees)
 
             self.let_migrants_in()
@@ -201,10 +180,12 @@ class MesaPROTON_OC(Model):
         self.schedule.step()
         self.ticks += 1
 
+
     def run(self, n_agents, ticks):
         self.setup(n_agents)
         for i in tqdm(range(ticks)):
             self.step()
+
 
     def fix_unemployment(self, correction):
         available = [x for x in self.schedule.agents if x.age > 16 and x.age < 65 and x.my_school == None]
@@ -225,15 +206,19 @@ class MesaPROTON_OC(Model):
             for x in self.rng.choice(unemployed, (1 - correction) * len(unemployed), replace=False):
                 x.job_level = 2 if self.rng.uniform(0, 1) < ratio_on else 0
 
+
     def setup_facilitators(self):
         for agent in self.schedule.agent_buffer(shuffled=True):
-            agent.facilitator = True if not agent.oc_member and agent.age > 18 and (self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+            agent.facilitator = True if not agent.oc_member and agent.age > 18 and (
+                        self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+
 
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
 
     # but-first?          to-report read-csv [ base-file-name ]
     # report but-first csv:from-file (word data-folder base-file-name ".csv")
+
 
     def load_stats_tables(self):
         self.num_co_offenders_dist = pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv"))
@@ -247,7 +232,7 @@ class MesaPROTON_OC(Model):
         self.wealth_quintile_by_work_status = self.df_to_dict(self.read_csv_city("wealth_quintile_by_work_status"))
         self.punishment_length_data = self.read_csv_city("conviction_length")
         self.male_punishment_length = self.df_to_lists(self.punishment_length_data[["months", "M"]], split_row=False)
-        self.female_punishment_length =  self.df_to_lists(self.punishment_length_data[["months", "F"]], split_row=False)
+        self.female_punishment_length = self.df_to_lists(self.punishment_length_data[["months", "F"]], split_row=False)
         self.jobs_by_company_size = self.df_to_dict(self.read_csv_city("jobs_by_company_size"))
         self.c_range_by_age_and_sex = self.df_to_lists(self.read_csv_city("crime_rate_by_gender_and_age_range"))
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
@@ -258,7 +243,9 @@ class MesaPROTON_OC(Model):
         marriage = pd.read_csv(os.path.join(self.general_data, "marriages_stats.csv"))
         self.number_weddings_mean = marriage['mean_marriages'][0]
         self.number_weddings_sd = marriage['std_marriages'][0]
-        self.num_co_offenders_dist = self.df_to_lists(pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv")), split_row=False)
+        self.num_co_offenders_dist = self.df_to_lists(
+            pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv")), split_row=False)
+
 
     def wedding(self):
         """
@@ -267,7 +254,7 @@ class MesaPROTON_OC(Model):
         """
         corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)
-        marriable = [x for x in self.schedule.agents if x.age > 25 and x.age < 55 and not x.neighbors.get("partner")]
+        marriable = [agent for agent in self.schedule.agents if agent.age > 25 and agent.age < 55 and not agent.neighbors.get("partner")]
         while num_wedding_this_month > 0 and len(marriable) > 1:
             ego = self.rng.choice(marriable)
             poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(marriable)
@@ -277,7 +264,7 @@ class MesaPROTON_OC(Model):
                     (agent.age - ego.age) < 8 and
                     agent not in ego.neighbors.get("sibling") and
                     agent not in ego.neighbors.get("offspring") and
-                    ego not in agent.neighbors.get("offspring")] # directed network
+                    ego not in agent.neighbors.get("offspring")]  # directed network
             if pool:  # https://www.python-course.eu/weighted_choice_and_sample.php
                 partner = self.rng.choice(pool, p=extra.wedding_proximity_with(ego, pool))
                 for agent in [ego, partner]:
@@ -290,6 +277,7 @@ class MesaPROTON_OC(Model):
                 num_wedding_this_month -= 1
                 self.number_weddings += 1
             marriable.remove(ego)  # removed in both cases, if married or if can't find a partner
+
 
     def socialization_intervene(self):
         """
@@ -304,15 +292,21 @@ class MesaPROTON_OC(Model):
         :return: None
         """
         potential_targets = [agent for agent in self.schedule.agents if
-                             agent.age <= 18 and agent.age >= 6 and agent.my_school != None]
+                             agent.age <= 18 and agent.age >= 6 and agent.my_school is not None]
         how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(potential_targets)))
-        targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
+        targets = extra.weighted_n_of(how_many, potential_targets,
+                                      lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
 
-        if self.social_support == "educational" or self.social_support == "all": self.soc_add_educational(targets)
-        if self.social_support == "psychological" or self.social_support == "all": self.soc_add_psychological(targets)
-        if self.social_support == "more-friends" or self.social_support == "all": self.soc_add_more_friends(targets)
+        if self.social_support == "educational" or self.social_support == "all":
+            self.soc_add_educational(targets)
+        if self.social_support == "psychological" or self.social_support == "all":
+            self.soc_add_psychological(targets)
+        if self.social_support == "more-friends" or self.social_support == "all":
+            self.soc_add_more_friends(targets)
         # also give a job to the mothers
-        if self.social_support == "all": self.welfare_createjobs(agent.mother for agent in self.schedule.agents if agent.mother)
+        if self.social_support == "all":
+            self.welfare_createjobs(agent.mother for agent in self.schedule.agents if agent.mother)
+
 
     def soc_add_educational(self, targets):
         """
@@ -323,6 +317,7 @@ class MesaPROTON_OC(Model):
         for agent in targets:
             agent.max_education_level = min(agent.max_education_level + 1, max(self.education_levels.keys()))
 
+
     def soc_add_psychological(self, targets):
         """
         For each target a new support member (who has not committed crimes) is added to the friends network
@@ -331,11 +326,13 @@ class MesaPROTON_OC(Model):
         """
         # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample from large populations
         for agent in targets:
-            support_set = extra.at_most([support_agent for support_agent in self.schedule.agents if support_agent.num_crimes_committed == 0 and support_agent.age > agent.age and support_agent != agent], 50, self.rng)
+            support_set = extra.at_most([support_agent for support_agent in self.schedule.agents if
+                                         support_agent.num_crimes_committed == 0 and support_agent.age > agent.age and
+                                         support_agent != agent], 50, self.rng)
             if support_set:
-                chosen = extra.weighted_one_of(support_set, lambda x: 1 - abs((
-                                                                                          x.age - agent.age) / 120), self.rng)
+                chosen = extra.weighted_one_of(support_set, lambda x: 1 - abs((x.age - agent.age) / 120), self.rng)
                 chosen.makeFriends(agent)
+
 
     def soc_add_more_friends(self, targets):
         """
@@ -347,7 +344,9 @@ class MesaPROTON_OC(Model):
         for target in targets:
             support_set = extra.at_most([agent for agent in self.schedule.agents if agent != target], 50, self.rng)
             if support_set:
-                target.makeFriends(extra.weighted_one_of(support_set, lambda x: max_criminal_tendency - x.criminal_tendency, self.rng))
+                target.makeFriends(
+                    extra.weighted_one_of(support_set, lambda x: max_criminal_tendency - x.criminal_tendency, self.rng))
+
 
     def welfare_intervene(self):
         """
@@ -364,17 +363,16 @@ class MesaPROTON_OC(Model):
                 if not mother.my_job and mother.neighbors.get("partner"):
                     if mother.get_link_list("partner")[0].oc_member:
                         targets.append(mother)
-
         if self.welfare_support == "job-child":
             for agent in self.schedule.agents:
                 if agent.age > 16 and agent.age < 24 and not agent.my_school and not agent.my_job and agent.father:
                     if agent.father.oc_member:
                         targets.append(agent)
-
         if targets:
             how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(targets)))
             targets = self.rng.choice(targets, how_many, replace=False)
             self.welfare_createjobs(targets)
+
 
     def welfare_createjobs(self, targets):
         """
@@ -389,8 +387,7 @@ class MesaPROTON_OC(Model):
             for new_professional_link in extra.at_most(the_employer.employees(), 20, self.rng):
                 agent.makeProfessionalLinks(new_professional_link)
 
-    # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network?
-    # for now I think I'll just add another network and keep the redundancy, then we'll see.
+
     def family_intervene(self):
         """
         This procedure is active when the self.family_intervention attribute is different from None. There are 3
@@ -436,8 +433,10 @@ class MesaPROTON_OC(Model):
                 self.soc_add_psychological(family)
                 self.soc_add_more_friends(family)
 
+
     def agents_where(self, reporter):
         return [x for x in self.schedule.agents if eval(reporter)]
+
 
     def return_kids(self):
         """
@@ -456,9 +455,11 @@ class MesaPROTON_OC(Model):
         for agent in self.schedule.agent_buffer(shuffled=True):
             p_friends = agent.potential_friends()
             if len(p_friends) > 0:
-                friends = extra.weighted_n_of(np.min([len(p_friends), self.rng.poisson(3)]), p_friends, lambda x: extra.social_proximity(agent, x), self.rng)
+                friends = extra.weighted_n_of(np.min([len(p_friends), self.rng.poisson(3)]), p_friends,
+                                              lambda x: extra.social_proximity(agent, x), self.rng)
                 for chosen in friends:
                     chosen.makeFriends(agent)
+
 
     def remove_excess_friends(self):
         """
@@ -471,6 +472,7 @@ class MesaPROTON_OC(Model):
                 for friend in self.rng.choice(friends, len(friends) - agent.dunbar_number(), replace=False):
                     friend.remove_friendship(agent)
 
+
     def remove_excess_professional_links(self):
         """
         Given a max number (30) this procedure cut the excess professional links
@@ -482,11 +484,13 @@ class MesaPROTON_OC(Model):
                 for friend in self.rng.choice(friends, int(len(friends) - 30), replace=False):
                     friend.remove_professional(agent)
 
+
     def total_num_links(self):
         return sum([
             sum([len(a.neighbors.get(net))
                  for net in Person.network_names])
             for a in self.schedule.agents]) / 2
+
 
     def setup_oc_groups(self):
         """
@@ -499,13 +503,15 @@ class MesaPROTON_OC(Model):
         scaled_num_oc_persons = np.ceil(self.num_oc_persons * self.initial_agents / 10000)
         # families first.
         # we assume here that we'll never get a negative criminal tendency.
-        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
+        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents,
+                                              lambda x: x.criminal_tendency, self.rng)
         candidates = list()
         for head in oc_family_heads:
             head.oc_member = True
             candidates += [relative for relative in head.neighbors.get('household') if relative.age >= 18]
         if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
-            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
+            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates,
+                                                      lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
             for member in members_in_families:
                 member.oc_member = True
@@ -513,8 +519,9 @@ class MesaPROTON_OC(Model):
             for candidate in candidates:
                 candidate.oc_member = True
             out_of_family_candidates = [agent for agent in self.schedule.agents if not agent.oc_member]
-            out_of_family_candidates = extra.weighted_n_of(scaled_num_oc_persons - len(candidates) - len(oc_family_heads),
-                                                           out_of_family_candidates, lambda x: x.criminal_tendency, self.rng)
+            out_of_family_candidates = extra.weighted_n_of(
+                scaled_num_oc_persons - len(candidates) - len(oc_family_heads),
+                out_of_family_candidates, lambda x: x.criminal_tendency, self.rng)
             for out_of_family_candidate in out_of_family_candidates:
                 out_of_family_candidate.oc_member = True
         # and now, the network with its weights..
@@ -522,8 +529,11 @@ class MesaPROTON_OC(Model):
         for (i, j) in combinations(oc_members_pool, 2):
             i.addCriminalLink(j)
 
+
     def reset_oc_embeddedness(self):
-        for x in self.schedule.agents: x.cached_oc_embeddedness = None
+        for agent in self.schedule.agents:
+            agent.cached_oc_embeddedness = None
+
 
     def setup_persons_and_friendship(self):
         # We transform this df into a list for ease of access
@@ -541,6 +551,7 @@ class MesaPROTON_OC(Model):
         # nx.draw(watts_strogatz, with_labels=True)
         # plt.show()
 
+
     def incestuos(self, ego, candidates):
         """
         This procedure checks if there are any links between partners within the candidate pool.
@@ -550,10 +561,14 @@ class MesaPROTON_OC(Model):
         :param candidates: list of Person objects
         :return: bool, True if there are links between partners, None otherwise.
         """
-        all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
+        all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in
+                                                                                      candidates for sibling in
+                                                                                      candidate.neighbors.get(
+                                                                                          'sibling')]
         for sibling in all_potential_siblings:
             if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
                 return True
+
 
     def setup_siblings(self):
         """
@@ -563,7 +578,8 @@ class MesaPROTON_OC(Model):
         children are taken and "sibling" links are created taking care not to create incestuous relationships.
         :return: None
         """
-        agent_left_household = [p for p in self.schedule.agents if p.neighbors.get('offspring')] # simulates people who left the original household.
+        agent_left_household = [p for p in self.schedule.agents if
+                                p.neighbors.get('offspring')]  # simulates people who left the original household.
         for agent in agent_left_household:
             num_siblings = self.rng.poisson(0.5)
             # 0.5 -> the number of links is N^3 agents, so let's keep this low
@@ -578,7 +594,7 @@ class MesaPROTON_OC(Model):
                 potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
-            targets = [agent] + self.rng.choice(candidates, min(len(candidates),num_siblings)).tolist()
+            targets = [agent] + self.rng.choice(candidates, min(len(candidates), num_siblings)).tolist()
             for sib in targets:
                 if sib in agent_left_household:
                     agent_left_household.remove(sib)
@@ -616,7 +632,7 @@ class MesaPROTON_OC(Model):
                 hh_members = list()
                 nb_attempts += 1
                 # pick the age of the head according to the size of the household
-                head_age = extra.pick_from_pair_list(head_age_dist[size],self.rng)
+                head_age = extra.pick_from_pair_list(head_age_dist[size], self.rng)
                 if size == 1:
                     male_wanted = (self.rng.random() < proportion_of_male_singles_by_age[head_age])
                     head = self.pick_from_population_pool_by_age_and_gender(head_age, male_wanted)
@@ -644,10 +660,11 @@ class MesaPROTON_OC(Model):
                     for child in range(1, int(num_children) + 1):
                         if num_children in self.children_age_dist:
                             if mother_age in self.children_age_dist[num_children]:
-                                child_age = extra.pick_from_pair_list(self.children_age_dist[num_children][mother_age], self.rng)
+                                child_age = extra.pick_from_pair_list(self.children_age_dist[num_children][mother_age],
+                                                                      self.rng)
                                 child = self.pick_from_population_pool_by_age(child_age)
                                 hh_members.append(child)
-                    hh_members = [x for x in hh_members if x != None] #exclude Nones
+                    hh_members = [memb for memb in hh_members if memb is not None]  # exclude Nones
                     if len(hh_members) == size:
                         # only generate the household if we got everyone we needed
                         success = True
@@ -675,18 +692,19 @@ class MesaPROTON_OC(Model):
         print("Complex size: " + str(len(self.complex_hh_sizes)) + str("/") + str(len(self.hh_size)))
         for comp_hh_size in self.complex_hh_sizes:
             comp_hh_size = int(min(comp_hh_size, len(self.population)))
-            complex_hh_members = self.population[0:comp_hh_size] # grab the first persons in the list
+            complex_hh_members = self.population[0:comp_hh_size]  # grab the first persons in the list
             max_age_index = [x.age for x in complex_hh_members].index(max([x.age for x in complex_hh_members]))
             family_wealth_level = complex_hh_members[max_age_index].wealth_level
             for member in complex_hh_members:
-                self.population.remove(member) # remove persons from the population
-                member.makeHouseholdLinks(complex_hh_members) #and link them up.
+                self.population.remove(member)  # remove persons from the population
+                member.makeHouseholdLinks(complex_hh_members)  # and link them up.
                 member.wealth_level = family_wealth_level
             if len(complex_hh_members) > 1:
                 self.families.append(complex_hh_members)
         print("Singles " + str(len([x for x in self.hh_size if x == 1])))
         print("Families " + str(len(self.families)))
         print("Average of attempts " + str(np.mean(attempts_list)))
+
 
     def household_sizes(self, size):
         """
@@ -705,6 +723,7 @@ class MesaPROTON_OC(Model):
         sizes.sort(reverse=True)
         return sizes
 
+
     def pick_from_population_pool_by_age_and_gender(self, age_wanted, male_wanted):
         """
         Pick an agent with specific age and sex, None otherwise
@@ -719,6 +738,7 @@ class MesaPROTON_OC(Model):
         self.population.remove(picked_person)
         return picked_person
 
+
     def pick_from_population_pool_by_age(self, age_wanted):
         """
         Pick an agent with specific age form population, None otherwise
@@ -730,6 +750,7 @@ class MesaPROTON_OC(Model):
         picked_person = self.rng.choice([x for x in self.population if x.age == age_wanted])
         self.population.remove(picked_person)
         return picked_person
+
 
     def df_to_dict(self, df, extra_depth=False):
         """
@@ -750,10 +771,10 @@ class MesaPROTON_OC(Model):
             extra_depth_modifier = 1
 
         if len(df.columns) + extra_depth_modifier == 2:
-            for col in np.unique(df.iloc[:,0]):
-                dic[col] = df[df.iloc[:,0] == col].iloc[:,1].values
+            for col in np.unique(df.iloc[:, 0]):
+                dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1].values
         if len(df.columns) + extra_depth_modifier == 3:
-            for col in np.unique(df.iloc[:,0]):
+            for col in np.unique(df.iloc[:, 0]):
                 dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
         if len(df.columns) + extra_depth_modifier == 4:
             for col in np.unique(df.iloc[:, 0]):
@@ -768,6 +789,7 @@ class MesaPROTON_OC(Model):
                 dic[key] = subdic
         return dic
 
+
     def setup_education_levels(self):
         """
         Modify the self.education_levels attribute in-place. Given "n" levels of education,
@@ -775,9 +797,10 @@ class MesaPROTON_OC(Model):
         """
         self.list_schools = self.read_csv_city("schools").values.tolist()
         for index, level in enumerate(self.list_schools):
-            level[3] = np.ceil((level[3]/level[4])*self.initial_agents)
+            level[3] = np.ceil((level[3] / level[4]) * self.initial_agents)
             level.remove(level[4])
-            self.education_levels[index+1] = level
+            self.education_levels[index + 1] = level
+
 
     def setup_schools(self):
         """
@@ -788,6 +811,7 @@ class MesaPROTON_OC(Model):
                 new_school = School(self, level)
                 self.schools.append(new_school)
 
+
     def init_students(self):
         """
         Adds to schools the agents that meet the defined parameters of age and level of education and then
@@ -797,8 +821,11 @@ class MesaPROTON_OC(Model):
             row = self.education_levels[level]
             start_age = row[0]
             end_age = row[1]
-            pool = [x for x in self.schedule.agents if
-                    x.age >= start_age and x.age <= end_age and x.education_level == level - 1 and x.max_education_level >= level]
+            pool = [agent for agent in self.schedule.agents
+                    if agent.age >= start_age
+                    and agent.age <= end_age
+                    and agent.education_level == level - 1
+                    and agent.max_education_level >= level]
             for agent in pool:
                 agent.enroll_to_school(level)
         for school in self.schools:
@@ -808,6 +835,7 @@ class MesaPROTON_OC(Model):
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 student.makeSchoolLinks(conn_pool)
 
+
     def decide_conn_number(self, agents, max_lim, also_me=True):
         """
         Given a set of agents decides the number of connections to be created between them based on a maximum number.
@@ -816,9 +844,10 @@ class MesaPROTON_OC(Model):
         :return: max_lim if the agents are more than max_lim otherwise returns the number of agents minus one.
         """
         if len(agents) <= max_lim:
-            return len(agents) -1 if also_me else len(agents)
+            return len(agents) - 1 if also_me else len(agents)
         else:
             return max_lim
+
 
     def setup(self, n_agent):
         """
@@ -840,9 +869,9 @@ class MesaPROTON_OC(Model):
         self.setup_siblings()
         self.assing_parents()
         self.setup_employers_jobs()
-        for agent in [a for a in self.schedule.agents if
-                      a.my_job == None and a.my_school == None and a.age >= 18 and a.age < self.retirement_age
-                      and a.job_level > 1]:
+        for agent in [agent for agent in self.schedule.agents
+                      if agent.my_job is None and agent.my_school is None and agent.age >= 18
+                         and agent.age < self.retirement_age and agent.job_level > 1]:
             agent.find_job()
         self.init_professional_links()
         self.calculate_crime_multiplier()
@@ -853,7 +882,7 @@ class MesaPROTON_OC(Model):
         self.init_collector()
         self.datacollector.collect(self)
         for agent in self.schedule.agent_buffer(shuffled=True):
-            agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
+            agent.hobby = self.rng.integers(low=1, high=5, endpoint=True)
         self.calc_correction_for_non_facilitators()
         for agent in self.schedule.agents:
             if not agent.gender_is_male and agent.get_link_list("offspring"):
@@ -863,7 +892,8 @@ class MesaPROTON_OC(Model):
         temp = elapsed_time - 3600 * hours
         minutes = temp // 60
         seconds = temp - 60 * minutes
-        print("Setup Completed in: " + "%d:%d:%d" %(hours, minutes, seconds))
+        print("Setup Completed in: " + "%d:%d:%d" % (hours, minutes, seconds))
+
 
     def assign_jobs_and_wealth(self):
         """
@@ -872,11 +902,14 @@ class MesaPROTON_OC(Model):
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
             if agent.age > 16:
-                agent.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],self.rng)
-                agent.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male],self.rng)
+                agent.job_level = extra.pick_from_pair_list(
+                    self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male], self.rng)
+                agent.wealth_level = extra.pick_from_pair_list(
+                    self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male], self.rng)
             else:
                 agent.job_level = 1
-                agent.wealth_level = 1  #this will be updated by family membership
+                agent.wealth_level = 1  # this will be updated by family membership
+
 
     def setup_inactive_status(self):
         """
@@ -886,6 +919,7 @@ class MesaPROTON_OC(Model):
             if agent.age > 14 and agent.age < 65 and agent.job_level == 1 and self.rng.random() < \
                     self.labour_status_by_age_and_sex[agent.gender_is_male][agent.age]:
                 agent.job_level = 0
+
 
     def setup_employers_jobs(self):
         """
@@ -908,6 +942,7 @@ class MesaPROTON_OC(Model):
                 new_employer.my_jobs.append(new_job)
                 new_job.job_level = self.random_level_by_size(n)
 
+
     def random_level_by_size(self, employer_size):
         """
         Given a float or int (employer_size) this function returns the level to be assigned
@@ -925,6 +960,7 @@ class MesaPROTON_OC(Model):
                     min_dist = abs(employer_size - key)
             return extra.pick_from_pair_list(self.jobs_by_company_size[most_similar_key], self.rng)
 
+
     def init_professional_links(self):
         """
         Creates connections between agents within the same Employer.
@@ -939,7 +975,8 @@ class MesaPROTON_OC(Model):
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.makeProfessionalLinks(conn_pool)
 
-    def df_to_lists(self,df, split_row=True):
+
+    def df_to_lists(self, df, split_row=True):
         """
         This function transforms a pandas DataFrame into nested lists as follows:
         df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
@@ -955,8 +992,8 @@ class MesaPROTON_OC(Model):
                 output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
         else:
             output_list = df.values.tolist()
-
         return output_list
+
 
     def calculate_crime_multiplier(self):
         """
@@ -972,6 +1009,7 @@ class MesaPROTON_OC(Model):
             total_crime += n_of_crimes
         self.crime_multiplier = self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
 
+
     def calculate_criminal_tendency(self):
         """
         Based on the c_range_by_age_and_sex distribution, this function calculates and assigns to each agent
@@ -979,22 +1017,23 @@ class MesaPROTON_OC(Model):
         :return: None
         """
         for line in self.c_range_by_age_and_sex:
-            #the line variable is composed as follows:
-            #[[bool(gender_is_male), int(minimum age range)], [int(maximum age range), float(c value)]]
+            # the line variable is composed as follows:
+            # [[bool(gender_is_male), int(minimum age range)], [int(maximum age range), float(c value)]]
             subpop = [agent for agent in self.schedule.agents if
                       agent.age >= line[0][1] and agent.age <= line[1][0] and agent.gender_is_male == line[0][0]]
             if subpop:
                 c = line[1][1]
-                #c is the cell value. Now we calculate criminal-tendency with the factors.
+                # c is the cell value. Now we calculate criminal-tendency with the factors.
                 for agent in subpop:
                     agent.criminal_tendency = c
                     agent.factors_c()
-                #then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
+                # then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
                 epsilon = c - np.mean([agent.criminal_tendency for agent in subpop])
                 for agent in subpop:
                     agent.criminal_tendency += epsilon
         if self.intervention_is_on() and self.facilitator_repression:
-                self.calc_correction_for_non_facilitators()
+            self.calc_correction_for_non_facilitators()
+
 
     def calc_correction_for_non_facilitators(self):
         """
@@ -1006,12 +1045,14 @@ class MesaPROTON_OC(Model):
         self.correction_for_non_facilitators = [
             (n - self.facilitator_repression_multiplier * f) / (n - f)] if f > 0 else 1.0
 
+
     def intervention_is_on(self):
         """
         Returns True if there is an active intervention False otherwise.
         :return: bool
         """
         return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
+
 
     def lognormal(self, mu, sigma):
         """
@@ -1022,6 +1063,7 @@ class MesaPROTON_OC(Model):
         """
         return np.exp(mu + sigma * self.rng.normal())
 
+
     def calculate_arrest_rate(self):
         """
         This gives the base probability of arrest, proportionally to the number of expected crimes in the first year.
@@ -1029,6 +1071,7 @@ class MesaPROTON_OC(Model):
         :return: None
         """
         self.arrest_rate = self.number_arrests_per_year / self.ticks_per_year / self.number_crimes_yearly_per10k / 10000 * self.initial_agents
+
 
     def assing_parents(self):
         """
@@ -1042,6 +1085,7 @@ class MesaPROTON_OC(Model):
                         agent.father = parent
                     else:
                         agent.mother = parent
+
 
     def choose_intervention_setting(self):
         """
@@ -1149,6 +1193,7 @@ class MesaPROTON_OC(Model):
             self.intervention_start = 13
             self.intervention_end = 9999
 
+
     def graduate_and_enter_jobmarket(self):
         """
         This enables students to move between levels of education and into the labor market.
@@ -1167,11 +1212,15 @@ class MesaPROTON_OC(Model):
                         and school.diploma_level + 1 <= student.max_education_level:
                     student.enroll_to_school(school.diploma_level + 1)
                 else:
-                    student.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[student.education_level][student.gender_is_male], self.rng)
-                    student.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[student.job_level][student.gender_is_male], self.rng)
-                    if student.age > 14 and student.age < self.retirement_age and student.job_level == 1 and self.rng.random() < self.labour_status_by_age_and_sex[student.gender_is_male][
-                        student.age]:
+                    student.job_level = extra.pick_from_pair_list(
+                        self.work_status_by_edu_lvl[student.education_level][student.gender_is_male], self.rng)
+                    student.wealth_level = extra.pick_from_pair_list(
+                        self.wealth_quintile_by_work_status[student.job_level][student.gender_is_male], self.rng)
+                    if student.age > 14 and student.age < self.retirement_age and student.job_level == 1 and self.rng.random() < \
+                            self.labour_status_by_age_and_sex[student.gender_is_male][
+                                student.age]:
                         student.job_level = 0
+
 
     def let_migrants_in(self):
         """
@@ -1181,7 +1230,8 @@ class MesaPROTON_OC(Model):
         """
         if self.migration_on:
             # calculate the difference between deaths and birth
-            to_replace = self.initial_agents - len(self.schedule.agents) if self.initial_agents - len(self.schedule.agents) > 0 else 0
+            to_replace = self.initial_agents - len(self.schedule.agents) if self.initial_agents - len(
+                self.schedule.agents) > 0 else 0
             free_jobs = [job for job in self.jobs if job.my_worker]
             n_to_add = np.min([to_replace, len(free_jobs)])
             self.number_migrants += n_to_add
@@ -1192,18 +1242,21 @@ class MesaPROTON_OC(Model):
                 self.schedule.add(new_agent)
                 new_agent.my_job = job
                 job.my_worker = new_agent
-                total_pool = [candidate for candidate in new_agent.my_job.my_employer.employees() if candidate != new_agent]
+                total_pool = [candidate for candidate in new_agent.my_job.my_employer.employees() if
+                              candidate != new_agent]
                 employees = list(
                     self.rng.choice(total_pool, self.decide_conn_number(total_pool, 20, also_me=False),
                                     replace=False))
                 new_agent.makeProfessionalLinks(employees)
-                new_agent.bird_tick = self.ticks - (self.rng.integers(0,20) + 18)  * self.ticks_per_year
+                new_agent.bird_tick = self.ticks - (self.rng.integers(0, 20) + 18) * self.ticks_per_year
                 new_agent.wealth_level = job.job_level
                 new_agent.migrant = True
 
+
     def cal_criminal_tendency_addme(self):
         min_criminal_tendencies = np.min([agent.criminal_tendency for agent in self.schedule.agents])
-        self.criminal_tendency_addme = -1 *  min_criminal_tendencies if  min_criminal_tendencies < 0 else 0
+        self.criminal_tendency_addme = -1 * min_criminal_tendencies if min_criminal_tendencies < 0 else 0
+
 
     def commit_crimes(self):
         """
@@ -1218,12 +1271,13 @@ class MesaPROTON_OC(Model):
         for cell, value in self.c_range_by_age_and_sex:
             people_in_cell = [agent for agent in self.schedule.agents if
                               agent.age >= cell[1] and agent.age <= value[0] and agent.gender_is_male == cell[0]]
-            target_n_of_crimes = value[1]* len(people_in_cell)/ self.ticks_per_year * self.crime_multiplier
+            target_n_of_crimes = value[1] * len(people_in_cell) / self.ticks_per_year * self.crime_multiplier
             for x in np.arange(np.round(target_n_of_crimes)):
                 self.number_crimes += 1
-                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
+                agent = extra.weighted_one_of(people_in_cell,
+                                              lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
                 number_of_accomplices = self.number_of_accomplices()
-                accomplices = agent.find_accomplices(number_of_accomplices) # this takes care of facilitators as well.
+                accomplices = agent.find_accomplices(number_of_accomplices)  # this takes care of facilitators as well.
                 co_offender_groups.append(accomplices)
                 if agent.oc_member:
                     co_offender_started_by_OC.append(accomplices)
@@ -1232,9 +1286,6 @@ class MesaPROTON_OC(Model):
                     self.big_crime_from_small_fish += 1
         for co_offender_group in co_offender_groups:
             self.commit_crime(co_offender_group)
-        if len(co_offender_groups) > 0:
-            # todo: make-co-offending-histo
-            pass
         for co_offenders_by_OC in co_offender_started_by_OC:
             for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
                 agent.new_recruit = self.ticks
@@ -1250,7 +1301,8 @@ class MesaPROTON_OC(Model):
                 for criminal in criminals:
                     criminal.arrest_weight = self.facilitator_repression_multiplier if criminal.facilitator else 1
             else:
-                if self.intervention_is_on() and self.oc_boss_repression and len([agent for agent in criminals if agent.oc_member]) >= 1:
+                if self.intervention_is_on() and self.oc_boss_repression and len(
+                        [agent for agent in criminals if agent.oc_member]) >= 1:
                     for criminal in criminals:
                         if not criminal.oc_member:
                             criminal.arrest_weight = 1
@@ -1260,7 +1312,8 @@ class MesaPROTON_OC(Model):
                     for criminal in criminals:
                         criminal.arrest_weight = 1
             arrest_mod = self.number_arrests_per_year / self.ticks_per_year / 10000 * len(self.schedule.agents)
-            target_n_of_arrest = np.floor(arrest_mod + 1 if self.rng.random() < (arrest_mod - np.floor(arrest_mod)) else 0)
+            target_n_of_arrest = np.floor(
+                arrest_mod + 1 if self.rng.random() < (arrest_mod - np.floor(arrest_mod)) else 0)
             for agent in extra.weighted_n_of(target_n_of_arrest, criminals, lambda x: x.arrest_weight, self.rng):
                 agent.get_caught()
 
@@ -1279,7 +1332,6 @@ class MesaPROTON_OC(Model):
                 agent.arrest_weight = (agent.arrest_weight - min_score) / divide_score
             else:
                 agent.arrest_weight = 1
-
 
     def commit_crime(self, co_offenders):
         """
@@ -1302,7 +1354,6 @@ class MesaPROTON_OC(Model):
                 if co_offender.co_off_flag[co_off_key] == 2:
                     co_offender.num_co_offenses[co_off_key] += 1
 
-
     def number_of_accomplices(self):
         """
         Pick a group size from the num. co-offenders distribution
@@ -1311,8 +1362,7 @@ class MesaPROTON_OC(Model):
         """
         return extra.pick_from_pair_list(self.num_co_offenders_dist, self.rng) - 1
 
-
-    def update_meta_links(self,agents):
+    def update_meta_links(self, agents):
         """
         This method creates a new temporal graph that is used to colculate the oc_embeddedness of an agent, the graph is stored
         in the variable self.meta_graph
@@ -1322,7 +1372,8 @@ class MesaPROTON_OC(Model):
         self.meta_graph = nx.Graph()
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
-            for in_radius_agent in agent.agents_in_radius(1): # limit the context to the agents in the radius of interest
+            for in_radius_agent in agent.agents_in_radius(
+                    1):  # limit the context to the agents in the radius of interest
                 self.meta_graph.add_node(in_radius_agent.unique_id)
                 w = 0
                 for net in Person.network_names:
@@ -1332,7 +1383,7 @@ class MesaPROTON_OC(Model):
                                 w += agent.num_co_offenses[in_radius_agent]
                         else:
                             w += 1
-                self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=1/w)
+                self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=1 / w)
 
     def retire_persons(self):
         """
@@ -1357,11 +1408,14 @@ class MesaPROTON_OC(Model):
         if self.constant_population:
             breeding_target = self.initial_agents - len(self.schedule.agents)
             if breeding_target > 0:
-                breeding_pool = self.rng.choice([agent for agent in self.schedule.agents if agent.age >= 14 and agent.age <= 50 and not agent.gender_is_male], size=breeding_target * 10, replace=False)
+                breeding_pool = self.rng.choice([agent for agent in self.schedule.agents if
+                                                 agent.age >= 14 and agent.age <= 50 and not agent.gender_is_male],
+                                                size=breeding_target * 10, replace=False)
                 for agent in extra.weighted_n_of(breeding_target, breeding_pool, lambda x: x.p_fertility(), self.rng):
                     agent.init_baby()
         else:
-            for agent in [agent for agent in self.schedule.agents if agent.age >= 14 and agent.age <= 50 and not agent.gender_is_male]:
+            for agent in [agent for agent in self.schedule.agents if
+                          agent.age >= 14 and agent.age <= 50 and not agent.gender_is_male]:
                 if self.rng.random() < agent.p_fertility():
                     agent.init_baby()
 
@@ -1383,9 +1437,9 @@ class MesaPROTON_OC(Model):
                                                        and not agent.oc_member and agent.age > 18])
                     new_facilitator.facilitator = True
                 self.number_deceased += 1
-                if agent.my_job != None:
+                if agent.my_job is not None:
                     agent.my_job.my_worker = None
-                if agent.my_school != None:
+                if agent.my_school is not None:
                     agent.my_school.my_students.remove(agent)
                 agent.die()
         for agent in dead_agents:
@@ -1394,7 +1448,6 @@ class MesaPROTON_OC(Model):
 
 
 if __name__ == "__main__":
-
     model = MesaPROTON_OC()
     model.initial_agents = 100
     model.create_agents()
@@ -1410,10 +1463,3 @@ if __name__ == "__main__":
     # model.setup_siblings()
     print("num links:")
     print(model.total_num_links())
-
-
-
-
-
-
-

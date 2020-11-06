@@ -5,7 +5,6 @@ Created on Tue Apr  7 19:05:04 2020
 
 @author: paolucci
 """
-import Person
 import numpy as np
 import numba
 
@@ -41,7 +40,7 @@ def wedding_proximity_with(ego, pool):
     return proximity
 
 
-def social_proximity(ego:Person, alter:Person):
+def social_proximity(ego, alter):
     """
     This function calculates the social proximity between two agents based on age, gender, wealth level, education level and friendship
     :param ego: Person
