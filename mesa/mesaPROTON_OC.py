@@ -724,7 +724,6 @@ class MesaPROTON_OC(Model):
         self.calculate_arrest_rate()
         self.setup_oc_groups()
         self.setup_facilitators()
-        self.datacollector.collect(self)
         for agent in self.schedule.agent_buffer(shuffled=True):
             agent.hobby = self.rng.integers(low = 1,high = 5, endpoint=True)
         self.calc_correction_for_non_facilitators()
