@@ -312,13 +312,14 @@ def test_oc_intervention():
             model.schedule.add(new_agent)
             age = model.rng.choice(np.arange(agelist.size))
             new_agent.birth_tick = -1 * agelist[age] * model.ticks_per_year
+            new_agent.calculate_age()
             agelist = np.delete(agelist, age)
             new_agent.propensity = 0
             new_agent.gender_is_male = True
             kingpin.makeParent_OffspringsLinks(new_agent)
         for agent in the_family:
             agent.addSiblingLinks(the_family)
-        baby = [agent for agent in the_family if agent.age() == 0]
+        baby = [agent for agent in the_family if agent.age == 0]
         model.targets_addressed_percent = 100
         model.family_intervention = "remove-if-OC-member"
         model.cal_criminal_tendency_addme()
