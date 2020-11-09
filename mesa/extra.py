@@ -5,9 +5,15 @@ Created on Tue Apr  7 19:05:04 2020
 
 @author: paolucci
 """
+from __future__ import annotations
 import numpy as np
 import numba
-
+import typing
+if typing.TYPE_CHECKING:
+    from model import ProtonOC
+    from entities import Person
+    from typing import List, Set, Dict, Tuple, Optional, Union, Any
+    import pandas as pd
 # basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
 def print_id(p):
     print([x.pid for x in p])
@@ -96,6 +102,73 @@ def pick_from_pair_list(a_list_of_pairs, rng_istance):
     :return: object
     """
     return weighted_one_of(a_list_of_pairs, lambda x: x[-1], rng_istance)[0]
+
+
+def incestuos(ego: Person, candidates: Union[List[Person], Set[Person]]) -> Union[bool, None]:
+    """
+    This procedure checks if there are any links between partners within the candidate pool.
+    Returns True if there are, None if there are not. It is used during ProtonOc.setup_siblings
+    procedure to avoid incestuous marriages.
+    :param ego: Person, the agent
+    :param candidates: Union[List[Person], Set[Person]], the candidates
+    :return: Union[bool, None], True if there are links between partners, None otherwise.
+    """
+    all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in
+                                                                                      candidates for sibling in
+                                                                                      candidate.neighbors.get(
+                                                                                          'sibling')]
+    for sibling in all_potential_siblings:
+        if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
+            return True
+
+def df_to_dict(df: pd.DataFrame, extra_depth: bool = False) -> Dict:
+    """
+    Based on the number of pandas DataFrame columns, transforms the dataframe into nested dictionaries as follows:
+    df-columns = age, sex, education, p --> dict-keys = {age:{sex:[education, p]}}
+
+    If extra_depth is True the transformation has an extra level of depth as follows:
+    df-columns = age, sex, education, p --> dict-keys = {age:{sex:{education: p}}}
+
+    This transformation ensures a faster access to the values using the dictionary keys.
+    :param df: pd.DataFrame, the df to be transformed
+    :param extra_depth: bool, if True gives an extra level of depth
+    :return: Dict, a new dictionary
+    """
+    dic = dict()
+    extra_depth_modifier = 0
+    if extra_depth:
+        extra_depth_modifier = 1
+    if len(df.columns) + extra_depth_modifier == 2:
+        for col in np.unique(df.iloc[:, 0]):
+            dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1].values
+    if len(df.columns) + extra_depth_modifier == 3:
+        for col in np.unique(df.iloc[:, 0]):
+            dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:].values
+    if len(df.columns) + extra_depth_modifier == 4:
+        for col in np.unique(df.iloc[:, 0]):
+            dic[col] = df[df.iloc[:, 0] == col].iloc[:, 1:]
+        for key in dic:
+            subdic = dict()
+            for subcol in np.unique(dic[key].iloc[:, 0]):
+                if extra_depth:
+                    subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values[0][0]
+                else:
+                    subdic[subcol] = dic[key][dic[key].iloc[:, 0] == subcol].iloc[:, 1:].values
+            dic[key] = subdic
+    return dic
+
+def decide_conn_number(agents: Union[List, Set], max_lim: int, also_me: bool = True) -> int:
+    """
+    Given a set of agents decides the number of connections to be created between them based on a maximum number.
+    :param agents: Union[List, Set], agents
+    :param max_lim: int, an arbitrary maximum number
+    :param also_me: bool, include caller
+    :return: max_lim if the agents are more than max_lim otherwise returns the number of agents minus one.
+    """
+    if len(agents) <= max_lim:
+        return len(agents) - 1 if also_me else len(agents)
+    else:
+        return max_lim
 
 #Numba functions
 @numba.jit(nopython=True)
