@@ -1,3 +1,4 @@
+import os
 from mesa import Model
 from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
@@ -6,12 +7,11 @@ import numpy as np
 import networkx as nx
 from tqdm import tqdm
 from itertools import combinations, chain
-import os
 from numpy.random import default_rng
 import time
 from entities import Person, School, Employer, Job
 import extra
-from typing import List, Set, Dict, Tuple, Optional, Union, Any
+from typing import List, Set, Union, Dict
 
 
 class ProtonOC(Model):
@@ -26,12 +26,13 @@ class ProtonOC(Model):
         self.rng: np.random.default_rng = default_rng(seed)
         self.verbose = False
         self.check_random = [self.rng.random(), self.random.random()]
-        self.education_levels: dict = dict()  # table from education level to data
+        self.education_levels: Dict = dict()  # table from education level to data
         self.removed_fatherships: list = list()
         self.schools: List[School] = list()
         self.jobs: List[Job] = list()
         self.employers: List[Employer] = list()
         self.datacollector: Union[DataCollector, None] = None
+        self.meta_graph: nx.Graph = nx.Graph()
 
         # Intervention
         self.family_intervention: Union[str, None] = None
@@ -62,6 +63,7 @@ class ProtonOC(Model):
         self.big_crime_from_small_fish: int = 0  # checking anomalous crimes
         self.families: List = list()
         self.hh_size: List = list()
+        self.arrest_rate: Union[int, float] = 0
 
         #Scheduler
         self.schedule: RandomActivation = RandomActivation(self)
@@ -105,7 +107,6 @@ class ProtonOC(Model):
         self.general: str = os.path.join(self.input_directory, "general")
         self.general_data: str = os.path.join(self.general, "data")
         self.data_folder: str = os.path.join(self.palermo, "data")
-
         """
         Directory structure:
         ├───inputs (@self.input_directory)
@@ -118,35 +119,51 @@ class ProtonOC(Model):
         │   └───palermo (@self.palermo_inputs)
         │       ├───data
         │       └───raw
-        
         generated with github.com/nfriend/tree-online
         """
         # Load tables
-        self.fertility_table = extra.df_to_dict(self.read_csv_city("initial_fertility_rates"), extra_depth=True)
-        self.mortality_table = extra.df_to_dict(self.read_csv_city("initial_mortality_rates"), extra_depth=True)
+        self.fertility_table = extra.df_to_dict(
+            self.read_csv_city("initial_fertility_rates"), extra_depth=True)
+        self.mortality_table = extra.df_to_dict(
+            self.read_csv_city("initial_mortality_rates"), extra_depth=True)
         self.edu = extra.df_to_dict(self.read_csv_city("edu"))
         self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
         self.edu_by_wealth_lvl = self.read_csv_city("edu_by_wealth_lvl")
-        self.work_status_by_edu_lvl = extra.df_to_dict(self.read_csv_city("work_status_by_edu_lvl"))
-        self.wealth_quintile_by_work_status = extra.df_to_dict(self.read_csv_city("wealth_quintile_by_work_status"))
+        self.work_status_by_edu_lvl = extra.df_to_dict(
+            self.read_csv_city("work_status_by_edu_lvl"))
+        self.wealth_quintile_by_work_status = extra.df_to_dict(
+            self.read_csv_city("wealth_quintile_by_work_status"))
         self.punishment_length_data = self.read_csv_city("conviction_length")
-        self.male_punishment_length = extra.df_to_lists(self.punishment_length_data[["months", "M"]], split_row=False)
-        self.female_punishment_length = extra.df_to_lists(self.punishment_length_data[["months", "F"]], split_row=False)
-        self.jobs_by_company_size = extra.df_to_dict(self.read_csv_city("jobs_by_company_size"))
-        self.c_range_by_age_and_sex = extra.df_to_lists(self.read_csv_city("crime_rate_by_gender_and_age_range"))
+        self.male_punishment_length = extra.df_to_lists(
+            self.punishment_length_data[["months", "M"]], split_row=False)
+        self.female_punishment_length = extra.df_to_lists(
+            self.punishment_length_data[["months", "F"]], split_row=False)
+        self.jobs_by_company_size = extra.df_to_dict(
+            self.read_csv_city("jobs_by_company_size"))
+        self.c_range_by_age_and_sex = extra.df_to_lists(
+            self.read_csv_city("crime_rate_by_gender_and_age_range"))
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
-        self.labour_status_by_age_and_sex = extra.df_to_dict(self.read_csv_city("labour_status"), extra_depth=True)
-        self.labour_status_range = extra.df_to_dict(self.read_csv_city("labour_status_range"), extra_depth=True)
-        marriage = pd.read_csv(os.path.join(self.general_data, "marriages_stats.csv"))
+        self.labour_status_by_age_and_sex = extra.df_to_dict(
+            self.read_csv_city("labour_status"), extra_depth=True)
+        self.labour_status_range = extra.df_to_dict(
+            self.read_csv_city("labour_status_range"), extra_depth=True)
+        marriage = pd.read_csv(os.path.join(
+            self.general_data, "marriages_stats.csv"))
         self.number_weddings_mean = marriage['mean_marriages'][0]
         self.number_weddings_sd = marriage['std_marriages'][0]
         self.num_co_offenders_dist = extra.df_to_lists(
-            pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv")), split_row=False)
-        self.head_age_dist = extra.df_to_dict(self.read_csv_city("head_age_dist_by_household_size"))
-        self.proportion_of_male_singles_by_age = extra.df_to_dict(self.read_csv_city("proportion_of_male_singles_by_age"))
-        self.hh_type_dist = extra.df_to_dict(self.read_csv_city("household_type_dist_by_age"))
-        self.partner_age_dist = extra.df_to_dict(self.read_csv_city("partner_age_dist"))
-        self.children_age_dist = extra.df_to_dict(self.read_csv_city("children_age_dist"))
+            pd.read_csv(os.path.join(
+                self.general_data, "num_co_offenders_dist.csv")), split_row=False)
+        self.head_age_dist = extra.df_to_dict(
+            self.read_csv_city("head_age_dist_by_household_size"))
+        self.proportion_of_male_singles_by_age = extra.df_to_dict(
+            self.read_csv_city("proportion_of_male_singles_by_age"))
+        self.hh_type_dist = extra.df_to_dict(
+            self.read_csv_city("household_type_dist_by_age"))
+        self.partner_age_dist = extra.df_to_dict(
+            self.read_csv_city("partner_age_dist"))
+        self.children_age_dist = extra.df_to_dict(
+            self.read_csv_city("children_age_dist"))
         self.p_single_father = self.read_csv_city("proportion_single_fathers")
         self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
 
@@ -154,14 +171,14 @@ class ProtonOC(Model):
 
     def init_collector(self, complete: bool = False) -> None:
         """
-        This function instantiates a mesa.datacollection.DataCollector object. This object allows to collect the data
-        generated by the model. It is accessed at the end of the setup and at the end of each step, all attributes of
-        the model and all attributes of all agents are collected each call. If complete is True, additional information
-        are collected that need to be calculated and therefore may slow down the model
-        (e.g. oc_embeddedness that call the function Person.oc_embeddedness())
-        The collected data is stored in a dictionary and transformed into a Dataframe when get_model_vars_dataframe() or
-        get_agents_vars_dataframe() are called.
-
+        This function instantiates a mesa.datacollection.DataCollector object. This object allows
+        to collect the data generated by the model. It is accessed at the end of the setup and at
+        the end of each step, all attributes of the model and all attributes of all agents are
+        collected each call. If complete is True, additional information are collected that need
+        to be calculated and therefore may slow down the model (e.g. oc_embeddedness that call the
+        function Person.oc_embeddedness()) The collected data is stored in a dictionary and
+        transformed into a Dataframe when get_model_vars_dataframe() or get_agents_vars_dataframe()
+        are called.
         :param complete: bool, if True extra data are collected
         :return: None
         """
@@ -169,15 +186,17 @@ class ProtonOC(Model):
         agent_reporters = {key: key for key in self.schedule.agents[0].__dict__.keys()}
         if complete:
             agent_reporters["oc_embeddedness"] = lambda x: x.oc_embeddedness()
-        self.datacollector = DataCollector(model_reporters=model_reporters, agent_reporters=agent_reporters)
+        self.datacollector = DataCollector(model_reporters=model_reporters,
+                                           agent_reporters=agent_reporters)
 
 
     def step(self) -> None:
         """
-        This procedure is the step or rather a single tick of the model. The mesa package is designed so that the
-        step function of the model should activate the step function of individual agents through the scheduler.
-        In this model on the contrary agents do not have a step function (or rather they do but it does nothing),
-        everything is managed by the step function of the model.
+        This procedure is the step or rather a single tick of the model. The mesa package is
+        designed so that the step function of the model should activate the step function of
+        individual agents through the scheduler. In this model on the contrary agents do not
+        have a step function (or rather they do but it does nothing), everything is managed
+        by the step function of the model.
 
         :return: None
         """
@@ -211,10 +230,10 @@ class ProtonOC(Model):
                     total_pool = [candidate for candidate in agent.my_job.my_employer.employees()
                                   if candidate != agent]
                     employees = list(
-                        self.rng.choice(total_pool, extra.decide_conn_number(total_pool, 20, also_me=False),
+                        self.rng.choice(total_pool, extra.decide_conn_number(total_pool, 20,
+                                                                             also_me=False),
                                         replace=False))
                     agent.makeProfessionalLinks(employees)
-
             self.let_migrants_in()
             self.return_kids()
         self.cal_criminal_tendency_addme()
@@ -259,34 +278,39 @@ class ProtonOC(Model):
         This function strictly depends on the Proton_OC.unemployment_multiplier parameter.
         If this parameter is different from "base" a correction to unemployment is activated;
         with a correction > 1 increase unemployment otherwise decrease unemployment.
-        This policy is applied by modifying in-place the Person.job_level attribute of the eligible agents
+        This policy is applied by modifying in-place the Person.job_level attribute of the
+        eligible agents
 
         :param correction: Union[float, int, str], the correction
         :return: None
         """
-        available = [agent for agent in self.schedule.agents if 16 < agent.age < 65 and agent.my_school is None]
+        available = [agent for agent in self.schedule.agents if 16 < agent.age < 65
+                     and agent.my_school is None]
         unemployed = [agent for agent in available if agent.job_level == 1]
         occupied = [agent for agent in available if agent.job_level > 1]
         notlooking = [agent for agent in available if agent.job_level == 0]
         ratio_on = len(occupied) / (len(occupied) + len(notlooking))
         if correction > 1:
             # increase unemployment
-            for x in self.rng.choice(
-                    occupied, int(((correction - 1) * len(unemployed) * ratio_on)), replace=False):
+            for x in self.rng.choice(occupied, int(((correction - 1) * len(unemployed) *
+                                                    ratio_on)),
+                                     replace=False):
                 x.job_level = 1  # no need to resciss job links as they haven't been created yet.
-            for x in self.rng.choice(
-                    notlooking, int((correction - 1) * len(unemployed) * (1 - ratio_on)), replace=False):
+            for x in self.rng.choice(notlooking, int((correction - 1) * len(unemployed) *
+                                                     (1 - ratio_on)),
+                                     replace=False):
                 x.job_level = 1  # no need to resciss job links as they haven't been created yet.
         else:
             # decrease unemployment
-            for x in self.rng.choice(unemployed, int((1 - correction) * len(unemployed)), replace=False):
+            for x in self.rng.choice(unemployed, int((1 - correction) * len(unemployed)),
+                                     replace=False):
                 x.job_level = 2 if self.rng.uniform(0, 1) < ratio_on else 0
 
 
     def setup_facilitators(self) -> None:
         """
-        Based on parameter ProtonOc.percentage_of_facilitators this function gives a number of agents to become
-        facilitators, modifying the Person.facilitator attribute in-place.
+        Based on parameter ProtonOc.percentage_of_facilitators this function gives a number of
+        agents to become facilitators, modifying the Person.facilitator attribute in-place.
 
         :return: None
         """
@@ -297,9 +321,9 @@ class ProtonOC(Model):
 
     def read_csv_city(self, filename: str) -> pd.DataFrame:
         """
-        Based on the ProtonOc.data_folder attribute, which represents the directory of the city of interest,
-        this function returns a pd.DataFrame named filename in the directory. Warning, the file must be a .csv file,
-        it is not necessary to pass also the extension
+        Based on the ProtonOc.data_folder attribute, which represents the directory of the city
+        of interest, this function returns a pd.DataFrame named filename in the directory. Warning,
+        the file must be a .csv file, it is not necessary to pass also the extension
 
         :param filename: str, the filename
         :return: pd.DataFrame, a pandas dataframe
@@ -309,18 +333,21 @@ class ProtonOC(Model):
 
     def wedding(self) -> None:
         """
-        This procedure allows eligible agents (age > 25 and < 55 without any partner) to get married and thus
-        create a new household.
+        This procedure allows eligible agents (age > 25 and < 55 without any partner) to get
+        married and thus create a new household.
         :return: None
         """
-        corrected_weddings_mean = (self.number_weddings_mean * len(self.schedule.agents) / 1000) / 12
+        corrected_weddings_mean = (self.number_weddings_mean *
+                                   len(self.schedule.agents) / 1000) / 12
         num_wedding_this_month = self.rng.poisson(corrected_weddings_mean)
         marriable = [agent for agent in self.schedule.agents if 25 < agent.age < 55
                      and not agent.neighbors.get("partner")]
         while num_wedding_this_month > 0 and len(marriable) > 1:
             ego = self.rng.choice(marriable)
-            poolf = ego.neighbors_range("friendship", self.max_accomplice_radius) & set(marriable)
-            poolp = ego.neighbors_range("professional", self.max_accomplice_radius) & set(marriable)
+            poolf = ego.neighbors_range("friendship",
+                                        self.max_accomplice_radius) & set(marriable)
+            poolp = ego.neighbors_range("professional",
+                                        self.max_accomplice_radius) & set(marriable)
             pool = [agent for agent in (poolp | poolf) if
                     agent.gender_is_male != ego.gender_is_male and
                     (agent.age - ego.age) < 8 and
@@ -343,21 +370,27 @@ class ProtonOC(Model):
 
     def socialization_intervene(self) -> None:
         """
-        This procedure is active when the self.social_support attribute is different from None. There are 4
-        possible social interventions: educational, psychological, more-friends or all. The intervention has effect on
-        a portion of eligible members, determined by  @how_many variable that depends on self.targets_addressed_percent
-        attribute. The interventions consist of:
-        1. soc_add_educational, the max_education_level attribute of the eligible members is increased by one
-        2. soc_add_psychological, a new support member (who has not committed crimes) is added to the friends network
-        3. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
+        This procedure is active when the self.social_support attribute is different from None.
+        There are 4 possible social interventions: educational, psychological, more-friends or all.
+        The intervention has effect on a portion of eligible members, determined by @how_many
+        variable that depends on self.targets_addressed_percent attribute.
+        The interventions consist of:
+        1. soc_add_educational, the max_education_level attribute of the eligible members is
+        increased by one
+        2. soc_add_psychological, a new support member (who has not committed crimes) is added
+        to the friends network
+        3. soc_add_more_friends, a new support member (with a low level of tendency to crime)
+        is added to the friends network
         4. welfare_createjobs, new jobs are created and assigned to eligible members (mothers)
+
         :return: None
         """
         potential_targets = [agent for agent in self.schedule.agents if
                              agent.age <= 18 >= 6 and agent.my_school is not None]
         how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(potential_targets)))
         targets = extra.weighted_n_of(how_many, potential_targets,
-                                      lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
+                                      lambda x: x.criminal_tendency + self.criminal_tendency_addme,
+                                      self.rng)
         if self.social_support == "educational" or self.social_support == "all":
             self.soc_add_educational(targets)
         if self.social_support == "psychological" or self.social_support == "all":
@@ -366,58 +399,73 @@ class ProtonOC(Model):
             self.soc_add_more_friends(targets)
         # also give a job to the mothers
         if self.social_support == "all":
-            self.welfare_createjobs([agent.mother for agent in self.schedule.agents if agent.mother])
+            self.welfare_createjobs([agent.mother for agent in self.schedule.agents
+                                     if agent.mother])
 
 
     def soc_add_educational(self, targets: Union[List[Person], Set[Person]]) -> None:
         """
-        This procedure modifies the Person.max_education_level attribute of targets in-place, by adding +1 if possible.
-        This method is activated by ProtonOc.socialization_intervene()
+        This procedure modifies the Person.max_education_level attribute of targets in-place,
+        by adding +1 if possible. This method is activated by ProtonOc.socialization_intervene()
+
         :param targets: Union[List[Person], Set[Person], the target
         :return: None
         """
         for agent in targets:
-            agent.max_education_level = min(agent.max_education_level + 1, max(self.education_levels.keys()))
+            agent.max_education_level = min(agent.max_education_level + 1,
+                                            max(self.education_levels.keys()))
 
 
     def soc_add_psychological(self, targets: Union[List[Person], Set[Person]]) -> None:
         """
-        For each target a new support member (who has not committed crimes) is added to the friends network
-        This method is activated by ProtonOc.socialization_intervene()
+        For each target a new support member (who has not committed crimes) is added to the
+        friends network. This method is activated by ProtonOc.socialization_intervene()
         :param targets: Union[List[Person], Set[Person], the target
         :return: None
         """
-        # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample from large populations
+        # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample
+        # from large populations
         for agent in targets:
             support_set = extra.at_most([support_agent for support_agent in self.schedule.agents if
-                                         support_agent.num_crimes_committed == 0 and support_agent.age > agent.age and
+                                         support_agent.num_crimes_committed == 0
+                                         and support_agent.age > agent.age and
                                          support_agent != agent], 50, self.rng)
             if support_set:
-                chosen = extra.weighted_one_of(support_set, lambda x: 1 - abs((x.age - agent.age) / 120), self.rng)
+                chosen = extra.weighted_one_of(support_set,
+                                               lambda x: 1 - abs((x.age - agent.age) / 120),
+                                               self.rng)
                 chosen.makeFriends(agent)
 
 
     def soc_add_more_friends(self, targets: Union[List[Person], Set[Person]]) -> None:
         """
-        For each target a new friend (with a low level of Person.criminal_tendency) is added to the friends network
+        For each target a new friend (with a low level of Person.criminal_tendency) is added to the
+        friends network
         :param targets: Union[List[Person], Set[Person], the target
         :return: None
         """
-        max_criminal_tendency = max([0] + [agent.criminal_tendency for agent in self.schedule.agents])
+        max_criminal_tendency = max([0] + [agent.criminal_tendency for
+                                           agent in self.schedule.agents])
         for target in targets:
-            support_set = extra.at_most([agent for agent in self.schedule.agents if agent != target], 50, self.rng)
+            support_set = extra.at_most([agent for
+                                        agent in self.schedule.agents if agent != target],
+                                        50, self.rng)
             if support_set:
                 target.makeFriends(
-                    extra.weighted_one_of(support_set, lambda x: max_criminal_tendency - x.criminal_tendency, self.rng))
+                    extra.weighted_one_of(support_set,
+                                          lambda x: max_criminal_tendency - x.criminal_tendency,
+                                          self.rng))
 
 
     def welfare_intervene(self) -> None:
         """
-        This procedure is active when the self.welfare_support attribute is different from None. There are 2
-        possible welfare interventions determined by the parameter ProtonOc.welfare_support: job-mother or job-child.
-        These parameters determine the portion of the population on which the intervention will have effect.
-        The intervention consists of the application of a single procedures on eligible family members:
+        This procedure is active when the self.welfare_support attribute is different from None.
+        There are 2 possible welfare interventions determined by the parameter
+        ProtonOc.welfare_support: job-mother or job-child. These parameters determine the portion
+        of the population on which the intervention will have effect. The intervention consists of
+        the application of a single procedures on eligible family members:
         1. new jobs are created and assigned to eligible members (mothers or children)
+
         :return: None
         """
         targets = list()
@@ -428,7 +476,8 @@ class ProtonOC(Model):
                         targets.append(mother)
         if self.welfare_support == "job-child":
             for agent in self.schedule.agents:
-                if 16 < agent.age < 24 and not agent.my_school and not agent.my_job and agent.father:
+                if 16 < agent.age < 24 and not agent.my_school \
+                        and not agent.my_job and agent.father:
                     if agent.father.oc_member:
                         targets.append(agent)
         if targets:
@@ -453,16 +502,21 @@ class ProtonOC(Model):
 
     def family_intervene(self) -> None:
         """
-        This procedure is active when the self.family_intervention attribute is different from None. There are 3
-        possible family interventions: remove_if_caught, remove_if_OC_member and remove_if_caught_and_OC_member.
-        These parameters determine the portion of the population on which the intervention will have effect.
-        The intervention consists of the application of 5 procedures on eligible family members:
-        1. Fathers who comply with the conditions are removed from their families (Removed fathers are stored within the
-        removed_fatherships attribute so it is possible at any time to reintroduce them into the family.)
+        This procedure is active when the self.family_intervention attribute is different from None
+        There are 3 possible family interventions: remove_if_caught, remove_if_OC_member and
+        remove_if_caught_and_OC_member. These parameters determine the portion of the population on
+        which the intervention will have effect. The intervention consists of the application of 5
+        procedures on eligible family members:
+        1. Fathers who comply with the conditions are removed from their families  (Removed fathers
+        are stored within the removed_fatherships attribute so it is possible at any time to
+        reintroduce them into the family.)
         2. welfare_createjobs, new jobs are created and assigned to eligible members.
-        3. soc_add_educational, the max_education_level attribute of the eligible members is increased by one
-        4. soc_add_psychological, a new support member (who has not committed crimes) is added to the friends network
-        5. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
+        3. soc_add_educational, the max_education_level attribute of the eligible members is
+        increased by one
+        4. soc_add_psychological, a new support member (who has not committed crimes) is added
+        to the friends network
+        5. soc_add_more_friends, a new support member (with a low level of tendency to crime)
+        is added to the friends network
         :return: None
         """
         kids_to_protect = [agent for agent in self.schedule.agents if
@@ -479,20 +533,27 @@ class ProtonOC(Model):
             kids_pool = list(self.rng.choice(kids_to_protect, how_many, replace=False))
             for kid in kids_pool:
                 self.kids_intervention_counter += 1
-                # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
-                # gee but how comes that it increases with the nubmer of targets? We have to do better here
+                # notice that the intervention acts on ALL family members respecting the condition,
+                # causing double
+                # calls for families with double targets.
+                # gee but how comes that it increases with the nubmer of targets?
+                # We have to do better here
                 # this also removes household links, leaving the household in an incoherent state.
                 kid.neighbors.get("parent").remove(kid.father)
                 kid.father.neighbors.get("offspring").remove(kid)
                 self.removed_fatherships.append(
                     [((18 * self.ticks_per_year + kid.birth_tick) - self.ticks), kid.father, kid])
                 # at this point bad dad is out and we help the remaining with the whole package
-                # family_links_neighbors also include siblings that could be assigned during setup through the setup_siblings procedure,
+                # family_links_neighbors also include siblings that could be assigned during
+                # setup through the
+                # setup_siblings procedure,
                 # we do not need these in this procedure
                 family = [kid] + kid.family_link_neighbors()
                 self.welfare_createjobs(
-                    [agent for agent in family if agent.age >= 16 and not agent.my_job and not agent.my_school])
-                self.soc_add_educational([agent for agent in family if agent.age < 18 and not agent.my_job])
+                    [agent for agent in family if agent.age >= 16
+                     and not agent.my_job and not agent.my_school])
+                self.soc_add_educational([agent for agent in family if agent.age < 18
+                                          and not agent.my_job])
                 self.soc_add_psychological(family)
                 self.soc_add_more_friends(family)
 
@@ -520,29 +581,34 @@ class ProtonOC(Model):
         for agent in self.schedule.agent_buffer(shuffled=True):
             p_friends = agent.potential_friends()
             if len(p_friends) > 0:
-                friends = extra.weighted_n_of(np.min([len(p_friends), self.rng.poisson(3)]), p_friends,
-                                              lambda x: extra.social_proximity(agent, x), self.rng)
+                friends = extra.weighted_n_of(np.min([len(p_friends), self.rng.poisson(3)]),
+                                              p_friends,
+                                              lambda x: extra.social_proximity(agent, x),
+                                              self.rng)
                 for chosen in friends:
                     chosen.makeFriends(agent)
 
 
     def remove_excess_friends(self) -> None:
         """
-        Given the dunbar number this procedure cut the excess friendship links. Is activated at every tick.
-        Source: Dunbar, R. I. (1993). Coevolution of neocortical size, group size and language in humans.
-        Behavioral and brain sciences, 16(4), 681-694.
+        Given the dunbar number this procedure cut the excess friendship links. Is activated at
+        every tick. Source: Dunbar, R. I. (1993). Coevolution of neocortical size,  group size and
+        language in humans. Behavioral and brain sciences, 16(4), 681-694.
         :return: None
         """
         for agent in self.schedule.agents:
             friends = agent.neighbors.get('friendship')
             if len(friends) > agent.dunbar_number():
-                for friend in self.rng.choice(friends, len(friends) - agent.dunbar_number(), replace=False):
+                for friend in self.rng.choice(friends,
+                                              len(friends) - agent.dunbar_number(),
+                                              replace=False):
                     friend.remove_friendship(agent)
 
 
     def remove_excess_professional_links(self) -> None:
         """
-        Given a max number (30) this procedure cut the excess professional links. Is activated at every tick.
+        Given a max number (30) this procedure cut the excess professional links.
+        Is activated at every tick.
         :return: None
         """
         for agent in self.schedule.agents:
@@ -554,13 +620,17 @@ class ProtonOC(Model):
 
     def setup_oc_groups(self) -> None:
         """
-        This procedure creates "criminal" type links within the families, based on the criminal tendency of the agents,
-        in case the agents within the families are not enough, new members are taken outside.
+        This procedure creates "criminal" type links within the families, based on the criminal
+        tendency of the agents, in case the agents within the families are not enough, new members
+        are taken outside.
+
         :return: None
         """
         # OC members are scaled down if we don't have 10K agents
-        scaled_num_oc_families = np.ceil(self.num_oc_families * self.initial_agents / 10000 * self.num_oc_persons / 30)
-        scaled_num_oc_persons = np.ceil(self.num_oc_persons * self.initial_agents / 10000)
+        scaled_num_oc_families = np.ceil(
+            self.num_oc_families * self.initial_agents / 10000 * self.num_oc_persons / 30)
+        scaled_num_oc_persons = np.ceil(
+            self.num_oc_persons * self.initial_agents / 10000)
         # families first.
         # we assume here that we'll never get a negative criminal tendency.
         oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents,
@@ -568,24 +638,31 @@ class ProtonOC(Model):
         candidates = list()
         for head in oc_family_heads:
             head.oc_member = True
-            candidates += [relative for relative in head.neighbors.get('household') if relative.age >= 18]
-        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
-            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates,
-                                                      lambda x: x.criminal_tendency, self.rng)
+            candidates += [relative for relative in head.neighbors.get('household')
+                           if relative.age >= 18]
+        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:
+            # family members will be enough
+            members_in_families = extra.weighted_n_of(scaled_num_oc_persons -
+                                                      scaled_num_oc_families,
+                                                      candidates,
+                                                      lambda x: x.criminal_tendency,
+                                                      self.rng)
             # fill up the families as much as possible
             for member in members_in_families:
                 member.oc_member = True
         else:  # take more as needed (note that this modifies the count of families)
             for candidate in candidates:
                 candidate.oc_member = True
-            out_of_family_candidates = [agent for agent in self.schedule.agents if not agent.oc_member]
+            out_of_family_candidates = [agent for agent in self.schedule.agents
+                                        if not agent.oc_member]
             out_of_family_candidates = extra.weighted_n_of(
                 scaled_num_oc_persons - len(candidates) - len(oc_family_heads),
                 out_of_family_candidates, lambda x: x.criminal_tendency, self.rng)
             for out_of_family_candidate in out_of_family_candidates:
                 out_of_family_candidate.oc_member = True
         # and now, the network with its weights..
-        oc_members_pool = [oc_member for oc_member in self.schedule.agents if oc_member.oc_member]
+        oc_members_pool = [oc_member for oc_member in self.schedule.agents
+                           if oc_member.oc_member]
         for (i, j) in combinations(oc_members_pool, 2):
             i.addCriminalLink(j)
 
@@ -602,7 +679,8 @@ class ProtonOC(Model):
 
     def setup_persons_and_friendship(self) -> None:
         """
-        This procedure initializes the agents and creates the first "friendship" links based on an watts strogatz net.
+        This procedure initializes the agents and creates the first "friendship" links based on an
+        watts strogatz net.
         :return: None
         """
         watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
@@ -613,25 +691,30 @@ class ProtonOC(Model):
             watts_strogatz.nodes[node].update({'person': new_agent})
         for node in list(watts_strogatz.nodes()):
             for neighbor in list(watts_strogatz.neighbors(node)):
-                watts_strogatz.nodes[neighbor]['person'].makeFriends(watts_strogatz.nodes[node]['person'])
+                watts_strogatz.nodes[neighbor]['person'].makeFriends(
+                    watts_strogatz.nodes[node]['person'])
 
 
     def setup_siblings(self) -> None:
         """
-        Right now, during setup, links between agents are only those within households, between friends
-        and related to the school. At this stage of the standard setup, agents are linked through "siblings" links
-        outside the household. To simulate agents who have left the original household, agents who have
-        children are taken and "sibling" links are created taking care not to create incestuous relationships.
+        Right now, during setup, links between agents are only those within households, between
+        friends and related to the school. At this stage of the standard setup, agents are linked
+        through "siblings" links outside the household. To simulate agents who have left the
+        original household, agents who have children are taken and "sibling" links are created
+        taking care not to create incestuous relationships.
+
         :return: None
         """
         agent_left_household = [p for p in self.schedule.agents if
-                                p.neighbors.get('offspring')]  # simulates people who left the original household.
+                                p.neighbors.get('offspring')]
+        # simulates people who left the original household.
         for agent in agent_left_household:
             num_siblings = self.rng.poisson(0.5)
-            # 0.5 -> the number of links is N^3 agents, so let's keep this low
-            # at this stage links with other persons are only relatives inside households and friends.
-            candidates = [c for c in agent_left_household if c not in agent.neighbors.get("household") and abs(
-                agent.age - c.age) < 5 and c != agent]
+            # 0.5 -> the number of links is N^3 agents, so let's keep this low at this stage links
+            # with other persons are only relatives inside households and friends.
+            candidates = [c for c in agent_left_household
+                          if c not in agent.neighbors.get("household")
+                          and abs(agent.age - c.age) < 5 and c != agent]
             # remove couples from candidates and their neighborhoods (siblings)
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
@@ -640,13 +723,15 @@ class ProtonOC(Model):
                 potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
-            targets = [agent] + self.rng.choice(candidates, min(len(candidates), num_siblings)).tolist()
+            targets = [agent] + self.rng.choice(candidates,
+                                                min(len(candidates), num_siblings)).tolist()
             for sib in targets:
                 if sib in agent_left_household:
                     agent_left_household.remove(sib)
             for target in targets:
                 target.addSiblingLinks(targets)
-                # this is a good place to remind that the number of links in the sibling link neighbors is not the "number of brothers and sisters"
+                # this is a good place to remind that the number of links in the sibling link
+                # neighbors is not the "number of brothers and sisters"
                 # because, for example, 4 brothers = 6 links.
             other_targets = targets + [s for c in targets for s in c.neighbors.get('sibling')]
             for target in other_targets:
@@ -655,19 +740,23 @@ class ProtonOC(Model):
 
     def generate_households(self) -> None:
         """
-        This procedure aggregates eligible agents into households based on the tables (ProtonOC.self.head_age_dist,
-        ProtonOC.proportion_of_male_singles_by_age, ProtonOC.hh_type_dist, ProtonOC.partner_age_dist,
-        ProtonOC.children_age_dist, ProtonOC.p_single_father) and mostly follows the third algorithm from
-        Gargiulo et al. 2010 (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
+        This procedure aggregates eligible agents into households based on the tables
+        (ProtonOC.self.head_age_dist, ProtonOC.proportion_of_male_singles_by_age,
+        ProtonOC.hh_type_dist, ProtonOC.partner_age_dist, ProtonOC.children_age_dist,
+        ProtonOC.p_single_father) and mostly follows the third algorithm from Gargiulo et al. 2010
+        (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008828)
+
         :return: None
         """
         population = self.schedule.agents.copy()
         self.hh_size = self.household_sizes(self.initial_agents)
-        complex_hh_sizes = list()  # will contain the sizes that we fail to generate: we'll reuse those for complex households
+        complex_hh_sizes = list()
+        # contain the sizes that fail to generate: we'll reuse those for complex households
         max_attempts_by_size = 50
         attempts_list = list()
-        # We have two levels of iterating: the first level is the general attempts at generating a household
-        # and the second level is the attempts at generating a household of a particular size before giving up.
+        # We have two levels of iterating: the first level is the general attempts at generating
+        # a household and the second level is the attempts at generating a household of a
+        # particular size before giving up.
         for size in self.hh_size:
             success = False
             nb_attempts = 0
@@ -677,35 +766,46 @@ class ProtonOC(Model):
                 # pick the age of the head according to the size of the household
                 head_age = extra.pick_from_pair_list(self.head_age_dist[size], self.rng)
                 if size == 1:
-                    male_wanted = (self.rng.random() < self.proportion_of_male_singles_by_age[head_age])
-                    head = self.pick_from_population_pool_by_age_and_gender(head_age, male_wanted, population)
+                    male_wanted = (self.rng.random()
+                                   < self.proportion_of_male_singles_by_age[head_age])
+                    head = self.pick_from_population_pool_by_age_and_gender(head_age,
+                                                                            male_wanted,
+                                                                            population)
                     # Note that we don't "do" anything with the picked head: the fact that it gets
                     # removed from the population table when we pick it is sufficient for us.
                     if head:
                         success = True
                         attempts_list.append(nb_attempts)
                 else:
-                    # For household sizes greater than 1, pick a household type according to age of the head
+                    # For household sizes greater than 1, pick a household type according to
+                    # age of the head
                     hh_type = extra.pick_from_pair_list(self.hh_type_dist[head_age], self.rng)
                     if hh_type == "single_parent":
-                        male_head = self.rng.random() < float(self.p_single_father.columns.to_list()[0])
+                        male_head = self.rng.random() \
+                                    < float(self.p_single_father.columns.to_list()[0])
                     else:
                         male_head = True
                     if male_head:
-                        mother_age = extra.pick_from_pair_list(self.partner_age_dist[head_age], self.rng)
+                        mother_age = extra.pick_from_pair_list(self.partner_age_dist[head_age],
+                                                               self.rng)
                     else:
                         mother_age = head_age
-                    hh_members.append(self.pick_from_population_pool_by_age_and_gender(head_age, male_head, population))
+                    hh_members.append(self.pick_from_population_pool_by_age_and_gender(head_age,
+                                                                                       male_head,
+                                                                                       population))
                     if hh_type == "couple":
-                        mother = self.pick_from_population_pool_by_age_and_gender(mother_age, False, population)
+                        mother = self.pick_from_population_pool_by_age_and_gender(mother_age,
+                                                                                  False,
+                                                                                  population)
                         hh_members.append(mother)
                     num_children = size - len(hh_members)
                     for child in range(1, int(num_children) + 1):
                         if num_children in self.children_age_dist:
                             if mother_age in self.children_age_dist[num_children]:
-                                child_age = extra.pick_from_pair_list(self.children_age_dist[num_children][mother_age],
-                                                                      self.rng)
-                                child = self.pick_from_population_pool_by_age(child_age, population)
+                                child_age = extra.pick_from_pair_list(
+                                    self.children_age_dist[num_children][mother_age], self.rng)
+                                child = self.pick_from_population_pool_by_age(child_age,
+                                                                              population)
                                 hh_members.append(child)
                     hh_members = [memb for memb in hh_members if memb is not None]  # exclude Nones
                     if len(hh_members) == size:
@@ -713,7 +813,8 @@ class ProtonOC(Model):
                         success = True
                         attempts_list.append(nb_attempts)
                         family_wealth_level = hh_members[0].wealth_level
-                        # if it's a couple, partner up the first two members and set the others as offspring
+                        # if it's a couple, partner up the first two members and
+                        # set the others as offspring
                         if hh_type == "couple":
                             hh_members[0].makePartnerLinks(hh_members[1])
                             couple = hh_members[0:2]
@@ -727,17 +828,21 @@ class ProtonOC(Model):
                             member.wealth_level = family_wealth_level
                         self.families.append(hh_members)
                     else:
-                        # in case of failure, we need to put the selected members back in the population
+                        # in case of failure, we need to put the selected
+                        # members back in the population
                         for member in hh_members:
                             population.append(member)
             if not success:
                 complex_hh_sizes.append(size)
         if self.verbose:
-            print("Complex size: " + str(len(complex_hh_sizes)) + str("/") + str(len(self.hh_size)))
+            print("Complex size: " + str(len(complex_hh_sizes))
+                  + str("/") + str(len(self.hh_size)))
         for comp_hh_size in complex_hh_sizes:
             comp_hh_size = int(min(comp_hh_size, len(population)))
             complex_hh_members = population[0:comp_hh_size]  # grab the first persons in the list
-            max_age_index = [x.age for x in complex_hh_members].index(max([x.age for x in complex_hh_members]))
+            max_age_index = [x.age
+                             for x in complex_hh_members].index(max([x.age
+                                                                     for x in complex_hh_members]))
             family_wealth_level = complex_hh_members[max_age_index].wealth_level
             for member in complex_hh_members:
                 population.remove(member)  # remove persons from the population
@@ -753,8 +858,9 @@ class ProtonOC(Model):
 
     def household_sizes(self, size: int) -> List[int]:
         """
-        Loads a table with a probability distribution of household size and calculates household based on initial
-        agents
+        Loads a table with a probability distribution of household size and calculates household
+        based on initial agents
+
         :param size: int, population size
         :return: list, the sizes of household
         """
@@ -770,7 +876,11 @@ class ProtonOC(Model):
         return sizes
 
 
-    def pick_from_population_pool_by_age_and_gender(self, age_wanted: int, male_wanted: bool, population: List[Person]) -> Union[Person, None]:
+    def pick_from_population_pool_by_age_and_gender(self,
+                                                    age_wanted: int,
+                                                    male_wanted: bool,
+                                                    population: List[Person]) -> Union[Person,
+                                                                                       None]:
         """
         Pick an agent with specific age and sex, None otherwise
         :param age_wanted: int, age wanted
@@ -786,7 +896,8 @@ class ProtonOC(Model):
         return picked_person
 
 
-    def pick_from_population_pool_by_age(self, age_wanted: int, population: List[Person]) -> Union[Person, None]:
+    def pick_from_population_pool_by_age(self, age_wanted: int,
+                                         population: List[Person]) -> Union[Person, None]:
         """
         Pick an agent with specific age form population, None otherwise
         :param age_wanted: int, age wanted
@@ -802,11 +913,13 @@ class ProtonOC(Model):
 
     def setup_education_levels(self) -> None:
         """
-        Modify the self.education_levels attribute in-place. Given "n" levels of education (list_schools),
-        for each level compute the correct amount of schools for each level, based on the number of agents.
+        Modify the self.education_levels attribute in-place. Given "n" levels of education
+        (list_schools), for each level compute the correct amount of schools for each level,
+        based on the number of agents.
+
         :return: None
         """
-        list_schools = self.read_csv_city("schools").values.tolist()
+        list_schools = extra.df_to_lists(self.read_csv_city("schools"), split_row=False)
         for index, level in enumerate(list_schools):
             level[3] = np.ceil((level[3] / level[4]) * self.initial_agents)
             level.remove(level[4])
@@ -815,7 +928,8 @@ class ProtonOC(Model):
 
     def setup_schools(self) -> None:
         """
-        Based on the number of agents and the attribute ProtonOC.education_levels, generate schools.
+        Based on the number of agents and the attribute ProtonOC.education_levels,
+        generate schools.
         :return: None
         """
         for level in self.education_levels.keys():
@@ -826,8 +940,8 @@ class ProtonOC(Model):
 
     def init_students(self) -> None:
         """
-        Adds to schools the agents that meet the defined parameters of age and level of education and then
-        creates connections between agents within the school.
+        Adds to schools the agents that meet the defined parameters of age and level of education
+        and then creates connections between agents within the school.
         :return: None
         """
         for level in self.education_levels:
@@ -835,7 +949,7 @@ class ProtonOC(Model):
             start_age = row[0]
             end_age = row[1]
             pool = [agent for agent in self.schedule.agents
-                    if start_age <= start_age <= end_age
+                    if start_age <= agent.age <= end_age
                     and agent.education_level == level - 1
                     and agent.max_education_level >= level]
             for agent in pool:
@@ -897,15 +1011,20 @@ class ProtonOC(Model):
 
     def assign_jobs_and_wealth(self) -> None:
         """
-        This procedure modifies the job_level and wealth_level attributes of agents in-place. This is just a first
-        assignment, and will be modified first by the multiplier then by adding neet status.
+        This procedure modifies the job_level and wealth_level attributes of agents in-place.
+        This is just a first assignment, and will be modified first by the multiplier then
+        by adding neet status.
+
+        :return: None
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
             if agent.age > 16:
                 agent.job_level = extra.pick_from_pair_list(
-                    self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male], self.rng)
+                    self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],
+                    self.rng)
                 agent.wealth_level = extra.pick_from_pair_list(
-                    self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male], self.rng)
+                    self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male],
+                    self.rng)
             else:
                 agent.job_level = 1
                 agent.wealth_level = 1  # this will be updated by family membership
@@ -913,23 +1032,29 @@ class ProtonOC(Model):
 
     def setup_inactive_status(self) -> None:
         """
-        Based on ProtonOC.labour_status_by_age_and_sex table, this method modifies the job_level attribute
-        of the agents in-place.
+        Based on ProtonOC.labour_status_by_age_and_sex table, this method modifies the job_level
+        attribute of the agents in-place.
+
+        :return: None
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
-            if 14 < agent.age < self.retirement_age and agent.job_level == 1 and self.rng.random() < \
+            if 14 < agent.age < self.retirement_age \
+                    and agent.job_level == 1 and self.rng.random() < \
                     self.labour_status_by_age_and_sex[agent.gender_is_male][agent.age]:
                 agent.job_level = 0
 
 
     def setup_employers_jobs(self) -> None:
         """
-        Given the ProtonOC.job_counts table this function generates the correct number of Jobs and Employers.
-        Modify in-place Job.my_employer, Job.job_level and Employer.my_jobs.
+        Given the ProtonOC.job_counts table this function generates the correct number of Jobs
+        and Employers. Modify in-place Job.my_employer, Job.job_level and Employer.my_jobs.
+
         :return: None
         """
-        # a small multiplier is added so to increase the pool to allow for matching at the job level
-        jobs_target = len([agent for agent in self.schedule.agents if agent.job_level > 1 and agent.my_school is None
+        # a small multiplier is added so to increase the pool to
+        # allow for matching at the job level
+        jobs_target = len([agent for agent in self.schedule.agents
+                           if agent.job_level > 1 and agent.my_school is None
                            and 16 < agent.age < self.retirement_age]) * 1.2
         while len(self.jobs) < jobs_target:
             n = int(self.rng.choice(self.job_counts, 1))
@@ -943,26 +1068,24 @@ class ProtonOC(Model):
                 new_job.job_level = self.random_level_by_size(n)
 
 
-    def random_level_by_size(self, employer_size):
+    def random_level_by_size(self, employer_size: Union[int, float]) -> int:
         """
-        Given a float or int (employer_size) this function returns the level to be assigned
-        based on the table (self.jobs_by_company_size) keys.
-        :param employer_size: float,
-        :return: int,
+        Given a float or int @employer_size this function returns the level to be assigned
+        based on the table ProtonOC.jobs_by_company_size.
+        :param employer_size: Union[int, float], the size
+        :return: int, the level
         """
-
-        if employer_size in list(self.jobs_by_company_size.keys()):
-            return extra.pick_from_pair_list(self.jobs_by_company_size[employer_size], self.rng)
-        else:
+        most_similar_key = employer_size
+        if employer_size not in self.jobs_by_company_size:
             min_dist = 1e10
-            for key in list(self.jobs_by_company_size.keys()):
+            for key in self.jobs_by_company_size:
                 if abs(employer_size - key) < min_dist:
                     most_similar_key = key
                     min_dist = abs(employer_size - key)
-            return extra.pick_from_pair_list(self.jobs_by_company_size[most_similar_key], self.rng)
+        return extra.pick_from_pair_list(self.jobs_by_company_size[most_similar_key], self.rng)
 
 
-    def init_professional_links(self):
+    def init_professional_links(self) -> None:
         """
         Creates connections between agents within the same Employer.
         :return: None
@@ -977,39 +1100,44 @@ class ProtonOC(Model):
                 employee.makeProfessionalLinks(conn_pool)
 
 
-    def calculate_crime_multiplier(self):
+    def calculate_crime_multiplier(self) -> None:
         """
-        Based on self.c_range_by_age_and_sex this procedure modifies in-place the attribute self.crime_multiplier
+        Based on ProtonOC.c_range_by_age_and_sex this procedure modifies in-place
+        the attribute ProtonOc.crime_multiplier
         :return: None
         """
         total_crime = 0
         for line in self.c_range_by_age_and_sex:
-            people_in_cell = [agent for agent in self.schedule.agents if
-                              agent.age > line[0][1] and agent.age <= line[1][0] and agent.gender_is_male ==
-                              line[0][0]]
+            people_in_cell = [agent for agent in self.schedule.agents if line[0][1] <
+                              agent.age <= line[1][0] and agent.gender_is_male == line[0][0]]
             n_of_crimes = line[1][1] * len(people_in_cell)
             total_crime += n_of_crimes
-        self.crime_multiplier = self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
+        self.crime_multiplier = \
+            self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
 
 
-    def calculate_criminal_tendency(self):
+    def calculate_criminal_tendency(self) -> None:
         """
-        Based on the c_range_by_age_and_sex distribution, this function calculates and assigns to each agent
-        a value representing the criminal tendency. It modifies the attribute Person.criminal_tendency in-place.
+        Based on the ProtonOC.c_range_by_age_and_sex distribution, this function calculates and
+        assigns to each agent a value representing the criminal tendency. It modifies the attribute
+        Person.criminal_tendency in-place.
+
         :return: None
         """
         for line in self.c_range_by_age_and_sex:
             # the line variable is composed as follows:
-            # [[bool(gender_is_male), int(minimum age range)], [int(maximum age range), float(c value)]]
+            # [[bool(gender_is_male), int(minimum age range)],
+            # [int(maximum age range), float(c value)]]
             subpop = [agent for agent in self.schedule.agents if
-                      agent.age >= line[0][1] and agent.age <= line[1][0] and agent.gender_is_male == line[0][0]]
+                      line[0][1] <= agent.age <= line[1][0] and agent.gender_is_male == line[0][0]]
             if subpop:
                 c = line[1][1]
                 # c is the cell value. Now we calculate criminal-tendency with the factors.
                 for agent in subpop:
                     agent.criminal_tendency = c
                     agent.factors_c()
-                # then derive the correction epsilon by solving $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
+                # then derive the correction epsilon by solving
+                # $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
                 epsilon = c - np.mean([agent.criminal_tendency for agent in subpop])
                 for agent in subpop:
                     agent.criminal_tendency += epsilon
@@ -1019,7 +1147,8 @@ class ProtonOC(Model):
 
     def calc_correction_for_non_facilitators(self):
         """
-        This function modifies the self.correction_for_non_facilitators attribute of the model.
+        This function modifies the ProtonOC.correction_for_non_facilitators attribute of the model
+        based on the number of agents and on the number of facilitators.
         :return: None
         """
         f = len([agent for agent in self.schedule.agents if agent.facilitator])
@@ -1028,15 +1157,15 @@ class ProtonOC(Model):
             (n - self.facilitator_repression_multiplier * f) / (n - f)] if f > 0 else 1.0
 
 
-    def intervention_is_on(self):
+    def intervention_is_on(self) -> bool:
         """
         Returns True if there is an active intervention False otherwise.
-        :return: bool
+        :return: bool, True if there is an active intervention False otherwise.
         """
         return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
 
-    def lognormal(self, mu, sigma):
+    def lognormal(self, mu: Union[float, int], sigma: Union[float, int]) -> float:
         """
         Draw samples from a log-normal distribution
         :param mu: float, mean
@@ -1046,19 +1175,20 @@ class ProtonOC(Model):
         return np.exp(mu + sigma * self.rng.normal())
 
 
-    def calculate_arrest_rate(self):
+    def calculate_arrest_rate(self) -> None:
         """
-        This gives the base probability of arrest, proportionally to the number of expected crimes in the first year.
-        Modifies the attribute self.arrest_rate in-place
+        This gives the base probability of arrest, proportionally to the number of expected crimes
+        in the first year. Modifies the attribute ProtonOC.arrest_rate in-place
         :return: None
         """
         self.arrest_rate = self.number_arrests_per_year / self.ticks_per_year / self.number_crimes_yearly_per10k / 10000 * self.initial_agents
 
 
-    def assing_parents(self):
+    def assing_parents(self) -> None:
         """
-        This function modifies in-place the Person.mother and Person.father attribute of agents, based on networks.
-        # todo: specificare che è ridondante
+        This function modifies in-place the Person.mother and Person.father attribute of agents,
+        based on networks. This function is redundant, the information is already contained within
+        the Person.neighbors attribute, it has been implemented to ensure faster access.
         :return: None
         """
         for agent in self.schedule.agents:
@@ -1070,7 +1200,7 @@ class ProtonOC(Model):
                         agent.mother = parent
 
 
-    def choose_intervention_setting(self):
+    def choose_intervention_setting(self) -> None:
         """
         Selecting the intervention setting, modifies the model attributes in-place
         :return: None
@@ -1177,14 +1307,15 @@ class ProtonOC(Model):
             self.intervention_end = 9999
 
 
-    def graduate_and_enter_jobmarket(self):
+    def graduate_and_enter_jobmarket(self) -> None:
         """
         This enables students to move between levels of education and into the labor market.
         :return: None
         """
         primary_age = self.education_levels[1][0]
         for student in [agent for agent in self.schedule.agents
-                        if agent.education_level == 0 and agent.age == primary_age and agent.my_school == None]:
+                        if agent.education_level == 0 and agent.age == primary_age
+                        and agent.my_school is None]:
             student.enroll_to_school(1)
         for school in self.schools:
             end_age = self.education_levels[school.diploma_level][1]
@@ -1196,25 +1327,29 @@ class ProtonOC(Model):
                     student.enroll_to_school(school.diploma_level + 1)
                 else:
                     student.job_level = extra.pick_from_pair_list(
-                        self.work_status_by_edu_lvl[student.education_level][student.gender_is_male], self.rng)
+                        self.work_status_by_edu_lvl[student.education_level][student.gender_is_male],
+                        self.rng)
                     student.wealth_level = extra.pick_from_pair_list(
-                        self.wealth_quintile_by_work_status[student.job_level][student.gender_is_male], self.rng)
-                    if student.age > 14 and student.age < self.retirement_age and student.job_level == 1 and self.rng.random() < \
-                            self.labour_status_by_age_and_sex[student.gender_is_male][
-                                student.age]:
+                        self.wealth_quintile_by_work_status[student.job_level][student.gender_is_male],
+                        self.rng)
+                    if 14 < student.age < self.retirement_age and student.job_level == 1 \
+                            and self.rng.random() < \
+                            self.labour_status_by_age_and_sex[student.gender_is_male][student.age]:
                         student.job_level = 0
 
 
-    def let_migrants_in(self):
+    def let_migrants_in(self) -> None:
         """
-        if migration_on is equal to True this procedure inserts foreign agents within the population based on
-        available jobs. These new agents are instantiated and they are given a job
+        if ProtonOC.migration_on is equal to True this procedure inserts foreign agents within the
+        population based on available jobs. These new agents are instantiated and they are given
+        a job
+
         :return: None
         """
         if self.migration_on:
             # calculate the difference between deaths and birth
-            to_replace = self.initial_agents - len(self.schedule.agents) if self.initial_agents - len(
-                self.schedule.agents) > 0 else 0
+            to_replace = self.initial_agents - len(self.schedule.agents) \
+                if self.initial_agents - len(self.schedule.agents) > 0 else 0
             free_jobs = [job for job in self.jobs if job.my_worker]
             n_to_add = np.min([to_replace, len(free_jobs)])
             self.number_migrants += n_to_add
@@ -1222,13 +1357,15 @@ class ProtonOC(Model):
                 # we do not care about education level and wealth of migrants, as those variables
                 # exist only in order to generate the job position.
                 new_agent = Person(self)
+                new_agent.init_person()
                 self.schedule.add(new_agent)
                 new_agent.my_job = job
                 job.my_worker = new_agent
-                total_pool = [candidate for candidate in new_agent.my_job.my_employer.employees() if
-                              candidate != new_agent]
+                total_pool = [candidate for candidate in new_agent.my_job.my_employer.employees()
+                              if candidate != new_agent]
                 employees = list(
-                    self.rng.choice(total_pool, extra.decide_conn_number(total_pool, 20, also_me=False),
+                    self.rng.choice(total_pool, extra.decide_conn_number(total_pool, 20,
+                                                                         also_me=False),
                                     replace=False))
                 new_agent.makeProfessionalLinks(employees)
                 new_agent.bird_tick = self.ticks - (self.rng.integers(0, 20) + 18) * self.ticks_per_year
@@ -1236,40 +1373,53 @@ class ProtonOC(Model):
                 new_agent.migrant = True
 
 
-    def cal_criminal_tendency_addme(self):
-        min_criminal_tendencies = np.min([agent.criminal_tendency for agent in self.schedule.agents])
-        self.criminal_tendency_addme = -1 * min_criminal_tendencies if min_criminal_tendencies < 0 else 0
-
-
-    def commit_crimes(self):
+    def cal_criminal_tendency_addme(self) -> None:
         """
-        This procedure is central in the model, allowing agents to find accomplices and commit crimes.
-        Based on the table self.c_range_by_age_and_sex , the number of crimes and the subset of the agents who commit them
-        is selected. For each crime a single agent is selected and if necessary activates the procedure that allows
-        the agent to find accomplices. Criminal groups are append within the list self.co_offender_groups
+        Calculates the attribute ProtonOC.criminal_tendency_addme
+        :return: None
+        """
+        min_criminal_tendencies = np.min([agent.criminal_tendency for agent
+                                          in self.schedule.agents])
+        self.criminal_tendency_addme = -1 * min_criminal_tendencies \
+            if min_criminal_tendencies < 0 else 0
+
+
+    def commit_crimes(self) -> None:
+        """
+        This procedure is central in the model, allowing agents to find accomplices and commit
+        crimes. Based on the table ProtonOC.c_range_by_age_and_sex, the number of crimes and the
+        subset of the agents who commit them is selected. For each crime a single agent is selected
+        and if necessary activates the procedure that allows the agent to find accomplices.
+        Criminal groups are append within the list co_offender_groups.
+
         :return: None
         """
         co_offender_groups = list()
-        co_offender_started_by_OC = list()
+        co_offender_started_by_oc = list()
         for cell, value in self.c_range_by_age_and_sex:
             people_in_cell = [agent for agent in self.schedule.agents if
-                              agent.age >= cell[1] and agent.age <= value[0] and agent.gender_is_male == cell[0]]
-            target_n_of_crimes = value[1] * len(people_in_cell) / self.ticks_per_year * self.crime_multiplier
-            for x in np.arange(np.round(target_n_of_crimes)):
+                              cell[1] <= agent.age <= value[0]
+                              and agent.gender_is_male == cell[0]]
+            target_n_of_crimes = \
+                value[1] * len(people_in_cell) / self.ticks_per_year * self.crime_multiplier
+            for _target in np.arange(np.round(target_n_of_crimes)):
                 self.number_crimes += 1
                 agent = extra.weighted_one_of(people_in_cell,
-                                              lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
+                                              lambda x: x.criminal_tendency + self.criminal_tendency_addme,
+                                              self.rng)
                 number_of_accomplices = self.number_of_accomplices()
-                accomplices = agent.find_accomplices(number_of_accomplices)  # this takes care of facilitators as well.
+                accomplices = agent.find_accomplices(number_of_accomplices)
+                # this takes care of facilitators as well.
                 co_offender_groups.append(accomplices)
                 if agent.oc_member:
-                    co_offender_started_by_OC.append(accomplices)
+                    co_offender_started_by_oc.append(accomplices)
                 # check for big crimes started from a normal guy
-                if len(accomplices) > self.this_is_a_big_crime and agent.criminal_tendency < self.good_guy_threshold:
+                if len(accomplices) > self.this_is_a_big_crime \
+                        and agent.criminal_tendency < self.good_guy_threshold:
                     self.big_crime_from_small_fish += 1
         for co_offender_group in co_offender_groups:
-            self.commit_crime(co_offender_group)
-        for co_offenders_by_OC in co_offender_started_by_OC:
+            extra.commit_crime(co_offender_group)
+        for co_offenders_by_OC in co_offender_started_by_oc:
             for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
                 agent.new_recruit = self.ticks
                 agent.oc_member = True
@@ -1282,74 +1432,43 @@ class ProtonOC(Model):
         if criminals:
             if self.intervention_is_on() and self.facilitator_repression:
                 for criminal in criminals:
-                    criminal.arrest_weight = self.facilitator_repression_multiplier if criminal.facilitator else 1
+                    criminal.arrest_weight = self.facilitator_repression_multiplier \
+                        if criminal.facilitator else 1
             else:
                 if self.intervention_is_on() and self.oc_boss_repression and len(
                         [agent for agent in criminals if agent.oc_member]) >= 1:
                     for criminal in criminals:
                         if not criminal.oc_member:
                             criminal.arrest_weight = 1
-                    self.calculate_oc_status([agent for agent in criminals if agent.oc_member])
+                    extra.calculate_oc_status([agent for agent in criminals if agent.oc_member])
                 else:
                     # no intervention active
                     for criminal in criminals:
                         criminal.arrest_weight = 1
             arrest_mod = self.number_arrests_per_year / self.ticks_per_year / 10000 * len(self.schedule.agents)
             target_n_of_arrest = np.floor(
-                arrest_mod + 1 if self.rng.random() < (arrest_mod - np.floor(arrest_mod)) else 0)
-            for agent in extra.weighted_n_of(target_n_of_arrest, criminals, lambda x: x.arrest_weight, self.rng):
+                arrest_mod + 1
+                if self.rng.random() < (arrest_mod - np.floor(arrest_mod))
+                else 0)
+            for agent in extra.weighted_n_of(target_n_of_arrest, criminals,
+                                             lambda x: x.arrest_weight, self.rng):
                 agent.get_caught()
 
-    def calculate_oc_status(self, co_offenders):
-        """
-        This procedure modify in-place the arrest_weigh attribute of the Person objects passed to co_offenders
-        :param co_offenders: list, of Person object
-        :return: None
-        """
-        for agent in co_offenders:
-            agent.arrest_weight = agent.calculate_oc_member_position()
-        min_score = np.min([agent.arrest_weight for agent in co_offenders])
-        divide_score = np.mean([agent.arrest_weight - min_score for agent in co_offenders])
-        for agent in co_offenders:
-            if divide_score > 0:
-                agent.arrest_weight = (agent.arrest_weight - min_score) / divide_score
-            else:
-                agent.arrest_weight = 1
 
-    def commit_crime(self, co_offenders):
+    def number_of_accomplices(self) -> int:
         """
-        This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
-        attributes of the Person objects passed to co_offenders
-        :param co_offenders: list, of Person object
-        :return: None
-        """
-        for co_offender in co_offenders:
-            co_offender.num_crimes_committed += 1
-            co_offender.num_crimes_committed_this_tick += 1
-            other_co_offenders = [agent for agent in co_offenders if agent != co_offender]
-            for agent in other_co_offenders:
-                if agent not in co_offender.neighbors.get("criminal"):
-                    co_offender.addCriminalLink(agent)
-                    co_offender.co_off_flag[agent] = 0
-        for co_offender in co_offenders:
-            for co_off_key in co_offender.co_off_flag.keys():
-                co_offender.co_off_flag[co_off_key] += 1
-                if co_offender.co_off_flag[co_off_key] == 2:
-                    co_offender.num_co_offenses[co_off_key] += 1
-
-    def number_of_accomplices(self):
-        """
-        Pick a group size from the num. co-offenders distribution
-        and substract one to get the number of accomplices
-        :return:
+        Pick a group size from ProtonOC.num_co_offenders_dist distribution and substract one to get
+        the number of accomplices
+        :return: int
         """
         return extra.pick_from_pair_list(self.num_co_offenders_dist, self.rng) - 1
 
-    def update_meta_links(self, agents):
+    def update_meta_links(self, agents: List[Person]) -> None:
         """
-        This method creates a new temporal graph that is used to colculate the oc_embeddedness of an agent, the graph is stored
-        in the variable self.meta_graph
-        :param agents: list, of Person objects
+        This method creates a new temporary graph that is used to colculate the
+        oc_embeddedness of an agent.
+
+        :param agents: List[Person], the agentset
         :return: None
         """
         self.meta_graph = nx.Graph()
@@ -1368,43 +1487,46 @@ class ProtonOC(Model):
                             w += 1
                 self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=1 / w)
 
-    def retire_persons(self):
+    def retire_persons(self) -> None:
         """
         Agents that reach the self.retirement_age are retired.
         :return: None
         """
-        to_retire = [agent for agent in self.schedule.agents if agent.age >= self.retirement_age and not agent.retired]
+        to_retire = [agent for agent in self.schedule.agents
+                     if agent.age >= self.retirement_age and not agent.retired]
         for agent in to_retire:
             agent.retired = True
-            if agent.my_job != None:
+            if agent.my_job is not None:
                 agent.my_job.my_worker = None
                 agent.my_job = None
                 agent.neighbors.get("professional").clear()
                 # Figure out how to preserve socio-economic status (see issue #22)
 
-    def make_baby(self):
+    def make_baby(self) -> None:
         """
-        Based on the self.fertility_table this procedure create new agents taking into account the possibility
-        that the model is set to self.constant_population
+        Based on the ProtonOC.fertility_table this procedure create new agents taking into account
+        the possibility that the model is set to ProtonOC.constant_population.
         :return: None
         """
         if self.constant_population:
             breeding_target = self.initial_agents - len(self.schedule.agents)
             if breeding_target > 0:
                 breeding_pool = self.rng.choice([agent for agent in self.schedule.agents if
-                                                 agent.age >= 14 and agent.age <= 50 and not agent.gender_is_male],
+                                                14 <= agent.age <= 50
+                                                 and not agent.gender_is_male],
                                                 size=breeding_target * 10, replace=False)
-                for agent in extra.weighted_n_of(breeding_target, breeding_pool, lambda x: x.p_fertility(), self.rng):
+                for agent in extra.weighted_n_of(breeding_target, breeding_pool,
+                                                 lambda x: x.p_fertility(), self.rng):
                     agent.init_baby()
         else:
             for agent in [agent for agent in self.schedule.agents if
-                          agent.age >= 14 and agent.age <= 50 and not agent.gender_is_male]:
+                          14 <= agent.age <= 50 and not agent.gender_is_male]:
                 if self.rng.random() < agent.p_fertility():
                     agent.init_baby()
 
-    def make_people_die(self):
+    def make_people_die(self) -> None:
         """
-        Based on p_mortality table agents die.
+        Based on ProtonOC.p_mortality table agents die.
         :return: None
         """
         dead_agents = list()
@@ -1416,7 +1538,8 @@ class ProtonOC(Model):
                         if agent == removed[1] or agent == removed[2]:
                             self.removed_fatherships.remove(removed)
                 if agent.facilitator:
-                    new_facilitator = self.rng.choice([agent for agent in self.schedule.agents if not agent.facilitator
+                    new_facilitator = self.rng.choice([agent for agent in self.schedule.agents
+                                                       if not agent.facilitator
                                                        and not agent.oc_member and agent.age > 18])
                     new_facilitator.facilitator = True
                 self.number_deceased += 1
@@ -1430,59 +1553,6 @@ class ProtonOC(Model):
             del agent
 
 
-
-
 if __name__ == "__main__":
-    # model = ProtonOC()
-    # model.run(1000,60, verbose=True)
-
     model = ProtonOC()
-    model.setup(500)
-    def possible_school_level(model, agent):
-        """
-        Get the expected school level of the agent
-        :param model: The model
-        :param agent: The agent
-        :return: int, the expected school level
-        """
-        for level in model.education_levels:
-            if agent.age <= model.education_levels[level][1] and agent.age >= model.education_levels[level][0]:
-                the_level = level
-                return the_level
-
-    for agent in model.schedule.agents:
-        expected_school_level = possible_school_level(model, agent)
-        # 1 There must be no agents who work and go to school
-        assert not (agent.my_school is not None and agent.my_job is not None)
-        if agent.my_school:
-            # 2 No agent acquires the level of education before finishing school
-            assert agent.education_level == agent.my_school.diploma_level - 1
-            # 3 All agents who go to school at a certain level respect age limits
-            assert agent.my_school.diploma_level == expected_school_level and agent.education_level == expected_school_level - 1
-            # 4 The agent who goes to that school must be in the students of that school
-            assert agent in agent.my_school.my_students
-            # 5 The agent who goes to that school must be in the students of that school
-            assert agent.my_school in model.schools
-            # 6 The agent can only be found among students at a single school
-            assert len([school for school in model.schools if agent in school.my_students]) == 1
-
-    for i in range(36):
-        for agent in model.schedule.agents:
-            expected_school_level = possible_school_level(model, agent)
-            # 1 There must be no agents who work and go to school
-            assert not (agent.my_school is not None and agent.my_job is not None)
-            if agent.my_school:
-                # 2 No agent acquires the level of education before finishing school
-                assert agent.education_level == agent.my_school.diploma_level - 1
-                # 3 All agents who go to school at a certain level respect age limits
-                assert agent.my_school.diploma_level == expected_school_level and agent.education_level == expected_school_level - 1
-                # 4 The agent who goes to that school must be in the students of that school
-                assert agent in agent.my_school.my_students
-                # 5 The agent who goes to that school must be in the students of that school
-                assert agent.my_school in model.schools
-                # 6 The agent can only be found among students at a single school
-                assert len([school for school in model.schools if agent in school.my_students]) == 1
-
-
-
-
+    model.run(1000, 60, verbose=True)

@@ -189,6 +189,46 @@ def df_to_lists(df: pd.DataFrame, split_row: bool =True) -> List:
         output_list = df.values.tolist()
     return output_list
 
+
+def calculate_oc_status( co_offenders: List[Person]) -> None:
+    """
+    This procedure modify in-place the arrest_weigh attribute of the Person objects passed to co_offenders
+    :param co_offenders: list, of Person object
+    :return: None
+    """
+    for agent in co_offenders:
+        agent.arrest_weight = agent.calculate_oc_member_position()
+    min_score = np.min([agent.arrest_weight for agent in co_offenders])
+    divide_score = np.mean([agent.arrest_weight - min_score for agent in co_offenders])
+    for agent in co_offenders:
+        if divide_score > 0:
+            agent.arrest_weight = (agent.arrest_weight - min_score) / divide_score
+        else:
+            agent.arrest_weight = 1
+
+
+def commit_crime( co_offenders: List[Person]) -> None:
+    """
+    This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
+    attributes of the Person objects passed to co_offenders
+    :param co_offenders: list, of Person object
+    :return: None
+    """
+    for co_offender in co_offenders:
+        co_offender.num_crimes_committed += 1
+        co_offender.num_crimes_committed_this_tick += 1
+        other_co_offenders = [agent for agent in co_offenders if agent != co_offender]
+        for agent in other_co_offenders:
+            if agent not in co_offender.neighbors.get("criminal"):
+                co_offender.addCriminalLink(agent)
+                co_offender.co_off_flag[agent] = 0
+    for co_offender in co_offenders:
+        for co_off_key in co_offender.co_off_flag.keys():
+            co_offender.co_off_flag[co_off_key] += 1
+            if co_offender.co_off_flag[co_off_key] == 2:
+                co_offender.num_co_offenses[co_off_key] += 1
+
+
 #Numba functions
 @numba.jit(nopython=True)
 def _age(tick, birth_tick):
