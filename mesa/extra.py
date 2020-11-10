@@ -170,6 +170,25 @@ def decide_conn_number(agents: Union[List, Set], max_lim: int, also_me: bool = T
     else:
         return max_lim
 
+
+def df_to_lists(df: pd.DataFrame, split_row: bool =True) -> List:
+    """
+    This function transforms a pandas DataFrame into nested lists as follows:
+    df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
+
+    This transformation ensures a faster access to the values using the position in the list
+    :param df: pandas df, the df to be transformed
+    :return: list, a new list
+    """
+    output_list = list()
+    if split_row:
+        temp_list = df.iloc[:, :2].values.tolist()
+        for index, row in df.iterrows():
+            output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
+    else:
+        output_list = df.values.tolist()
+    return output_list
+
 #Numba functions
 @numba.jit(nopython=True)
 def _age(tick, birth_tick):

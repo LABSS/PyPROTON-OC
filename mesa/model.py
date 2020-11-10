@@ -130,17 +130,17 @@ class ProtonOC(Model):
         self.work_status_by_edu_lvl = extra.df_to_dict(self.read_csv_city("work_status_by_edu_lvl"))
         self.wealth_quintile_by_work_status = extra.df_to_dict(self.read_csv_city("wealth_quintile_by_work_status"))
         self.punishment_length_data = self.read_csv_city("conviction_length")
-        self.male_punishment_length = self.df_to_lists(self.punishment_length_data[["months", "M"]], split_row=False)
-        self.female_punishment_length = self.df_to_lists(self.punishment_length_data[["months", "F"]], split_row=False)
+        self.male_punishment_length = extra.df_to_lists(self.punishment_length_data[["months", "M"]], split_row=False)
+        self.female_punishment_length = extra.df_to_lists(self.punishment_length_data[["months", "F"]], split_row=False)
         self.jobs_by_company_size = extra.df_to_dict(self.read_csv_city("jobs_by_company_size"))
-        self.c_range_by_age_and_sex = self.df_to_lists(self.read_csv_city("crime_rate_by_gender_and_age_range"))
+        self.c_range_by_age_and_sex = extra.df_to_lists(self.read_csv_city("crime_rate_by_gender_and_age_range"))
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
         self.labour_status_by_age_and_sex = extra.df_to_dict(self.read_csv_city("labour_status"), extra_depth=True)
         self.labour_status_range = extra.df_to_dict(self.read_csv_city("labour_status_range"), extra_depth=True)
         marriage = pd.read_csv(os.path.join(self.general_data, "marriages_stats.csv"))
         self.number_weddings_mean = marriage['mean_marriages'][0]
         self.number_weddings_sd = marriage['std_marriages'][0]
-        self.num_co_offenders_dist = self.df_to_lists(
+        self.num_co_offenders_dist = extra.df_to_lists(
             pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv")), split_row=False)
         self.head_age_dist = extra.df_to_dict(self.read_csv_city("head_age_dist_by_household_size"))
         self.proportion_of_male_singles_by_age = extra.df_to_dict(self.read_csv_city("proportion_of_male_singles_by_age"))
@@ -148,6 +148,7 @@ class ProtonOC(Model):
         self.partner_age_dist = extra.df_to_dict(self.read_csv_city("partner_age_dist"))
         self.children_age_dist = extra.df_to_dict(self.read_csv_city("children_age_dist"))
         self.p_single_father = self.read_csv_city("proportion_single_fathers")
+        self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
 
 
 
@@ -868,8 +869,8 @@ class ProtonOC(Model):
         self.assing_parents()
         self.setup_employers_jobs()
         for agent in [agent for agent in self.schedule.agents
-                      if agent.my_job is None and agent.my_school is None and agent.age >= 18
-                      and agent.age < self.retirement_age and agent.job_level > 1]:
+                      if agent.my_job is None and agent.my_school is None and 18 <=
+                      agent.age < self.retirement_age and agent.job_level > 1]:
             agent.find_job()
         self.init_professional_links()
         self.calculate_crime_multiplier()
@@ -910,27 +911,27 @@ class ProtonOC(Model):
                 agent.wealth_level = 1  # this will be updated by family membership
 
 
-    def setup_inactive_status(self):
+    def setup_inactive_status(self) -> None:
         """
-        Based on labour_status_by_age_and_sex table, this method modifies the job_level attribute of the agents in-place.
+        Based on ProtonOC.labour_status_by_age_and_sex table, this method modifies the job_level attribute
+        of the agents in-place.
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
-            if agent.age > 14 and agent.age < 65 and agent.job_level == 1 and self.rng.random() < \
+            if 14 < agent.age < self.retirement_age and agent.job_level == 1 and self.rng.random() < \
                     self.labour_status_by_age_and_sex[agent.gender_is_male][agent.age]:
                 agent.job_level = 0
 
 
-    def setup_employers_jobs(self):
+    def setup_employers_jobs(self) -> None:
         """
-        Given a table this function generates the correct number of Jobs and Employers. Modify in-place the
-        "my_employer" and "job_level" attributes of "Job" and the "my_jobs" attribute of "Employer".
+        Given the ProtonOC.job_counts table this function generates the correct number of Jobs and Employers.
+        Modify in-place Job.my_employer, Job.job_level and Employer.my_jobs.
         :return: None
         """
-        self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
         # a small multiplier is added so to increase the pool to allow for matching at the job level
-        self.jobs_target = len([a for a in self.schedule.agents if
-                                a.job_level > 1 and a.my_school == None and a.age > 16 and a.age < self.retirement_age]) * 1.2
-        while len(self.jobs) < self.jobs_target:
+        jobs_target = len([agent for agent in self.schedule.agents if agent.job_level > 1 and agent.my_school is None
+                           and 16 < agent.age < self.retirement_age]) * 1.2
+        while len(self.jobs) < jobs_target:
             n = int(self.rng.choice(self.job_counts, 1))
             new_employer = Employer(self)
             self.employers.append(new_employer)
@@ -949,7 +950,7 @@ class ProtonOC(Model):
         :param employer_size: float,
         :return: int,
         """
-        global most_similar_key
+
         if employer_size in list(self.jobs_by_company_size.keys()):
             return extra.pick_from_pair_list(self.jobs_by_company_size[employer_size], self.rng)
         else:
@@ -974,25 +975,6 @@ class ProtonOC(Model):
                 total_pool.remove(employee)
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.makeProfessionalLinks(conn_pool)
-
-
-    def df_to_lists(self, df, split_row=True):
-        """
-        This function transforms a pandas DataFrame into nested lists as follows:
-        df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
-
-        This transformation ensures a faster access to the values using the position in the list
-        :param df: pandas df, the df to be transformed
-        :return: list, a new list
-        """
-        output_list = list()
-        if split_row:
-            temp_list = df.iloc[:, :2].values.tolist()
-            for index, row in df.iterrows():
-                output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
-        else:
-            output_list = df.values.tolist()
-        return output_list
 
 
     def calculate_crime_multiplier(self):
@@ -1448,9 +1430,59 @@ class ProtonOC(Model):
             del agent
 
 
+
+
 if __name__ == "__main__":
+    # model = ProtonOC()
+    # model.run(1000,60, verbose=True)
+
     model = ProtonOC()
-    model.run(1000,600, verbose=True)
+    model.setup(500)
+    def possible_school_level(model, agent):
+        """
+        Get the expected school level of the agent
+        :param model: The model
+        :param agent: The agent
+        :return: int, the expected school level
+        """
+        for level in model.education_levels:
+            if agent.age <= model.education_levels[level][1] and agent.age >= model.education_levels[level][0]:
+                the_level = level
+                return the_level
+
+    for agent in model.schedule.agents:
+        expected_school_level = possible_school_level(model, agent)
+        # 1 There must be no agents who work and go to school
+        assert not (agent.my_school is not None and agent.my_job is not None)
+        if agent.my_school:
+            # 2 No agent acquires the level of education before finishing school
+            assert agent.education_level == agent.my_school.diploma_level - 1
+            # 3 All agents who go to school at a certain level respect age limits
+            assert agent.my_school.diploma_level == expected_school_level and agent.education_level == expected_school_level - 1
+            # 4 The agent who goes to that school must be in the students of that school
+            assert agent in agent.my_school.my_students
+            # 5 The agent who goes to that school must be in the students of that school
+            assert agent.my_school in model.schools
+            # 6 The agent can only be found among students at a single school
+            assert len([school for school in model.schools if agent in school.my_students]) == 1
+
+    for i in range(36):
+        for agent in model.schedule.agents:
+            expected_school_level = possible_school_level(model, agent)
+            # 1 There must be no agents who work and go to school
+            assert not (agent.my_school is not None and agent.my_job is not None)
+            if agent.my_school:
+                # 2 No agent acquires the level of education before finishing school
+                assert agent.education_level == agent.my_school.diploma_level - 1
+                # 3 All agents who go to school at a certain level respect age limits
+                assert agent.my_school.diploma_level == expected_school_level and agent.education_level == expected_school_level - 1
+                # 4 The agent who goes to that school must be in the students of that school
+                assert agent in agent.my_school.my_students
+                # 5 The agent who goes to that school must be in the students of that school
+                assert agent.my_school in model.schools
+                # 6 The agent can only be found among students at a single school
+                assert len([school for school in model.schools if agent in school.my_students]) == 1
+
 
 
 
