@@ -53,7 +53,7 @@ def at_most(agentset, n, rng_istance):
     if len(agentset) < n:
         return agentset
     else:
-        return list(rng_istance.choice(agentset,n, replace=False))
+        return list(rng_istance.choice(agentset, n, replace=False))
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):
     # todo: check for positives

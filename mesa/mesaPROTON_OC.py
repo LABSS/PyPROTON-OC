@@ -53,10 +53,9 @@ class MesaPROTON_OC(Model):
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
-        self.removed_fatherships = list()
-
         #Intervention
         self.family_intervention = None
+        self.removed_fatherships = list()
 
         # outputs
         self.number_deceased = 0
@@ -275,7 +274,7 @@ class MesaPROTON_OC(Model):
         """
         # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample from large populations
         for agent in targets:
-            support_set = extra.at_most([support_agent for support_agent in self.schedule.agents if support_agent.num_crimes_committed == 0 and support_agent.age() > agent.age() and support_agent != agent], 50,  self.rng)
+            support_set = extra.at_most([support_agent for support_agent in self.schedule.agents if support_agent.num_crimes_committed == 0 and support_agent.age() > agent.age()], 50, self.rng)
             if support_set:
                 chosen = extra.weighted_one_of(support_set, lambda x: 1 - abs((x.age() - agent.age()) / 120), self.rng)
                 chosen.makeFriends(agent)
@@ -286,6 +285,8 @@ class MesaPROTON_OC(Model):
         :param targets: list, of Person objects
         :return: None
         """
+        # todo: calculate max_criminal_tendency could be expensive  Maybe we should only
+        #  recalculate it when criminal tendency changes?
         max_criminal_tendency = max([0] + [agent.criminal_tendency for agent in self.schedule.agents])
         for target in targets:
             support_set = extra.at_most([agent for agent in self.schedule.agents if agent != target], 50, self.rng)
@@ -323,8 +324,6 @@ class MesaPROTON_OC(Model):
             for new_professional_link in extra.at_most(the_employer.employees(), 20, self.rng):
                 agent.makeProfessionalLinks(new_professional_link)
 
-    # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network?
-    # for now I think I'll just add another network and keep the redundancy, then we'll see.
     def family_intervene(self):
         """
         This procedure is active when the self.family_intervention attribute is different from None. There are 3
@@ -357,6 +356,7 @@ class MesaPROTON_OC(Model):
                 kid.neighbors.get("parent").remove(kid.father)
                 kid.father.neighbors.get("offspring").remove(kid)
                 self.removed_fatherships.append([((18 * self.ticks_per_year + kid.birth_tick) - self.ticks), kid.father, kid])
+                # we do not modify Person.father, this attribute is implemented so that it is possible to remove the father from the network and keep the information.
                 # at this point bad dad is out and we help the remaining with the whole package
                 # family_links_neighbors also include siblings that could be assigned during setup through the setup_siblings procedure,
                 # we do not need these in this procedure
