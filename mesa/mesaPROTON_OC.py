@@ -53,6 +53,10 @@ class MesaPROTON_OC(Model):
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
+        #Intervention
+        self.family_intervention = None
+        self.removed_fatherships = list()
+
         # outputs
         self.number_deceased = 0
         self.facilitator_fails = 0
@@ -63,7 +67,6 @@ class MesaPROTON_OC(Model):
         self.number_weddings = 0
         self.number_weddings_mean = 100
         self.number_weddings_sd = 0
-        self.removed_fatherships = list()
         self.criminal_tendency_addme_for_weighted_extraction = 0
         self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction = 0
         self.number_law_interventions_this_tick = 0
@@ -131,8 +134,17 @@ class MesaPROTON_OC(Model):
             i_agent.random_init(random_relationships, exclude_partner_net)
 
     def step(self):
-        self.schedule.step()
-        self.wedding()
+        for agent in self.schedule.agents:
+            agent.num_crimes_committed_this_tick = 0
+        self.number_law_interventions_this_tick = 0
+        if self.intervention_is_on():
+            if self.family_intervention:
+                self.family_intervene()
+        self.ticks += 1
+
+
+        # self.schedule.step()
+        # self.wedding()
         # collect data
         # self.datacollector.collect(self)
 
@@ -246,26 +258,40 @@ class MesaPROTON_OC(Model):
                             x.gender_is_male == False and x.neighbors.get('offspring').intersection(set(targets))})
 
     def soc_add_educational(self, targets):
-        for x in targets: x.max_education_level = min(max_education_level + 1, max(education_levels.keys()))
+        """
+        This procedure modifies the max_education_level attribute of targets in-place, by adding +1 if possible.
+        :param targets: list, of Person objects
+        :return: None
+        """
+        for agent in targets:
+            agent.max_education_level = min(agent.max_education_level + 1, max(self.education_levels.keys()))
 
     def soc_add_psychological(self, targets):
+        """
+        For each target a new support member (who has not committed crimes) is added to the friends network
+        :param targets: list, of Person object
+        :return: None
+        """
         # we use a random sample (arbitrarily to =  50 people size max) to avoid weighting sample from large populations
-        for x in targets:
-            support_set = extra.at_most(50, [y for y in schedule.agents if y.num_crimes_committed == 0 and y.age() > x.age()], self.rng)
-        if support_set:
-            chosen = self.rng.choice(support_set,
-                                      p=[(1 - (y.age() - x.age()) / 120) for y in support_set],
-                                      size=None,
-                                      replace=False)
-            chosen.makeFriends(x)
+        for agent in targets:
+            support_set = extra.at_most([support_agent for support_agent in self.schedule.agents if support_agent.num_crimes_committed == 0 and support_agent.age() > agent.age()], 50, self.rng)
+            if support_set:
+                chosen = extra.weighted_one_of(support_set, lambda x: 1 - abs((x.age() - agent.age()) / 120), self.rng)
+                chosen.makeFriends(agent)
 
     def soc_add_more_friends(self, targets):
-        for x in targets:
-            support_set = limited.extraction(schedule.agents.remove(x))
+        """
+        For each target a new friend (with a low level of tendency to crime) is added to the friends network
+        :param targets: list, of Person objects
+        :return: None
+        """
+        # todo: calculate max_criminal_tendency could be expensive  Maybe we should only
+        #  recalculate it when criminal tendency changes?
+        max_criminal_tendency = max([0] + [agent.criminal_tendency for agent in self.schedule.agents])
+        for target in targets:
+            support_set = extra.at_most([agent for agent in self.schedule.agents if agent != target], 50, self.rng)
             if support_set:
-                x.makeFriends(self.rng.choice(support_set, size=None,
-                                             p=[self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction
-                                                - y.criminal_tendency for y in support_set]))
+                target.makeFriends(extra.weighted_one_of(support_set, lambda x: max_criminal_tendency - x.criminal_tendency, self.rng))
 
     def welfare_intervene(self):
         if welfare_support == "job_mother":
@@ -286,37 +312,57 @@ class MesaPROTON_OC(Model):
             self.welfare_createjobs(targets)
 
     def welfare_createjobs(self, targets):
-        for x in targets:
+        """
+        This procedure creates new jobs for each member within targets.
+        :param targets: list, of Person objects
+        :return: None
+        """
+        for agent in targets:
             the_employer = self.rng.choice(self.employers)
-            the_level = x.job_level if x.job_level >= 2 else 2
-            the_employer.create_job(the_level, x)
-            for y in extra.at_most(20, the_employer.employees, self.rng):
-                x.makeProfessionalLinks(y)
+            the_level = agent.job_level if agent.job_level >= 2 else 2
+            the_employer.create_job(the_level, agent)
+            for new_professional_link in extra.at_most(the_employer.employees(), 20, self.rng):
+                agent.makeProfessionalLinks(new_professional_link)
 
-    # here I have to decide how to manage father and mother links. Just as pointers? Then how do I collapse them into the family network?
-    # for now I think I'll just add another network and keep the redundancy, then we'll see.
     def family_intervene(self):
-        kids_to_protect = [x for x in schedule.agents if x.age_between(12, 18)]
-        if family_intervention == "remove_if_caught":
-            kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner]
-        if family_intervention == "remove_if_OC_member":
-            kids_to_protect = [x for x in kids_to_protect if x.father.oc_member]
-        if family_intervention == "remove_if_caught_and_OC_member":
-            kids_to_protect = [x for x in kids_to_protect if type(x.father) == Prisoner and x.father.oc_member]
+        """
+        This procedure is active when the self.family_intervention attribute is different from None. There are 3
+        possible family interventions: remove_if_caught, remove_if_OC_member and remove_if_caught_and_OC_member.
+        These parameters determine the portion of the population on which the intervention will have effect.
+        The intervention consists of the application of 5 procedures on eligible family members:
+        1. Fathers who comply with the conditions are removed from their families (Removed fathers are stored within the
+        removed_fatherships attribute so it is possible at any time to reintroduce them into the family.)
+        2. welfare_createjobs, new jobs are created and assigned to eligible members.
+        3. soc_add_educational, the max_education_level attribute of the eligible members is increased by one
+        4. soc_add_psychological, a new support member (who has not committed crimes) is added to the friends network
+        5. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
+        :return: None
+        """
+        kids_to_protect = [agent for agent in self.schedule.agents if agent.age() < 18 and agent.age() >= 12 and agent.father in agent.neighbors.get("parent")]
+        if self.family_intervention == "remove-if-caught":
+            kids_to_protect = [agent for agent in kids_to_protect if type(agent.father) == Prisoner]
+        if self.family_intervention == "remove-if-OC-member":
+            kids_to_protect = [agent for agent in kids_to_protect if agent.father.oc_member]
+        if self.family_intervention == "remove-if-caught-and-OC-member":
+            kids_to_protect = [agent for agent in kids_to_protect if type(agent.father) == Prisoner and agent.father.oc_member]
         if kids_to_protect:
-            # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
-            # gee but how comes that it increases with the nubmer of targets We have to do better here
-            how_many = math.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect))
-            for x in self.rng.choice(kids_to_protect, how_many, replace=False):
-                kids_intervention_counter += 1
+            how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect)))
+            kids_pool = list(self.rng.choice(kids_to_protect, how_many, replace=False))
+            for kid in kids_pool:
+                self.kids_intervention_counter += 1
+                # notice that the intervention acts on ALL family members respecting the condition, causing double calls for families with double targets.
+                # gee but how comes that it increases with the nubmer of targets? We have to do better here
                 # this also removes household links, leaving the household in an incoherent state.
-                x.neighbor.get('parent').remove(x.father)
-                # maybe not needed?
-                self.removed_fatherships.add([((18 * ticks_per_year + birth_tick) - ticks), x.father, x])
+                kid.neighbors.get("parent").remove(kid.father)
+                kid.father.neighbors.get("offspring").remove(kid)
+                self.removed_fatherships.append([((18 * self.ticks_per_year + kid.birth_tick) - self.ticks), kid.father, kid])
+                # we do not modify Person.father, this attribute is implemented so that it is possible to remove the father from the network and keep the information.
                 # at this point bad dad is out and we help the remaining with the whole package
-                family = x.family().add(x)
-                self.welfare_createjobs([y for y in family if y.age() >= 16 and not y.job and not y.my_school])
-                self.soc_add_educational([y for y in family if y.age() < 18 and not y.job])
+                # family_links_neighbors also include siblings that could be assigned during setup through the setup_siblings procedure,
+                # we do not need these in this procedure
+                family = [kid] + kid.family_link_neighbors()
+                self.welfare_createjobs([agent for agent in family if agent.age() >= 16 and not agent.my_job and not agent.my_school])
+                self.soc_add_educational([agent for agent in family if agent.age() < 18 and not agent.my_job])
                 self.soc_add_psychological(family)
                 self.soc_add_more_friends(family)
 
@@ -679,7 +725,7 @@ class MesaPROTON_OC(Model):
             conn = self.decide_conn_number(school.my_students, 15)
             for student in school.my_students:
                 total_pool = school.my_students.difference({student})
-                conn_pool = list(extra.at_most(conn, list(total_pool), self.rng, replace=False))
+                conn_pool = list(extra.at_most(list(total_pool), conn, self.rng))
                 student.makeSchoolLinks(conn_pool)
 
     def decide_conn_number(self, agents, max_lim):
@@ -1045,5 +1091,3 @@ if __name__ == "__main__":
     # model.setup_siblings()
     print("num links:")
     print(model.total_num_links())
-
-

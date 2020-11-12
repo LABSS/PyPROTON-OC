@@ -188,10 +188,7 @@ class Person(Agent):
 
     def age_between(self, low, high):
         return self.age() >= low and self.age() < high
-    
-    def family(self): # maybe add self?
-        return self.neighbors.get("sibling").union(self.neighbors.get("offspring")).union(self.neighbors.get("partner"))
-    
+
     def potential_friends(self):
         return self.family().union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(self.neighbors.get("friendship")) #minus self.. needed?
     
@@ -301,7 +298,6 @@ class Person(Agent):
         :return: list, the agents
         """
         return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
-
 
 class Prisoner(Person):
     sentence_countdown = 0

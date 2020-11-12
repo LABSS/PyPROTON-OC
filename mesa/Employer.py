@@ -4,7 +4,7 @@ from mesa import Agent, Model
 import random
 import math
 import mesaPROTON_OC
-import Job
+from Job import *
 import Person
 
 class Employer():
@@ -19,10 +19,11 @@ class Employer():
     def __repr__(self):
         return "Employer: " + str(self.unique_id)
   
-    def create_job(self,  level:int, worker: Person):
-        newjob = Job(level, self, worker, self.m)
+    def create_job(self,  level: int, worker: Person):
+        newjob = Job(self.m)
+        newjob.level = level
         worker.my_job = newjob
-        self.my_jobs.add(newjob)
+        self.my_jobs.append(newjob)
         
     def employees(self):
         return [x.my_worker for x in self.my_jobs if x.my_worker != None]
