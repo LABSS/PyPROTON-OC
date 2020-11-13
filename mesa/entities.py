@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import List, Set, Union, Dict
 import typing
 if typing.TYPE_CHECKING:
     from model import ProtonOC
@@ -8,9 +9,11 @@ import networkx as nx
 from itertools import chain
 import extra
 
+
 class Person(Agent):
-    max_id = 0
-    network_names = [
+
+    max_id: int = 0
+    network_names: List[str] = [
         'sibling',
         'offspring',
         'parent',
@@ -22,67 +25,69 @@ class Person(Agent):
         'school']
 
     def __init__(self, model: ProtonOC):
+        self.unique_id: int = Person.max_id
+        Person.max_id += 1
+        super().__init__(self.unique_id, model=model)
         self.model = model
-        self.prisoner = False
         # networks
-        self.networks_init()
-        self.age = 0
-        self.sentence_countdown = 0
-        self.num_crimes_committed = 0
-        self.num_crimes_committed_this_tick = 0
-        self.education_level = 0  # level: last school I finished (for example, 4: I finished university)
-        self.max_education_level = 0
-        self.wealth_level = 1
-        self.job_level = 0
-        self.my_job = None  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick = self.model.ticks
-        self.gender_is_male = self.model.rng.choice([True, False])  # True male False female
-        self.father = None
-        self.mother = None
-        self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
-        self.oc_member = False
-        self.cached_oc_embeddedness = None
-        self.oc_embeddedness_fresh = 0
-        self.retired = False
-        self.number_of_children = 0
-        self.facilitator = False
-        self.hobby = self.model.rng.integers(low=1, high=5, endpoint=True)
-        self.new_recruit = -2
-        self.migrant = False
-        self.criminal_tendency = 0
-        self.my_school = None
-        self.target_of_intervention = False
-        self.arrest_weight = 0
-        self.num_co_offenses = dict()  # criminal-links
-        self.co_off_flag = dict()  # criminal-links
-        self.unique_id = Person.max_id
-        Person.max_id = Person.max_id + 1
-        self.co_off_flag = dict()
+        self.neighbors: Dict = self.networks_init()
+
+        self.gender_is_male: bool = self.model.rng.choice([True, False])  # True male False female
+        self.prisoner: bool = False
+        self.age: Union[int, float] = 0
+        self.sentence_countdown: Union[int, float] = 0
+        self.num_crimes_committed: Union[int, float] = 0
+        self.num_crimes_committed_this_tick: Union[int, float] = 0
+        self.education_level: Union[int, float] = 0  # level: last school I finished (for example, 4: I finished university)
+        self.max_education_level: Union[int, float] = 0
+        self.wealth_level: Union[int, float] = 1
+        self.job_level: Union[int, float] = 0
+        self.my_job: Union[Job, None] = None  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
+        self.birth_tick: Union[int, float] = self.model.ticks
+        self.father: Union[Person, None] = None
+        self.mother: Union[Person, None] = None
+        self.propensity: Union[int, float] = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
+        self.oc_member: bool = False
+        self.cached_oc_embeddedness: Union[int, float, None] = None
+        self.retired: bool = False
+        self.number_of_children: Union[int, float] = 0
+        self.facilitator: bool = False
+        self.hobby: int = self.model.rng.integers(low=1, high=5, endpoint=True)
+        self.new_recruit: int = -2
+        self.migrant: bool = False
+        self.criminal_tendency: float = 0
+        self.my_school: Union[None, School] = None
+        self.target_of_intervention: bool = False
+        self.arrest_weight: Union[int, float] = 0
+        self.num_co_offenses: Dict = dict()  # criminal-links
+        self.co_off_flag: Dict = dict()  # criminal-links
+
 
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
 
-    def calculate_age(self):
-        self.age = extra._age(self.model.ticks, self.birth_tick)
 
-    def random_init(self, random_relationships : bool = False, exclude_partner_net: bool = False):
-        self.education_level = self.model.rng.choice(range(0, 4))
-        self.max_education_level = self.education_level
-        self.wealth_level = self.model.rng.choice(range(0, 4))
-        self.job_level = self.model.rng.choice(range(0, 4))
-        self.my_job = 0  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick = -1 * self.model.rng.choice(range(0, 80 * 12))
-        self.gender_is_male = self.model.rng.choice([True, False])
-        self.hobby = 0
-        self.criminal_tendency = self.model.rng.uniform(0, 1)
-        if random_relationships == True:
-            self.random_links(exclude_partner_net)
+    def calculate_age(self) -> None:
+        """
+        This method modifies the Person.age attribute in-place. Calculates the age of the agent
+        base on Person.birth_tick and Person.model.ticks.
+        :return: None
+        """
+        self.age = extra.age(self.model.ticks, self.birth_tick)
 
-    def networks_init(self):
-        self.neighbors = {i: set() for i in Person.network_names}
 
-    def neighbors_range(self, netname, dist):
+    def networks_init(self) -> Dict:
+        """
+        This method generates the structure of the agent's networks that will be preserved
+        within the Person.neighbors attribute.
+        :return: Dict
+        """
+        return {i: set() for i in Person.network_names}
+
+
+    def neighbors_range(self, netname: str, dist: int):
         return extra.find_neighb(netname, dist, set(), {self}) - {self}
+
 
     def isneighbor(self, other):
         return any([other in self.neighbors[x] for x in Person.network_names])

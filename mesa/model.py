@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from mesa import Model
 from mesa.time import RandomActivation
@@ -167,6 +168,9 @@ class ProtonOC(Model):
         self.p_single_father = self.read_csv_city("proportion_single_fathers")
         self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
 
+
+    def __repr__(self):
+        return "PROTON-OC MODEL, seed: " + str(self.seed)
 
 
     def init_collector(self, complete: bool = False) -> None:

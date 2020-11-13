@@ -231,7 +231,7 @@ def commit_crime( co_offenders: List[Person]) -> None:
 
 #Numba functions
 @numba.jit(nopython=True)
-def _age(tick, birth_tick):
+def age(tick, birth_tick):
     return np.floor((tick - birth_tick) / 12)
 
 
