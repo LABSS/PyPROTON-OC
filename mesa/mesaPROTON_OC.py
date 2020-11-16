@@ -56,6 +56,8 @@ class MesaPROTON_OC(Model):
         #Intervention
         self.family_intervention = None
         self.removed_fatherships = list()
+        self.social_support = None
+        self.welfare_support = None
 
         # outputs
         self.number_deceased = 0
@@ -99,6 +101,7 @@ class MesaPROTON_OC(Model):
         self.num_oc_families = 8
         self.education_modifier = 1.0 #education-rate in Netlogo model
         self.retirement_age = 65
+        self.age_enter_labor_market = 16
         self.unemployment_multiplier = "base"
         self.nat_propensity_m = 1.0
         self.nat_propensity_sigma = 0.25
@@ -140,13 +143,16 @@ class MesaPROTON_OC(Model):
         if self.intervention_is_on():
             if self.family_intervention:
                 self.family_intervene()
+            if self.social_support:
+                self.socialization_intervene()
+            if self.welfare_support:
+                self.welfare_intervene()
+
         self.ticks += 1
 
 
         # self.schedule.step()
         # self.wedding()
-        # collect data
-        # self.datacollector.collect(self)
 
     def run_model(self, n):
         for self.ticks in range(n):
@@ -159,7 +165,8 @@ class MesaPROTON_OC(Model):
         # random.choice(self.schedule.agents).create_pat()
 
     def fix_unemployment(self, correction):
-        available = [x for x in self.schedule.agents if x.age() > 16 and x.age() < 65 and x.my_school == None]
+        available = [x for x in self.schedule.agents if x.age() >= self.age_enter_labor_market
+                     and x.age() < 65 and x.my_school == None]
         unemployed = [x for x in available if x.job_level == 1]
         occupied = [x for x in available if x.job_level > 1]
         notlooking = [x for x in available if x.job_level == 0]
@@ -244,18 +251,27 @@ class MesaPROTON_OC(Model):
         return self.ticks % self.ticks_between_intervention == 0 and self.intervention_start <= self.ticks < self.intervention_end
 
     def socialization_intervene(self):
-        potential_targets = [x for x in schedule.agents if x.age() < 18 and x.age >= 6 and x.my_school != None]
-        targets = self.rng.choice(potential_targets,
-                                   p=[x.criminal_tendency for x in potential_targets],
-                                   size=math.ceil((targets_addressed_percent / 100 * len(potential_targets))
-                                                  # criminal_tendency + criminal_tendency_addme_for_weighted_extraction
-                                                  )
-                                   )
-        if social_support == "educational" or social_support == "all": self.soc_add_educational(targets)
-        if social_support == "psychological" or social_support == "all": self.soc_add_psychological(targets)
-        if social_support == "more friends" or social_support == "all": self.soc_add_more_friends(targets)
-        welfare_createjobs({x for x in schedule.agents if
-                            x.gender_is_male == False and x.neighbors.get('offspring').intersection(set(targets))})
+        """
+        This procedure is active when the self.social_support attribute is different from None. There are 4
+        possible social interventions: educational, psychological, more-friends or all. The intervention has effect on a
+        portion of eligible members, determined by "how_many" variable that depends on self.targets_addressed_percent attribute.
+        The interventions consist of:
+        1. soc_add_educational, the max_education_level attribute of the eligible members is increased by one
+        2. soc_add_psychological, a new support member (who has not committed crimes) is added to the friends network
+        3. soc_add_more_friends, a new support member (with a low level of tendency to crime) is added to the friends network
+        4. welfare_createjobs, new jobs are created and assigned to eligible members (mothers)
+        :return: None
+        """
+        potential_targets = [agent for agent in self.schedule.agents if
+                             agent.age() <= 18 and agent.age() >= 6 and agent.my_school != None]
+        how_many = np.ceil(self.targets_addressed_percent / 100 * len(potential_targets))
+        targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency, self.rng)
+
+        if self.social_support == "educational" or self.social_support == "all": self.soc_add_educational(targets)
+        if self.social_support == "psychological" or self.social_support == "all": self.soc_add_psychological(targets)
+        if self.social_support == "more-friends" or self.social_support == "all": self.soc_add_more_friends(targets)
+        # also give a job to the mothers
+        if self.social_support == "all": self.welfare_createjobs(agent.mother for agent in self.schedule.agents if agent.mother)
 
     def soc_add_educational(self, targets):
         """
@@ -294,21 +310,31 @@ class MesaPROTON_OC(Model):
                 target.makeFriends(extra.weighted_one_of(support_set, lambda x: max_criminal_tendency - x.criminal_tendency, self.rng))
 
     def welfare_intervene(self):
-        if welfare_support == "job_mother":
-            targets = [x for x in schedule.agents if
-                       x.gender_is_male == False and
-                       not x.my_job and
-                       (True if not x.neighbors.get("partner") else not x.neighbors.get("partner").pop().oc_member)
-                       ]
-        if welfare_support == "job_child":
-            targets = [x for x in schedule.agents if
-                       x.age() > 16 and x.age() < 24 and
-                       not x.my_school and
-                       not x.my_job and
-                       x.father.oc_member
-                       ]
+        """
+        This procedure is active when the self.welfare_support attribute is different from None. There are 2
+        possible welfare interventions: job-mother or job-child. These parameters determine the portion of the population
+        on which the intervention will have effect. The intervention consists of the application of a single procedures
+        on eligible family members:
+        1. new jobs are created and assigned to eligible members (mothers or children)
+        :return: None
+        """
+        targets = list()
+        if self.welfare_support == "job-mother":
+            for mother in [agent.mother for agent in self.schedule.agents if agent.mother]:
+                if not mother.my_job and mother.neighbors.get("partner"):
+                    if mother.get_neighbor_list("partner")[0].oc_member:
+                        targets.append(mother)
+
+        if self.welfare_support == "job-child":
+            for agent in self.schedule.agents:
+                if agent.age() >= self.age_enter_labor_market and agent.age() < 24 and not \
+                        agent.my_school and not agent.my_job and agent.father:
+                    if agent.father.oc_member:
+                        targets.append(agent)
+
         if targets:
-            targets = self.rng.choice(targets, math.ceil(targets_addressed_percent / 100 * len(targets)), replace=False)
+            how_many = np.ceil(self.targets_addressed_percent / 100 * len(targets))
+            targets = self.rng.choice(targets, how_many, replace=False)
             self.welfare_createjobs(targets)
 
     def welfare_createjobs(self, targets):
@@ -361,7 +387,7 @@ class MesaPROTON_OC(Model):
                 # family_links_neighbors also include siblings that could be assigned during setup through the setup_siblings procedure,
                 # we do not need these in this procedure
                 family = [kid] + kid.family_link_neighbors()
-                self.welfare_createjobs([agent for agent in family if agent.age() >= 16 and not agent.my_job and not agent.my_school])
+                self.welfare_createjobs([agent for agent in family if agent.age() >= self.age_enter_labor_market and not agent.my_job and not agent.my_school])
                 self.soc_add_educational([agent for agent in family if agent.age() < 18 and not agent.my_job])
                 self.soc_add_psychological(family)
                 self.soc_add_more_friends(family)
@@ -761,7 +787,7 @@ class MesaPROTON_OC(Model):
         self.assing_parents()
         self.setup_employers_jobs()
         for agent in [a for a in self.schedule.agent_buffer(shuffled=True) if
-                      a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
+                      a.my_job == None and a.my_school == None and a.age() >= self.age_enter_labor_market and a.age() < self.retirement_age
                       and a.job_level > 1]:
             agent.find_job()
         self.init_professional_links()
@@ -786,7 +812,7 @@ class MesaPROTON_OC(Model):
         assignment, and will be modified first by the multiplier then by adding neet status.
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
-            if agent.age() > 16:
+            if agent.age() >= self.age_enter_labor_market:
                 agent.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],self.rng)
                 agent.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male],self.rng)
             else:
@@ -811,7 +837,8 @@ class MesaPROTON_OC(Model):
         self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
         # a small multiplier is added so to increase the pool to allow for matching at the job level
         self.jobs_target = len([a for a in self.schedule.agents if
-                                a.job_level > 1 and a.my_school == None and a.age() > 16 and a.age() < self.retirement_age]) * 1.2
+                                a.job_level > 1 and a.my_school == None and a.age() >= self.age_enter_labor_market and
+                                a.age() < self.retirement_age]) * 1.2
         while len(self.jobs) < self.jobs_target:
             n = self.rng.choice(self.job_counts, size=None)
             new_employer = Employer(self)
