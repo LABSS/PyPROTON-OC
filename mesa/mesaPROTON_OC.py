@@ -262,7 +262,7 @@ class MesaPROTON_OC(Model):
         """
         potential_targets = [agent for agent in self.schedule.agents if
                              agent.age() <= 18 and agent.age() >= 6 and agent.my_school != None]
-        how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(potential_targets)))
+        how_many = np.ceil(self.targets_addressed_percent / 100 * len(potential_targets))
         targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency, self.rng)
 
         if self.social_support == "educational" or self.social_support == "all": self.soc_add_educational(targets)
@@ -316,22 +316,21 @@ class MesaPROTON_OC(Model):
         1. new jobs are created and assigned to eligible members (mothers or children)
         :return: None
         """
+        targets = list()
         if self.welfare_support == "job-mother":
-            targets = list()
             for mother in [agent.mother for agent in self.schedule.agents if agent.mother]:
                 if not mother.my_job and mother.neighbors.get("partner"):
-                    if mother.get_link_list("partner")[0].oc_member:
+                    if mother.get_neighbor_list("partner")[0].oc_member:
                         targets.append(mother)
 
         if self.welfare_support == "job-child":
-            targets = list()
             for agent in self.schedule.agents:
                 if agent.age() > 16 and agent.age() < 24 and not agent.my_school and not agent.my_job and agent.father:
                     if agent.father.oc_member:
                         targets.append(agent)
 
         if targets:
-            how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(targets)))
+            how_many = np.ceil(self.targets_addressed_percent / 100 * len(targets))
             targets = self.rng.choice(targets, how_many, replace=False)
             self.welfare_createjobs(targets)
 
