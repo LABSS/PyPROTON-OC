@@ -101,6 +101,7 @@ class MesaPROTON_OC(Model):
         self.num_oc_families = 8
         self.education_modifier = 1.0 #education-rate in Netlogo model
         self.retirement_age = 65
+        self.age_enter_labor_market = 16
         self.unemployment_multiplier = "base"
         self.nat_propensity_m = 1.0
         self.nat_propensity_sigma = 0.25
@@ -164,7 +165,8 @@ class MesaPROTON_OC(Model):
         # random.choice(self.schedule.agents).create_pat()
 
     def fix_unemployment(self, correction):
-        available = [x for x in self.schedule.agents if x.age() > 16 and x.age() < 65 and x.my_school == None]
+        available = [x for x in self.schedule.agents if x.age() >= self.age_enter_labor_market
+                     and x.age() < 65 and x.my_school == None]
         unemployed = [x for x in available if x.job_level == 1]
         occupied = [x for x in available if x.job_level > 1]
         notlooking = [x for x in available if x.job_level == 0]
@@ -325,7 +327,8 @@ class MesaPROTON_OC(Model):
 
         if self.welfare_support == "job-child":
             for agent in self.schedule.agents:
-                if agent.age() > 16 and agent.age() < 24 and not agent.my_school and not agent.my_job and agent.father:
+                if agent.age() >= self.age_enter_labor_market and agent.age() < 24 and not \
+                        agent.my_school and not agent.my_job and agent.father:
                     if agent.father.oc_member:
                         targets.append(agent)
 
@@ -384,7 +387,7 @@ class MesaPROTON_OC(Model):
                 # family_links_neighbors also include siblings that could be assigned during setup through the setup_siblings procedure,
                 # we do not need these in this procedure
                 family = [kid] + kid.family_link_neighbors()
-                self.welfare_createjobs([agent for agent in family if agent.age() >= 16 and not agent.my_job and not agent.my_school])
+                self.welfare_createjobs([agent for agent in family if agent.age() >= self.age_enter_labor_market and not agent.my_job and not agent.my_school])
                 self.soc_add_educational([agent for agent in family if agent.age() < 18 and not agent.my_job])
                 self.soc_add_psychological(family)
                 self.soc_add_more_friends(family)
@@ -784,7 +787,7 @@ class MesaPROTON_OC(Model):
         self.assing_parents()
         self.setup_employers_jobs()
         for agent in [a for a in self.schedule.agent_buffer(shuffled=True) if
-                      a.my_job == None and a.my_school == None and a.age() >= 16 and a.age() < self.retirement_age
+                      a.my_job == None and a.my_school == None and a.age() >= self.age_enter_labor_market and a.age() < self.retirement_age
                       and a.job_level > 1]:
             agent.find_job()
         self.init_professional_links()
@@ -809,7 +812,7 @@ class MesaPROTON_OC(Model):
         assignment, and will be modified first by the multiplier then by adding neet status.
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
-            if agent.age() > 16:
+            if agent.age() >= self.age_enter_labor_market:
                 agent.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],self.rng)
                 agent.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[agent.job_level][agent.gender_is_male],self.rng)
             else:
@@ -834,7 +837,8 @@ class MesaPROTON_OC(Model):
         self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
         # a small multiplier is added so to increase the pool to allow for matching at the job level
         self.jobs_target = len([a for a in self.schedule.agents if
-                                a.job_level > 1 and a.my_school == None and a.age() > 16 and a.age() < self.retirement_age]) * 1.2
+                                a.job_level > 1 and a.my_school == None and a.age() >= self.age_enter_labor_market and
+                                a.age() < self.retirement_age]) * 1.2
         while len(self.jobs) < self.jobs_target:
             n = self.rng.choice(self.job_counts, size=None)
             new_employer = Employer(self)
