@@ -149,7 +149,7 @@ class MesaPROTON_OC(Model):
                 self.welfare_intervene()
             # OC-members-scrutiny works directly in factors-c
             # OC-members-repression works in arrest-probability-with-intervention in commmit-crime
-        if (self.ticks % self.ticks_per_year) == 0: # this should be 11, probably, otherwise
+        if (self.ticks % self.ticks_per_year) == 0:
             self.calculate_criminal_tendency()
             self.calculate_crime_multiplier() # we should update it, if population change
             self.graduate_and_enter_jobmarket()
@@ -833,7 +833,8 @@ class MesaPROTON_OC(Model):
         Based on labour_status_by_age_and_sex table, this method modifies the job_level attribute of the agents in-place.
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
-            if agent.age() > 14 and agent.age() < 65 and agent.job_level == 1 and self.rng.random() < \
+            if agent.age() >= self.age_enter_labor_market and agent.age() < 65 and \
+                    agent.job_level == 1 and self.rng.random() < \
                     self.labour_status_by_age_and_sex[agent.gender_is_male][agent.age()]:
                 agent.job_level = 0
 
@@ -1108,7 +1109,9 @@ class MesaPROTON_OC(Model):
                 else:
                     student.job_level = extra.pick_from_pair_list(self.work_status_by_edu_lvl[student.education_level][student.gender_is_male], self.rng)
                     student.wealth_level = extra.pick_from_pair_list(self.wealth_quintile_by_work_status[student.job_level][student.gender_is_male], self.rng)
-                    if student.age() > 14 and student.age() < self.retirement_age and student.job_level == 1 and self.rng.random() < self.labour_status_by_age_and_sex[student.gender_is_male][student.age()]:
+                    if student.age() >= self.age_enter_labor_market and student.age() < \
+                            self.retirement_age and \
+                            student.job_level == 1 and self.rng.random() < self.labour_status_by_age_and_sex[student.gender_is_male][student.age()]:
                         student.job_level = 0
 
 
