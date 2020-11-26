@@ -215,8 +215,8 @@ class Person(Agent):
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level
         for level in sorted(list(self.model.education_levels.keys()), reverse=True):
-            max_age = self.model.education_levels.get(level)[1]
-            if self.age() <= max_age:
+            max_age = self.model.education_levels[level][1]
+            if self.age() <= max_age or self.education_level > self.max_education_level:
                 self.education_level = level - 1
         self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
 
@@ -226,7 +226,10 @@ class Person(Agent):
         and modifies my_school atribute in-place.
         :param level: int, level of education to enroll
         """
-        self.potential_school = [school for agent in self.neighbors["household"] for school in agent.my_school if school.education_level == level]
+        self.potential_school = list()
+        for school in [agent.my_school for agent in self.neighbors.get("household") if agent.my_school]:
+                if school.diploma_level == level:
+                    self.potential_school.append(school)
         if self.potential_school:
             self.my_school = self.model.rng.choice(self.potential_school)
         else:
@@ -298,6 +301,15 @@ class Person(Agent):
         :return: list, the agents
         """
         return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
+
+    def leave_school(self):
+        """
+        This method modifies in-place the my_school attribute and the School.my_students attribute.
+        :return: None
+        """
+        self.my_school.my_students.remove(self)
+        self.my_school = None
+
 
 class Prisoner(Person):
     sentence_countdown = 0

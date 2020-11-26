@@ -111,7 +111,7 @@ def test_big_crimes_for_small_fish():
     m = MesaPROTON_OC()
     m.initial_agents = 500
     m.max_accomplice_radius = 6
-    m.create_agents()
+    m.setup(100)
     m.num_co_offenders_dist = [[5, 0.5], [6, 0.5], [10, 0.5]]
     for tick in range(1, 20):
         m.step()
