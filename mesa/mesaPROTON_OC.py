@@ -34,6 +34,7 @@ class MesaPROTON_OC(Model):
         self.this_is_a_big_crime = 3
         self.good_guy_threshold = 0.6
         self.big_crime_from_small_fish = 0  # checking anomalous crimes
+        self.migration_on = True
 
         # statistics tables
         self.num_co_offenders_dist = 0  # a list of probability for different crime sizes
