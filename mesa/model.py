@@ -1559,4 +1559,5 @@ class ProtonOC(Model):
 
 if __name__ == "__main__":
     model = ProtonOC()
+    model.intervention = "baseline"
     model.run(1000, 60, verbose=True)
