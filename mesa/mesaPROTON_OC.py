@@ -1,5 +1,5 @@
 import extra
-from mesa import Agent, Model
+from mesa import Model
 from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
 import pandas as pd
@@ -34,6 +34,7 @@ class MesaPROTON_OC(Model):
         self.this_is_a_big_crime = 3
         self.good_guy_threshold = 0.6
         self.big_crime_from_small_fish = 0  # checking anomalous crimes
+        self.migration_on = True
 
         # statistics tables
         self.num_co_offenders_dist = 0  # a list of probability for different crime sizes
@@ -153,7 +154,22 @@ class MesaPROTON_OC(Model):
             self.calculate_criminal_tendency()
             self.calculate_crime_multiplier() # we should update it, if population change
             self.graduate_and_enter_jobmarket()
+            for agent in [agent for agent in self.schedule.agents if agent.job_level < 2 and agent.just_changed_age() \
+                            and agent.age() in self.labour_status_range[agent.gender_is_male].keys()]:
+                agent.update_unemployment_status()
 
+            for agent in [agent for agent in self.schedule.agents if not agent.my_school and agent.age() >= 18 \
+                            and agent.age() < self.retirement_age and not agent.my_job \
+                            and not agent.retired and agent.job_level > 1]:
+                agent.find_job()
+                if agent.my_job:
+                    total_pool = [candidate for candidate in agent.my_job.my_employer.employees() if candidate != agent]
+                    employees = list(
+                        self.rng.choice(total_pool, self.decide_conn_number(total_pool, 20, also_me=False),
+                                              replace=False))
+                    agent.makeProfessionalLinks(employees)
+
+            self.let_migrants_in()
 
         self.ticks += 1
 
@@ -218,7 +234,7 @@ class MesaPROTON_OC(Model):
         self.c_range_by_age_and_sex = self.df_to_lists(self.read_csv_city("crime_rate_by_gender_and_age_range"))
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
         self.labour_status_by_age_and_sex = self.df_to_dict(self.read_csv_city("labour_status"), extra_depth=True)
-        self.labour_status_range = self.read_csv_city("labour_status_range")
+        self.labour_status_range = self.df_to_dict(self.read_csv_city("labour_status_range"), extra_depth=True)
         # further sources:
         # schools.csv table goes into education_levels
         marriage = pd.read_csv(os.path.join(self.general_data, "marriages_stats.csv"))
@@ -763,7 +779,7 @@ class MesaPROTON_OC(Model):
                 conn_pool = list(extra.at_most(list(total_pool), conn, self.rng))
                 student.makeSchoolLinks(conn_pool)
 
-    def decide_conn_number(self, agents, max_lim):
+    def decide_conn_number(self, agents, max_lim, also_me=True):
         """
         Given a set of agents decides the number of connections to be created between them based on a maximum number.
         :param agents: list or set, of agents
@@ -771,7 +787,7 @@ class MesaPROTON_OC(Model):
         :return: max_lim if the agents are more than max_lim otherwise returns the number of agents minus one.
         """
         if len(agents) <= max_lim:
-            return len(agents) -1
+            return len(agents) -1 if also_me else len(agents)
         else:
             return max_lim
 
@@ -1114,6 +1130,33 @@ class MesaPROTON_OC(Model):
                             student.job_level == 1 and self.rng.random() < self.labour_status_by_age_and_sex[student.gender_is_male][student.age()]:
                         student.job_level = 0
 
+    def let_migrants_in(self):
+        """
+        if migration_on is equal to True this procedure inserts foreign agents within the population based on
+        available jobs. These new agents are instantiated and they are given a job
+        :return: None
+        """
+        if self.migration_on:
+            # calculate the difference between deaths and birth
+            to_replace = self.initial_agents - len(self.schedule.agents) if self.initial_agents - len(self.schedule.agents) > 0 else 0
+            free_jobs = [job for job in self.jobs if job.my_worker]
+            n_to_add = np.min([to_replace, len(free_jobs)])
+            self.number_migrants += n_to_add
+            for job in self.rng.choice(free_jobs, n_to_add, replace=False):
+                # we do not care about education level and wealth of migrants, as those variables
+                # exist only in order to generate the job position.
+                new_agent = Person(self)
+                self.schedule.add(new_agent)
+                new_agent.my_job = job
+                job.my_worker = new_agent
+                total_pool = [candidate for candidate in new_agent.my_job.my_employer.employees() if candidate != new_agent]
+                employees = list(
+                    self.rng.choice(total_pool, self.decide_conn_number(total_pool, 20, also_me=False),
+                                    replace=False))
+                new_agent.makeProfessionalLinks(employees)
+                new_agent.bird_tick = self.ticks - (self.rng.integers(0,20) + 18)  * self.ticks_per_year
+                new_agent.wealth_level = job.job_level
+                new_agent.migrant = True
 
 
 # 778 / 1700
