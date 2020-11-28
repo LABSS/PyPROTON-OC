@@ -1185,7 +1185,7 @@ staticmethod(conclude_wedding)
 
 if __name__ == "__main__":
 
-    model = MesaPROTON_OC(as_netlogo=False)
+    model = MesaPROTON_OC()
     model.initial_agents = 100
     model.create_agents()
     num_co_offenders_dist = pd.read_csv(os.path.join(model.general_data, "num_co_offenders_dist.csv"))
