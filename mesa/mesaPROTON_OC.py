@@ -170,6 +170,7 @@ class MesaPROTON_OC(Model):
                     agent.makeProfessionalLinks(employees)
 
             self.let_migrants_in()
+            self.return_kids()
 
         self.ticks += 1
 
@@ -421,14 +422,16 @@ class MesaPROTON_OC(Model):
         return [x for x in self.schedule.agents if eval(reporter)]
 
     def return_kids(self):
-        for a in removed - fatherships:
-            # list tick father son
-            if a[2].age() >= 18:
-                if self.rng.random() < (6 / a[0]):
-                    # check for coherence. Need better offspring design.
-                    a[2].networks.get['parents'].add(a[1])
-                    a[2].father = a[1]
-                    removed.fatherships.remove(a)
+        """
+        If the conditions are respected, this procedure allows fathers to return to the household
+        :return: None
+        """
+        if self.removed_fatherships:
+            for removed in self.removed_fatherships:
+                if removed[2].age() >= 18 and self.rng.random() < 6 / removed[0]:
+                    removed[2].neighbors.get("parent").add(removed[2].father)
+                    removed[2].father.neighbors.get("offspring").add(removed[2])
+                    self.removed_fatherships.remove(removed)
 
     def make_friends(self):
         for a in self.schedule.agent_buffer(shuffled=True):
