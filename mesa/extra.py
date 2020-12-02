@@ -64,9 +64,11 @@ def at_most(agentset, n, rng_istance):
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):
     p = [float(weight_function(x)) for x in agentset]
-    if any([True for i in p if i < 0]):
-        min_value = min(p)
-        p = [i-min_value for i in p]
+    for pi in p:
+        if pi < 0:
+            min_value = np.min(p)
+            p = [i - min_value for i in p]
+            break
     sump = sum(p)
     p = [i/sump for i in p]
     return  rng_istance.choice(agentset, int(n), replace=False, p=p)

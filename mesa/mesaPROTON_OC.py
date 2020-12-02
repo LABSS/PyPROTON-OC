@@ -70,7 +70,6 @@ class MesaPROTON_OC(Model):
         self.number_weddings = 0
         self.number_weddings_mean = 100
         self.number_weddings_sd = 0
-        self.criminal_tendency_addme = 0 # criminal_tendency_addme_for_weighted_extraction
         self.criminal_tendency_subtractfromme_for_inverse_weighted_extraction = 0
         self.number_law_interventions_this_tick = 0
         self.correction_for_non_facilitators = 0
@@ -171,7 +170,6 @@ class MesaPROTON_OC(Model):
 
             self.let_migrants_in()
             self.return_kids()
-        self.cal_criminal_tendency_addme()
         self.wedding()
         self.ticks += 1
 
@@ -261,7 +259,7 @@ class MesaPROTON_OC(Model):
                     agent not in ego.neighbors.get("sibling") and
                     agent not in ego.neighbors.get("offspring") and
                     ego not in agent.neighbors.get("offspring")] # directed network
-            if pool:  # https://www.python-course.eu/weighted_choice_and_sample.php
+            if pool: # TODO: add link to Netlogo2Mesa
                 partner = self.rng.choice(pool, p=extra.wedding_proximity_with(ego, pool))
                 for agent in [ego, partner]:
                     agent.remove_from_household()
@@ -296,7 +294,7 @@ class MesaPROTON_OC(Model):
         potential_targets = [agent for agent in self.schedule.agents if
                              agent.age() <= 18 and agent.age() >= 6 and agent.my_school != None]
         how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(potential_targets)))
-        targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
+        targets = extra.weighted_n_of(how_many, potential_targets, lambda x: x.criminal_tendency, self.rng)
 
         if self.social_support == "educational" or self.social_support == "all": self.soc_add_educational(targets)
         if self.social_support == "psychological" or self.social_support == "all": self.soc_add_psychological(targets)
@@ -1167,10 +1165,6 @@ class MesaPROTON_OC(Model):
                 new_agent.bird_tick = self.ticks - (self.rng.integers(0,20) + 18)  * self.ticks_per_year
                 new_agent.wealth_level = job.job_level
                 new_agent.migrant = True
-
-    def cal_criminal_tendency_addme(self):
-        min_criminal_tendencies = np.min([agent.criminal_tendency for agent in self.schedule.agents])
-        self.criminal_tendency_addme = -1 *  min_criminal_tendencies if  min_criminal_tendencies < 0 else 0
 
 if __name__ == "__main__":
 
