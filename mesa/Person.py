@@ -322,6 +322,18 @@ class Person(Agent):
         """
         self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][self.age()] else 1
 
+    def remove_from_household(self):
+        """
+        This method removes the agent from household, keeping the networks consistent.
+        Modify the Person.neighbors attribute in-place
+        :return: None
+        """
+        for member in self.neighbors.get("household").copy():
+            if self in member.neighbors.get("household"):
+                member.neighbors.get("household").remove(self)
+                self.neighbors.get("household").remove(member)
+
+
 class Prisoner(Person):
     sentence_countdown = 0
 

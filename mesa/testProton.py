@@ -76,13 +76,13 @@ def test_generate_households():
 def test_weddings():
     model = MesaPROTON_OC()
     model.setup(1000)
-    initial_wedding = len([x for x in model.schedule.agents if x.get_link_list("partner")])
+    initial_wedding = len([x for x in model.schedule.agents if x.get_neighbor_list("partner")])
     for tick in range(100):
         model.step()
     for agent in model.schedule.agents:
-        if agent.get_link_list("partner"):
-            assert agent.get_link_list("partner")[0].get_link_list("partner")[0] == agent
-    assert model.number_weddings == (len([x for x in model.schedule.agents if x.get_link_list("partner")]) - initial_wedding) / 2
+        if agent.get_neighbor_list("partner"):
+            assert agent.get_neighbor_list("partner")[0].get_neighbor_list("partner")[0] == agent
+    assert model.number_weddings == (len([x for x in model.schedule.agents if x.get_neighbor_list("partner")]) - initial_wedding) / 2
     assert model.number_weddings > 0
     # coherent state of weddings
 
