@@ -1192,7 +1192,7 @@ class MesaPROTON_OC(Model):
             target_n_of_crimes = value[1]* len(people_in_cell)/ self.ticks_per_year * self.crime_multiplier
             for x in np.arange(np.round(target_n_of_crimes)):
                 self.number_crimes += 1
-                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency + self.criminal_tendency_addme, self.rng)
+                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency, self.rng)
                 number_of_accomplices = self.number_of_accomplices()
                 accomplices = agent.find_accomplices(number_of_accomplices) # this takes care of facilitators as well.
                 co_offender_groups.append(accomplices)
