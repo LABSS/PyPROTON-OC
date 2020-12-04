@@ -26,27 +26,34 @@ def find_neighb(netname, togo, found, border):
     else:
         togo -= 1
         return find_neighb(netname, togo, found, nextlayer)
-    
-# utility functions
-def wedding_proximity_with(ego, pool): # returns a list of proximities with ego. Careful not to shuffle it!
-    l = np.array([
-        (social_proximity(ego,x) + 
-         (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool
-        ])
-    l /= l.sum()
-    return l
+
+def wedding_proximity_with(ego, pool):
+    """
+    Given an agent and a pool of agents this function returns a list of proximities with ego. Careful not to shuffle it!
+    :param ego: Person
+    :param pool: list of Person objects
+    :return: list, list of proximities with ego.
+    """
+    proximity = np.array([(social_proximity(ego,x) + (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool])
+    if all([True for n in proximity if n <= 0]):
+        proximity = np.ones(len(proximity))
+    proximity /= np.sum(proximity)
+    return proximity
 
 def social_proximity(ego:Person, alter:Person):
+    """
+    This function calculates the social proximity between two agents based on age, gender, wealth level, education level and friendship
+    :param ego: Person
+    :param alter: Person
+    :return: int, social proximity
+    """
     acc = 0
     #normalization =  0
-    # age
     acc += 1 - abs(alter.age() - ego.age()) / 18 if abs(alter.age() - ego.age()) < 18 else 0
-    acc += 1 if alter.gender_is_male == ego.gender_is_male else False
+    acc += 1 if alter.gender_is_male == ego.gender_is_male else 0
     acc += 1 if alter.wealth_level == ego.wealth_level else 0
-    acc += 1 if alter.education_level == ego.education_level else 0    
-    acc += 1 if [x for x in alter.neighbors.get("friendship") if 
-                 (x in ego.neighbors.get("friendship")) 
-                 ] else 0
+    acc += 1 if alter.education_level == ego.education_level else 0
+    acc += 1 if [x for x in alter.neighbors.get("friendship") if (x in ego.neighbors.get("friendship"))] else 0
     return acc
 
 def at_most(agentset, n, rng_istance):
@@ -56,11 +63,13 @@ def at_most(agentset, n, rng_istance):
         return list(rng_istance.choice(agentset, n, replace=False))
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):
-    # todo: check for positives
     p = [float(weight_function(x)) for x in agentset]
+    for pi in p:
+        if pi < 0:
+            min_value = np.min(p)
+            p = [i - min_value for i in p]
+            break
     sump = sum(p)
-    #minp = min(p)
-    #maxp = max(p)
     p = [i/sump for i in p]
     return  rng_istance.choice(agentset, int(n), replace=False, p=p)
 
