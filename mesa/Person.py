@@ -216,8 +216,9 @@ class Person(Agent):
         if self.model.education_modifier != 1.0:
             if self.model.rng.random() < abs(self.model.education_modifier - 1):
                 self.max_education_level = self.max_education_level + (1 if (self.model.education_modifier > 1) else -1)
-                self.max_education_level = len(self.model.edu[True]) if self.max_education_level > len(
-                    self.model.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
+                self.max_education_level = len(self.model.edu[True]) \
+                    if self.max_education_level > len(self.model.edu[True]) \
+                    else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level

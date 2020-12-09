@@ -922,11 +922,14 @@ class MesaPROTON_OC(Model):
 
     def df_to_lists(self,df, split_row=True):
         """
-        This function transforms a pandas DataFrame into nested lists as follows:
+        This function transforms a pandas DataFrame into nested lists as shown in this example:
         df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
+        If split_row is false it returns a nested list where each sublist is a line of df as shown in this example:
+        df-columns = age, sex, education, p --> list = [[age,sex,education,p]]
 
         This transformation ensures a faster access to the values using the position in the list
         :param df: pandas df, the df to be transformed
+        :param split_row: bool
         :return: list, a new list
         """
         output_list = list()
@@ -1181,7 +1184,7 @@ class MesaPROTON_OC(Model):
         This procedure is central in the model, allowing agents to find accomplices and commit crimes.
         Based on the table self.c_range_by_age_and_sex , the number of crimes and the subset of the agents who commit them
         is selected. For each crime a single agent is selected and if necessary activates the procedure that allows
-        the agent to find accomplices. Criminal groups are append within the list self.co_offender_groups
+        the agent to find accomplices.
         :return: None
         """
         co_offender_groups = list()
