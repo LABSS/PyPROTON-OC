@@ -356,6 +356,7 @@ class Person(Agent):
                     candidate = candidates[0]
                     candidates.remove(candidate)
                     accomplices.add(candidate)
+                    # todo: Should be if candidate.facilitator and facilitator_needed? tracked issue #234
                     if candidate.facilitator:
                         n_of_accomplices += 1
                         facilitator_needed = False
@@ -408,9 +409,8 @@ class Person(Agent):
         """
         agents_in_radius = set()
         for net in context:
-            if self.neighbors.get(net):
-                for agent in self.neighbors.get(net):
-                    agents_in_radius.add(agent)
+            for agent in self.neighbors.get(net):
+                agents_in_radius.add(agent)
         return agents_in_radius
 
     def agents_in_radius(self, d, context=network_names):
