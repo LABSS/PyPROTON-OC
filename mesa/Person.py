@@ -185,17 +185,21 @@ class Person(Agent):
         forlorn.neighbors.get(kind).discard(self)
 
     def remove_friendship(self, forlorn):
-        self.remove_link(self, forlorn, 'friendship')
+        self.remove_link(forlorn, 'friendship')
 
     def remove_professional(self, forlorn):
-        self.remove_link(self, forlorn, 'professional')
+        self.remove_link(forlorn, 'professional')
 
     def age_between(self, low, high):
         return self.age() >= low and self.age() < high
 
     def potential_friends(self):
-        return self.family().union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(
-            self.neighbors.get("friendship"))  # minus self.. needed?
+        """
+        The potential friends in my networks
+        :return: set, potential friends
+        """
+        return set(self.family_link_neighbors()).union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(
+            self.neighbors.get("friendship"))
 
     def dunbar_number(self):
         return (150 - abs(self.age() - 30))
@@ -530,7 +534,6 @@ class Person(Agent):
         else:
             new_agent.max_education_level = self.max_education_level
         new_agent.makeHouseholdLinks(self.get_neighbor_list("household"))
-
 
 
 
