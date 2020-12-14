@@ -519,17 +519,17 @@ class Person(Agent):
         new_agent.wealth_level = self.wealth_level
         new_agent.birth_tick = self.model.ticks
         new_agent.mother = self
-        if self.get_link_list("offspring"):
-            new_agent.addSiblingLinks(self.get_link_list("offspring"))
+        if self.get_neighbor_list("offspring"):
+            new_agent.addSiblingLinks(self.get_neighbor_list("offspring"))
         self.makeParent_OffspringsLinks(new_agent)
-        if self.get_link_list("partner"):
-            dad = self.get_link_list("partner")[0]
+        if self.get_neighbor_list("partner"):
+            dad = self.get_neighbor_list("partner")[0]
             dad.makeParent_OffspringsLinks(new_agent)
             new_agent.father = dad
             new_agent.max_education_level = dad.max_education_level
         else:
             new_agent.max_education_level = self.max_education_level
-        new_agent.makeHouseholdLinks(self.get_link_list("household"))
+        new_agent.makeHouseholdLinks(self.get_neighbor_list("household"))
 
 
 
