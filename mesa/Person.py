@@ -55,7 +55,6 @@ class Person(Agent):
         self.arrest_weight = 0
         self.num_co_offenses = dict()  # criminal-links
         self.co_off_flag = dict()  # criminal-links
-        # super().__init__(self.unique_id, model)
         self.unique_id = Person.max_id
         Person.max_id = Person.max_id + 1
         Person.persons.append(self)
@@ -134,13 +133,11 @@ class Person(Agent):
         :param asker: agent
         :return: None
         """
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("professional").add(person)
-                person.neighbors.get("professional").add(self)
-        else:
-            self.neighbors.get("professional").add(asker)
-            asker.neighbors.get("professional").add(self)
+        if type(asker) != list:
+            asker = [asker]
+        for person in asker:
+            self.neighbors.get("professional").add(person)
+            person.neighbors.get("professional").add(self)
 
     def addSiblingLinks(self, targets):
         for x in targets:
@@ -168,13 +165,9 @@ class Person(Agent):
             asker.neighbors.get("parent").add(self)
 
     def makeSchoolLinks(self, asker):
-        if type(asker) == list:
-            for person in asker:
-                self.neighbors.get("school").add(person)
-                person.neighbors.get("school").add(self)
-        else:
-            self.neighbors.get("school").add(asker)
-            asker.neighbors.get("school").add(self)
+        for person in asker:
+            self.neighbors.get("school").add(person)
+            person.neighbors.get("school").add(self)
 
     def addCriminalLink(self, asker):
         """
@@ -227,8 +220,9 @@ class Person(Agent):
         if self.model.education_modifier != 1.0:
             if self.model.rng.random() < abs(self.model.education_modifier - 1):
                 self.max_education_level = self.max_education_level + (1 if (self.model.education_modifier > 1) else -1)
-                self.max_education_level = len(self.model.edu[True]) if self.max_education_level > len(
-                    self.model.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
+                self.max_education_level = len(self.model.edu[True]) \
+                    if self.max_education_level > len(self.model.edu[True]) \
+                    else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level
@@ -255,7 +249,7 @@ class Person(Agent):
             self.my_school = self.model.rng.choice(self.potential_school)
         self.my_school.my_students.add(self)
 
-    def get_link_list(self, net_name):
+    def get_neighbor_list(self, net_name):
         """
         Given the name of a network, this method returns a list of agents within the network.
         If the network is empty, it returns an empty list.
@@ -278,14 +272,16 @@ class Person(Agent):
         if not jobs_pool:
             jobs_pool = [j for j in self.model.jobs if j.my_worker == None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.model.rng.choice(jobs_pool, 1)[0]
+            the_job = self.model.rng.choice(jobs_pool)
             self.my_job = the_job
             the_job.my_worker = self
 
-    def factors_c(self):
+    def update_criminal_tendency(self):
         """
-        This procedure modifies the attribute self.criminal_tendency in-place, based on the characteristics of the agent.
-        [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        This procedure modifies the attribute self.criminal_tendency in-place, based on the individual characteristics of the agent.
+        The original nomenclature of the model in Netlogo is: [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
+        More information on criminal tendency modeling can be found on PROTON-Simulator-Report, page 30, 2.3.2 MODELLING CRIMINAL ACTIVITY (C):
+        [https://www.projectproton.eu/wp-content/uploads/2019/10/D5.1-PROTON-Simulator-Report.pdf]
         :return: None
         """
         # employment
@@ -304,32 +300,20 @@ class Person(Agent):
                 len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
             self.family_link_neighbors())) > 0.5 else 1.0
         # crim-neigh
-        self.criminal_tendency *= 1.81 if self.get_link_list("friendship") or self.get_link_list("professional") and (
-                len([agent for agent in self.get_link_list("friendship") if agent.num_crimes_committed > 0]
-                    + [agent for agent in self.get_link_list("professional") if agent.num_crimes_committed > 0]) / len(
-            [agent for agent in self.get_link_list("friendship")] + [agent for agent in self.get_link_list(
+        self.criminal_tendency *= 1.81 if self.get_neighbor_list("friendship") or self.get_neighbor_list("professional") and (
+                len([agent for agent in self.get_neighbor_list("friendship") if agent.num_crimes_committed > 0]
+                    + [agent for agent in self.get_neighbor_list("professional") if agent.num_crimes_committed > 0]) / len(
+            [agent for agent in self.get_neighbor_list("friendship")] + [agent for agent in self.get_neighbor_list(
                 "professional")])) > 0.5 else 1.0
         # oc-member
-        self.criminal_tendency *= 4.50 if self.oc_member and not (
-                self.model.intervention_is_on() and self.model.oc_members_scrutinize) else 1.0
+        self.criminal_tendency *= 4.50 if self.oc_member else 1.0
 
     def family_link_neighbors(self):
         """
         This function returns a list of all agents that have sibling,offspring,partner type connection with the agent.
         :return: list, the agents
         """
-        return self.get_link_list("sibling") + self.get_link_list("offspring") + self.get_link_list("partner")
-
-    def remove_from_household(self):
-        """
-        This method removes the agent from household, keeping the networks consistent.
-        Modify the Person.neighbors attribute in-place
-        :return: None
-        """
-        for member in self.neighbors.get("household").copy():
-            if self in member.neighbors.get("household"):
-                member.neighbors.get("household").remove(self)
-                self.neighbors.get("household").remove(member)
+        return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
 
     def leave_school(self):
         """
@@ -376,6 +360,7 @@ class Person(Agent):
                     candidate = candidates[0]
                     candidates.remove(candidate)
                     accomplices.add(candidate)
+                    # todo: Should be if candidate.facilitator and facilitator_needed? tracked issue #234
                     if candidate.facilitator:
                         n_of_accomplices += 1
                         facilitator_needed = False
@@ -396,6 +381,18 @@ class Person(Agent):
                 else:
                     self.model.facilitator_fails += 1
         return list(accomplices)
+        
+        
+    def remove_from_household(self):
+        """
+        This method removes the agent from household, keeping the networks consistent.
+        Modify the Person.neighbors attribute in-place
+        :return: None
+        """
+        for member in self.neighbors.get("household").copy():
+            if self in member.neighbors.get("household"):
+                member.neighbors.get("household").remove(self)
+                self.neighbors.get("household").remove(member)
 
     def candidates_weight(self, agent):
         """
@@ -416,9 +413,8 @@ class Person(Agent):
         """
         agents_in_radius = set()
         for net in context:
-            if self.neighbors.get(net):
-                for agent in self.neighbors.get(net):
-                    agents_in_radius.add(agent)
+            for agent in self.neighbors.get(net):
+                agents_in_radius.add(agent)
         return agents_in_radius
 
     def agents_in_radius(self, d, context=network_names):
@@ -428,12 +424,12 @@ class Person(Agent):
         :param context: list, of strings, limit to networks name
         :return: set, of Person objects
         """
-        # todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
+        #todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
         radius = self._agents_in_radius(context)
         if d == 1:
             return radius
         else:
-            for di in range(d - 1):
+            for di in range(d-1):
                 for agent_in_radius in radius:
                     radius = radius.union(agent_in_radius._agents_in_radius(context))
             radius.remove(self)
@@ -539,17 +535,17 @@ class Person(Agent):
         new_agent.wealth_level = self.wealth_level
         new_agent.birth_tick = self.model.ticks
         new_agent.mother = self
-        if self.get_link_list("offspring"):
-            new_agent.addSiblingLinks(self.get_link_list("offspring"))
+        if self.get_neighbor_list("offspring"):
+            new_agent.addSiblingLinks(self.get_neighbor_list("offspring"))
         self.makeParent_OffspringsLinks(new_agent)
-        if self.get_link_list("partner"):
-            dad = self.get_link_list("partner")[0]
+        if self.get_neighbor_list("partner"):
+            dad = self.get_neighbor_list("partner")[0]
             dad.makeParent_OffspringsLinks(new_agent)
             new_agent.father = dad
             new_agent.max_education_level = dad.max_education_level
         else:
             new_agent.max_education_level = self.max_education_level
-        new_agent.makeHouseholdLinks(self.get_link_list("household"))
+        new_agent.makeHouseholdLinks(self.get_neighbor_list("household"))
 
     def die(self):
         """
