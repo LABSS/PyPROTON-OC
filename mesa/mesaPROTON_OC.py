@@ -476,7 +476,7 @@ class MesaPROTON_OC(Model):
         :return: None
         """
         for agent in self.schedule.agents:
-            friends = agent.get_link_list('professional')
+            friends = agent.get_neighbor_list('professional')
             if len(friends) > 30:
                 for friend in self.rng.choice(friends, int(len(friends) - 30), replace=False):
                     friend.remove_professional(agent)
