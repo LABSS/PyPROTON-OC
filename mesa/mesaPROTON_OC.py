@@ -11,7 +11,7 @@ from Employer import Employer
 from Job import Job
 import timeit
 # import testProton
-from itertools import combinations
+from itertools import combinations, chain
 import os
 from numpy.random import default_rng
 import time
@@ -45,9 +45,6 @@ class MesaPROTON_OC(Model):
         self.wealth_quintile_by_work_status = 0
         self.criminal_propensity_by_wealth_quintile = 0
         self.edu = 0
-        self.punishment_length_list = 0
-        self.male_punishment_length_list = 0
-        self.female_punishment_length_list = 0
         self.arrest_rate = 0
         self.education_levels = dict()  # table from education level to data
         self.c_by_age_and_sex = 0
@@ -110,6 +107,11 @@ class MesaPROTON_OC(Model):
         self.facilitator_repression = False
         self.facilitator_repression_multiplier = 2.0
         self.likelihood_of_facilitators = 0.005
+        self.targets_addressed_percent = 10
+        self.threshold_use_facilitators = 4
+        self.oc_embeddedness_radius = 2
+        self.oc_boss_repression = False
+        self.punishment_length = 1
 
         # Folders definition
         self.mesa_dir = os.getcwd()
@@ -171,6 +173,9 @@ class MesaPROTON_OC(Model):
             self.let_migrants_in()
             self.return_kids()
         self.wedding()
+        self.reset_oc_embeddedness()
+        self.commit_crimes()
+
         self.ticks += 1
 
 
@@ -227,9 +232,9 @@ class MesaPROTON_OC(Model):
         self.edu_by_wealth_lvl = self.read_csv_city("edu_by_wealth_lvl")
         self.work_status_by_edu_lvl = self.df_to_dict(self.read_csv_city("work_status_by_edu_lvl"))
         self.wealth_quintile_by_work_status = self.df_to_dict(self.read_csv_city("wealth_quintile_by_work_status"))
-        self.punishment_length_list = self.read_csv_city("conviction_length")
-        # male_punishment_length_list =  map [ i _> (list (item 0 i) (item 2 i)) ] punishment_length_list
-        # female_punishment_length_list =  map [ i _> (list (item 0 i) (item 1 i)) ] punishment_length_list
+        self.punishment_length_data = self.read_csv_city("conviction_length")
+        self.male_punishment_length = self.df_to_lists(self.punishment_length_data[["months", "M"]], split_row=False)
+        self.female_punishment_length =  self.df_to_lists(self.punishment_length_data[["months", "F"]], split_row=False)
         self.jobs_by_company_size = self.df_to_dict(self.read_csv_city("jobs_by_company_size"))
         self.c_range_by_age_and_sex = self.df_to_lists(self.read_csv_city("crime_rate_by_gender_and_age_range"))
         self.c_by_age_and_sex = self.read_csv_city("crime_rate_by_gender_and_age")
@@ -240,6 +245,7 @@ class MesaPROTON_OC(Model):
         marriage = pd.read_csv(os.path.join(self.general_data, "marriages_stats.csv"))
         self.number_weddings_mean = marriage['mean_marriages'][0]
         self.number_weddings_sd = marriage['std_marriages'][0]
+        self.num_co_offenders_dist = self.df_to_lists(pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv")), split_row=False)
 
     def wedding(self):
         """
@@ -396,12 +402,12 @@ class MesaPROTON_OC(Model):
         kids_to_protect = [agent for agent in self.schedule.agents if
                            agent.age() < 18 and agent.age() >= 12 and agent.father in agent.neighbors.get("parent")]
         if self.family_intervention == "remove-if-caught":
-            kids_to_protect = [agent for agent in kids_to_protect if type(agent.father) == Prisoner]
+            kids_to_protect = [agent for agent in kids_to_protect if agent.father.prisoner]
         if self.family_intervention == "remove-if-OC-member":
             kids_to_protect = [agent for agent in kids_to_protect if agent.father.oc_member]
         if self.family_intervention == "remove-if-caught-and-OC-member":
             kids_to_protect = [agent for agent in kids_to_protect if
-                               type(agent.father) == Prisoner and agent.father.oc_member]
+                               agent.father.prisoner and agent.father.oc_member]
         if kids_to_protect:
             how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(kids_to_protect)))
             kids_pool = list(self.rng.choice(kids_to_protect, how_many, replace=False))
@@ -914,19 +920,26 @@ class MesaPROTON_OC(Model):
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.makeProfessionalLinks(conn_pool)
 
-    def df_to_lists(self,df):
+    def df_to_lists(self,df, split_row=True):
         """
-        This function transforms a pandas DataFrame into nested lists as follows:
+        This function transforms a pandas DataFrame into nested lists as shown in this example:
         df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
+        If split_row is false it returns a nested list where each sublist is a line of df as shown in this example:
+        df-columns = age, sex, education, p --> list = [[age,sex,education,p]]
 
         This transformation ensures a faster access to the values using the position in the list
         :param df: pandas df, the df to be transformed
+        :param split_row: bool
         :return: list, a new list
         """
         output_list = list()
-        temp_list = df.iloc[:, :2].values.tolist()
-        for index, row in df.iterrows():
-            output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
+        if split_row:
+            temp_list = df.iloc[:, :2].values.tolist()
+            for index, row in df.iterrows():
+                output_list.append([temp_list[index], [row.iloc[2], row.iloc[3]]])
+        else:
+            output_list = df.values.tolist()
+
         return output_list
 
     def calculate_crime_multiplier(self):
@@ -1166,6 +1179,136 @@ class MesaPROTON_OC(Model):
                 new_agent.wealth_level = job.job_level
                 new_agent.migrant = True
 
+    def commit_crimes(self):
+        """
+        This procedure is central in the model, allowing agents to find accomplices and commit crimes.
+        Based on the table self.c_range_by_age_and_sex , the number of crimes and the subset of the agents who commit them
+        is selected. For each crime a single agent is selected and if necessary activates the procedure that allows
+        the agent to find accomplices.
+        :return: None
+        """
+        co_offender_groups = list()
+        co_offender_started_by_OC = list()
+        for cell, value in self.c_range_by_age_and_sex:
+            people_in_cell = [agent for agent in self.schedule.agents if
+                              agent.age() >= cell[1] and agent.age() <= value[0] and agent.gender_is_male == cell[0]]
+            target_n_of_crimes = value[1]* len(people_in_cell)/ self.ticks_per_year * self.crime_multiplier
+            for x in np.arange(np.round(target_n_of_crimes)):
+                self.number_crimes += 1
+                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency, self.rng)
+                number_of_accomplices = self.number_of_accomplices()
+                accomplices = agent.find_accomplices(number_of_accomplices) # this takes care of facilitators as well.
+                co_offender_groups.append(accomplices)
+                if agent.oc_member:
+                    co_offender_started_by_OC.append(accomplices)
+                # check for big crimes started from a normal guy
+                if len(accomplices) > self.this_is_a_big_crime and agent.criminal_tendency < self.good_guy_threshold:
+                    self.big_crime_from_small_fish += 1
+        for co_offender_group in co_offender_groups:
+            self.commit_crime(co_offender_group)
+        if len(co_offender_groups) > 0:
+            # todo: make-co-offending-histo
+            pass
+        for co_offenders_by_OC in co_offender_started_by_OC:
+            for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
+                agent.new_recruit = self.ticks
+                agent.oc_member = True
+                if agent.father:
+                    if agent.father.oc_member:
+                        self.number_offspring_recruited_this_tick += 1
+                if agent.target_of_intervention:
+                    self.number_protected_recruited_this_tick += 1
+        criminals = list(chain.from_iterable(co_offender_groups))
+        if criminals:
+            if self.intervention_is_on() and self.facilitator_repression:
+                for criminal in criminals:
+                    criminal.arrest_weight = self.facilitator_repression_multiplier if criminal.facilitator else 1
+            else:
+                if self.intervention_is_on() and self.oc_boss_repression and len([agent for agent in criminals if agent.oc_member]) >= 1:
+                    for criminal in criminals:
+                        if not criminal.oc_member:
+                            criminal.arrest_weight = 1
+                    self.calculate_oc_status([agent for agent in criminals if agent.oc_member])
+                else:
+                    # no intervention active
+                    for criminal in criminals:
+                        criminal.arrest_weight = 1
+            arrest_mod = self.number_arrests_per_year / self.ticks_per_year / 10000 * len(self.schedule.agents)
+            target_n_of_arrest = np.floor(arrest_mod + 1 if self.rng.random() < (arrest_mod - np.floor(arrest_mod)) else 0)
+            for agent in extra.weighted_n_of(target_n_of_arrest, criminals, lambda x: x.arrest_weight, self.rng):
+                agent.get_caught()
+
+    def calculate_oc_status(self, co_offenders):
+        """
+        This procedure modify in-place the arrest_weigh attribute of the Person objects passed to co_offenders
+        :param co_offenders: list, of Person object
+        :return: None
+        """
+        for agent in co_offenders:
+            agent.arrest_weight = agent.calculate_oc_member_position()
+        min_score = np.min([agent.arrest_weight for agent in co_offenders])
+        divide_score = np.mean([agent.arrest_weight - min_score for agent in co_offenders])
+        for agent in co_offenders:
+            if divide_score > 0:
+                agent.arrest_weight = (agent.arrest_weight - min_score) / divide_score
+            else:
+                agent.arrest_weight = 1
+
+
+    def commit_crime(self, co_offenders):
+        """
+        This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
+        attributes of the Person objects passed to co_offenders
+        :param co_offenders: list, of Person object
+        :return: None
+        """
+        for co_offender in co_offenders:
+            co_offender.num_crimes_committed += 1
+            co_offender.num_crimes_committed_this_tick += 1
+            other_co_offenders = [agent for agent in co_offenders if agent != co_offender]
+            for agent in other_co_offenders:
+                if agent not in co_offender.neighbors.get("criminal"):
+                    co_offender.addCriminalLink(agent)
+                    co_offender.co_off_flag[agent] = 0
+        for co_offender in co_offenders:
+            for co_off_key in co_offender.co_off_flag.keys():
+                co_offender.co_off_flag[co_off_key] += 1
+                if co_offender.co_off_flag[co_off_key] == 2:
+                    co_offender.num_co_offenses[co_off_key] += 1
+
+
+    def number_of_accomplices(self):
+        """
+        Pick a group size from the num. co-offenders distribution
+        and substract one to get the number of accomplices
+        :return:
+        """
+        return extra.pick_from_pair_list(self.num_co_offenders_dist, self.rng) - 1
+
+
+    def update_meta_links(self,agents):
+        """
+        This method creates a new temporal graph that is used to colculate the oc_embeddedness of an agent, the graph is stored
+        in the variable self.meta_graph
+        :param agents: list, of Person objects
+        :return: None
+        """
+        self.meta_graph = nx.Graph()
+        for agent in agents:
+            self.meta_graph.add_node(agent.unique_id)
+            for in_radius_agent in agent.agents_in_radius(1): # limit the context to the agents in the radius of interest
+                self.meta_graph.add_node(in_radius_agent.unique_id)
+                w = 0
+                for net in Person.network_names:
+                    if in_radius_agent in agent.neighbors.get(net):
+                        if net == "criminal":
+                            if in_radius_agent in agent.num_co_offenses:
+                                w += agent.num_co_offenses[in_radius_agent]
+                        else:
+                            w += 1
+                self.meta_graph.add_edge(agent.unique_id, in_radius_agent.unique_id, weight=1/w)
+
+
 if __name__ == "__main__":
 
     model = MesaPROTON_OC()
@@ -1183,3 +1326,4 @@ if __name__ == "__main__":
     # model.setup_siblings()
     print("num links:")
     print(model.total_num_links())
+
