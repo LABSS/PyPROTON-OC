@@ -517,11 +517,10 @@ class Person(Agent):
         :return:
         """
         if self.age() in self.model.mortality_table:
-            p = self.model.mortality_table[self.age()][self.gender_is_male] / self.model.ticks_per_year
+            return self.model.mortality_table[self.age()][self.gender_is_male] / self.model.ticks_per_year
         else:
-            # if there's no key, we remove the agent
-            p = 1
-        return p
+            raise Exception(str(self) + " is too old (" + str(self.age()) + ") maximum age admitted is: "
+                            + str(max(self.model.mortality_table)))
 
     def init_baby(self):
         """
