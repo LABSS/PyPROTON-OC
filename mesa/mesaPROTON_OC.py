@@ -181,13 +181,13 @@ class MesaPROTON_OC(Model):
         self.remove_excess_friends()
         self.remove_excess_professional_links()
         self.make_friends()
-
-
+        for agent in self.schedule.agents:
+            if agent.prisoner:
+                agent.sentence_countdown -= 1
+                if agent.sentence_countdown == 0:
+                    agent.prisoner = False
+        self.make_people_die()
         self.ticks += 1
-
-
-        # self.schedule.step()
-        # self.wedding()
 
     def run_model(self, n):
         for self.ticks in range(n):
@@ -232,7 +232,7 @@ class MesaPROTON_OC(Model):
     def load_stats_tables(self):
         self.num_co_offenders_dist = pd.read_csv(os.path.join(self.general_data, "num_co_offenders_dist.csv"))
         self.fertility_table = self.df_to_dict(self.read_csv_city("initial_fertility_rates"), extra_depth=True)
-        self.mortality_table = self.read_csv_city("initial_mortality_rates")
+        self.mortality_table = self.df_to_dict(self.read_csv_city("initial_mortality_rates"), extra_depth=True)
         self.edu = self.df_to_dict(self.read_csv_city("edu"))
         self.age_gender_dist = self.read_csv_city("initial_age_gender_dist").values.tolist()
 
@@ -1352,6 +1352,33 @@ class MesaPROTON_OC(Model):
                 if self.rng.random() < agent.p_fertility():
                     agent.init_baby()
 
+    def make_people_die(self):
+        """
+        Based on p_mortality table agents die.
+        :return: None
+        """
+        dead_agents = list()
+        for agent in self.schedule.agent_buffer(True):
+            if self.rng.random() < agent.p_mortality() or agent.age() > 119:
+                dead_agents.append(agent)
+                if self.removed_fatherships:
+                    for removed in self.removed_fatherships:
+                        if agent == removed[1] or agent == removed[2]:
+                            self.removed_fatherships.remove(removed)
+                if agent.facilitator:
+                    new_facilitator = self.rng.choice([agent for agent in self.schedule.agents if not agent.facilitator
+                                                           and not agent.oc_member and agent.age() > 18])
+                    new_facilitator.facilitator = True
+                self.number_deceased += 1
+                if agent.my_job != None:
+                    agent.my_job.my_worker = None
+                if agent.my_school != None:
+                    agent.my_school.my_students.remove(agent)
+                agent.die()
+        for agent in dead_agents:
+            self.schedule.remove(agent)
+            del agent
+
 
 if __name__ == "__main__":
 
@@ -1370,4 +1397,3 @@ if __name__ == "__main__":
     # model.setup_siblings()
     print("num links:")
     print(model.total_num_links())
-
