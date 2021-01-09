@@ -224,7 +224,7 @@ class MesaPROTON_OC(Model):
 
     def setup_facilitators(self):
         for agent in self.schedule.agent_buffer(shuffled=True):
-            agent.facilitator = True if not agent.oc_member and agent.age > 18 and (self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+            agent.facilitator = True if not agent.oc_member and agent.age > 18 and (self.rng.uniform(0, 1) < self.likelihood_of_facilitators) else False
 
     def read_csv_city(self, filename):
         return pd.read_csv(os.path.join(self.data_folder, filename + ".csv"))
@@ -505,7 +505,7 @@ class MesaPROTON_OC(Model):
         oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
         for head in oc_family_heads:
             head.oc_member = True
-            candidates += [relative for relative in head.neighbors.get('household') if relative.age >= 18]
+            candidates = [relative for relative in head.neighbors.get('household') if relative.age >= 18]
         if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
             members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible

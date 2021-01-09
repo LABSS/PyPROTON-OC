@@ -536,11 +536,10 @@ class Person(Agent):
         """
         if self.age in self.model.mortality_table:
             p = self.model.mortality_table[self.age][self.gender_is_male] / self.model.ticks_per_year
-        else:
-            # if there's no key, we remove the agent
+        elif self.age > max(self.model.mortality_table):
             p = 1
         else:
-            raise Exception(self.__repr__() + " age: " + str(self.age()) + ", not in mortality table keys")
+            raise Exception(self.__repr__() + " age: " + str(self.age) + ", not in mortality table keys")
         return p
 
     def init_baby(self):
