@@ -51,6 +51,7 @@ class MesaPROTON_OC(Model):
         self.labour_status_by_age_and_sex = 0
         self.labour_status_range = 0
 
+        self.migration_on = False
         #Intervention
         self.family_intervention = None
         self.removed_fatherships = list()
@@ -150,7 +151,6 @@ class MesaPROTON_OC(Model):
                 self.socialization_intervene()
             if self.welfare_support:
                 self.welfare_intervene()
-            # OC-members-scrutiny works directly in factors-c
             # OC-members-repression works in arrest-probability-with-intervention in commmit-crime
         if (self.ticks % self.ticks_per_year) == 0:
             self.calculate_criminal_tendency()

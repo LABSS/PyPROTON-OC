@@ -2,22 +2,24 @@
 import pytest
 from mesaPROTON_OC import MesaPROTON_OC
 import Person as pp
+import numpy as np
+import extra
 
 
 def test_random():
     """
     Tests the random generation of numbers through the two modules (numpy random and random) with a single seed.
     """
-    m = MesaPROTON_OC(seed=42)
-    assert m.check_random == [0.7739560485559633, 0.6394267984578837]
+    model = MesaPROTON_OC(seed=42)
+    assert model.check_random == [0.7739560485559633, 0.6394267984578837]
 
 def test_networks():
     pp.Person.persons = []
     # testing link exploration
     links = [[4, 5], [2, 3], [1], [1, 8], [0, 6, 5, 7], [4, 0], [4], [4, 8], [9, 3, 8], [8]]
-    m = MesaPROTON_OC()
+    model = MesaPROTON_OC()
     for i in range(0, 10):
-        pp.Person(m)
+        pp.Person(model)
     for i in range(0, 10):
         for l in links[i]: pp.Person.persons[i].neighbors.get('friendship').add(pp.Person.persons[l])
     # for i in range(0,10):
@@ -25,7 +27,7 @@ def test_networks():
     ne = pp.Person.persons[5].neighbors_range('friendship', 3)
     assert sorted([x.unique_id for x in ne]) == [0, 4, 6, 7, 8]
     # print([x.unique_id for x in ne]) # should be [ 4, 7, 8, 0, 6]
-
+#
 def test_generate_households():
     """
     test the households generation
@@ -35,27 +37,32 @@ def test_generate_households():
     4. wealth must be the same for all members of the household
     5. nobody should have more than one father and one mother
     """
-    m = MesaPROTON_OC()
-    m.initial_agents = 1000
-    m.create_agents()
-    m.generate_households()
+    model = MesaPROTON_OC()
+    model.initial_agents = 1000
+    model.setup_education_levels()
+    model.setup_persons_and_friendship()
+    model.setup_schools()
+    model.init_students()
+    model.assign_jobs_and_wealth()
+    model.setup_inactive_status()
+    model.generate_households()
     #1
     counter_couple = 0
     counter_single_parent = 0
-    for family in m.families:
+    for family in model.families:
         if family[0].neighbors["partner"]:
             counter_couple += 1
         else:
             counter_single_parent += 1
-    single = len([x for x in m.hh_size if x == 1])
-    assert counter_couple+counter_single_parent+single == len(m.hh_size)
+    single = len([x for x in model.hh_size if x == 1])
+    assert counter_couple+counter_single_parent+single == len(model.hh_size)
     #2
-    test_family = m.rng.choice(m.families)
+    test_family = model.rng.choice(model.families)
     for member in test_family:
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
     #3
-    for test_simple_family in m.families:
+    for test_simple_family in model.families:
         if len(test_simple_family) >= 3 and test_family[0].neighbors["partner"] == test_family[1] and test_family[1].neighbors["partner"]  == test_family[0]:
             assert set(test_simple_family[1:]) == test_simple_family[0].neighbors["household"]
             assert test_simple_family[-1] in test_simple_family[0].neighbors["offspring"]
@@ -63,85 +70,415 @@ def test_generate_households():
             for son in test_simple_family[2:]:
                 assert son.neighbors["parent"] == set(test_simple_family[:2])
     #4
-    for agent in m.schedule.agents:
+    for agent in model.schedule.agents:
         for household in agent.neighbors["household"]:
             assert agent.wealth_level == household.wealth_level
     #5
-    for agent in m.schedule.agents:
+    for agent in model.schedule.agents:
         if agent.neighbors["parent"]:
             assert len(agent.neighbors["parent"]) <= 2
             assert len([x for x in agent.neighbors["parent"] if x.gender_is_male == True]) <= 1
             assert len([x for x in agent.neighbors["parent"] if x.gender_is_male == False]) <= 1
 
 def test_weddings():
+    """
+    Coherent state of weddings
+    :return: None
+    """
     model = MesaPROTON_OC()
     model.setup(1000)
     initial_wedding = len([x for x in model.schedule.agents if x.get_neighbor_list("partner")])
     for tick in range(100):
-        model.step()
+        model.wedding()
     for agent in model.schedule.agents:
         if agent.get_neighbor_list("partner"):
             assert agent.get_neighbor_list("partner")[0].get_neighbor_list("partner")[0] == agent
     assert model.number_weddings == (len([x for x in model.schedule.agents if x.get_neighbor_list("partner")]) - initial_wedding) / 2
     assert model.number_weddings > 0
-    # coherent state of weddings
-
-def test_inflate_deflate_network():
-    m = MesaPROTON_OC()
-    m.create_agents(random_relationships=True)
-    tot_links = m.total_num_links()
-    assert tot_links
-
-def test_oc_creation():
-    m = MesaPROTON_OC()
-    m.initial_agents = 500
-    m.create_agents()
-    m.number_weddings_mean = 1000
-    for i in range(1, 5):
-        m.wedding()
-    # todo: fix this routine
-    # m.setup_oc_groups()
-    # print(m.total_num_links())
-
-def test_big_crimes_for_small_fish():
-    m = MesaPROTON_OC()
-    m.max_accomplice_radius = 6
-    m.setup(500)
-    m.num_co_offenders_dist = [[5, 0.5], [6, 0.5], [10, 0.5]]
-    for tick in range(1, 20):
-        m.step()
-    # todo: fix this routine
-    # assert m.big_crime_from_small_fish < 0
-
-def test_oc_crime_net_init():
-    m = MesaPROTON_OC()
-    m.create_agents()
-    pass
 
 
-def test_population_generator():
-    m = MesaPROTON_OC()
-    m.initial_agents = 2000
-    m.load_stats_tables()
-    m.facilitator_fails = 0
-    m.facilitator_crimes = 0
-    m.setup_persons_and_friendship()
-    pass
-
-def test_criminal_propensity_setup():
+def test_big_crimes_from_small_fish():
     """
-    Check if the criminal_tendency of the agents diverges from the theoretical value.
+    A large crime organized by a small fish is reported
     :return: None
     """
-    m = MesaPROTON_OC()
-    m.setup(1000)
-    for line in m.c_range_by_age_and_sex:
-        # the line variable is composed as follows:
-        # [[bool(gender_is_male), int(minimum age range)], [int(maximum age range), float(c value)]]
-        subpop = [agent for agent in m.schedule.agents if
-                  agent.age() >= line[0][1] and agent.age() <= line[1][0] and agent.gender_is_male == line[0][0]]
-        if subpop:
-            total_c = 0
-            for agent in subpop:
-                total_c += agent.criminal_tendency
-            assert ((total_c - len(subpop) * line[1][1]) / total_c < 1.0E-10)
+    model = MesaPROTON_OC()
+    model.max_accomplice_radius = 6
+    model.setup(500)
+    model.num_co_offenders_dist = [[5, 0.5], [6, 0.5], [10, 0.5]]
+    for tick in range(20):
+        model.step()
+    assert model.big_crime_from_small_fish > 0
+
+def test_oc_crime_net_init():
+    """
+    All OC links have weight >= 1
+    :return: None
+    """
+    model = MesaPROTON_OC()
+    model.setup(1000)
+    for agent in model.schedule.agents:
+        if agent.neighbors.get("criminal"):
+            for criminal in agent.neighbors.get("criminal"):
+                assert agent.num_co_offenses[criminal] >= 1
+
+def test_oc_crime_stats():
+    model = MesaPROTON_OC()
+    model.setup(1500)
+    for n in range(20):
+        model.step()
+        for cell, value in model.c_range_by_age_and_sex:
+            pool = [agent for agent in model.schedule.agents
+                if agent.age() > cell[1] and agent.age() <= value[0] and agent.gender_is_male]
+            if pool and np.sum([agent.num_crimes_committed for agent in pool]) > 0:
+                result = np.abs(value[1]) * model.ticks / model.ticks_per_year \
+                - np.mean([agent.num_crimes_committed for agent in pool]) < \
+                2 * np.std([agent.num_crimes_committed for agent in pool])
+                assert result
+
+def test_oc_embeddedness():
+    """
+    Tests oc_embeddedness in various contexts
+    :return: None
+    """
+    def test1(model):
+        """
+        A single non-OC person
+        :param model: the model
+        :return: None
+        """
+        agent = pp.Person(model)
+        assert agent.oc_embeddedness() == 0
+
+    def test2(model):
+        """
+        A single non-OC person with one family OC member
+        :param model: the model
+        :return: None
+        """
+        agent1 = pp.Person(model)
+        agent2 = pp.Person(model)
+        agent2.oc_member = True
+        agent1.addSiblingLinks([agent2])
+        assert agent1.oc_embeddedness() == 1
+        assert agent1.find_oc_distance([agent2]) == 1
+
+    def test3(model):
+        """
+        A non-OC person with its family being OC member
+        :param model: the model
+        :return: None
+        """
+        pool = list()
+        for i in range(11):
+            agent = pp.Person(model)
+            pool.append(agent)
+        father = model.rng.choice(pool)
+        pool.remove(father)
+        for agent in list(model.rng.choice(pool, size=5, replace=False)):
+            agent.oc_member = True
+        father.makeParent_OffspringsLinks(pool)
+        assert father.oc_embeddedness() == 0.5
+        distances = list()
+        for agent in pool:
+            distances.append(father.find_oc_distance([agent]))
+        assert distances == list(np.full(10,1))
+
+    def test4(model):
+        """
+        A non-OC person with one double link to an OC member
+        :param model: The model
+        :return: None
+        """
+        pool = list()
+        for i in range(3):
+            agent = pp.Person(model)
+            pool.append(agent)
+        pool[2].oc_member = True
+        pool[0].addSiblingLinks([pool[1]])
+        pool[0].makePartnerLinks(pool[2])
+        pool[0].makeFriends(pool[2])
+        assert pool[0].oc_embeddedness() == 2 / 3
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [0.5, 1.0]
+
+    def test5(model):
+        """
+        A non-OC person with one double link to a non-OC member
+        :param model: The model
+        :return: None
+        """
+        pool = list()
+        for i in range(3):
+            agent = pp.Person(model)
+            pool.append(agent)
+        pool[2].oc_member = True
+        pool[0].makePartnerLinks(pool[1])
+        pool[0].makeFriends(pool[1])
+        pool[0].makeFriends(pool[2])
+        assert pool[0].oc_embeddedness() == 1 / 3
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [0.5, 1.0]
+
+    def test6(model):
+        """
+        A non-OC person with a strong co-offending link to an OC member
+        :param model: The model
+        :return: None
+        """
+        pool = list()
+        for i in range(3):
+            agent = pp.Person(model)
+            pool.append(agent)
+        pool[0].addSiblingLinks([pool[1]])
+        pool[0].makeParent_OffspringsLinks(pool[2])
+        pool[0].addCriminalLink(pool[2])
+        pool[0].num_co_offenses[pool[2]] = 4
+        pool[2].num_co_offenses[pool[0]] = 4
+        pool[2].oc_member = True
+        assert pool[0].oc_embeddedness() == 5 / 6
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [0.2, 1.0]
+
+    def test7(model):
+        """
+        A non-OC person with all types of links
+        :param model: The model
+        :return: None
+        """
+        pool = list()
+        for i in range(6):
+            agent = pp.Person(model)
+            pool.append(agent)
+
+        pool[0].makePartnerLinks(pool[1])
+        pool[0].makeFriends(pool[2])
+        pool[0].makeProfessionalLinks(pool[3])
+        pool[0].makeSchoolLinks([pool[4]])
+        pool[0].addCriminalLink(pool[5])
+        pool[0].num_co_offenses[pool[5]] = 5
+        pool[5].num_co_offenses[pool[0]] = 5
+        pool[0].makeParent_OffspringsLinks(pool[5])
+        pool[5].oc_member = True
+
+        assert pool[0].oc_embeddedness() == 0.6
+        distances = list()
+        for agent in pool[1:]:
+            distances.append(pool[0].find_oc_distance([agent]))
+        assert sorted(distances) == [1/6, 1.0, 1.0, 1.0, 1.0]
+
+
+    #Test
+    model = MesaPROTON_OC()
+    model.setup(1000)
+    test1(model) # A single non-OC person
+    test2(model) # A single non-OC person with one family OC member
+    test3(model) # A non-OC person with its family being OC member
+    test4(model) # A non-OC person with one double link to an OC member
+    test5(model) # A non-OC person with one double link to a non-OC member
+    test6(model) # A non-OC person with a strong co-offending link to an OC member
+    test7(model) # A non-OC person with all types of links
+
+def test_oc_intervention():
+    def test1():
+        """
+        Test the Intervention on OC families
+        :return: None
+        """
+        model = MesaPROTON_OC()
+        model.setup(550)
+        for agent in model.schedule.agents:
+            agent.oc_member = False
+        agelist = np.arange(0, 12 * 4, 4)
+        kingpin = pp.Person(model)
+        kingpin.birth_tick = -1 * model.ticks_per_year * 50
+        kingpin.oc_member = True
+        kingpin.gender_is_male = True
+        model.schedule.add(kingpin)
+        the_family = list()
+        for i in range(12):
+            new_agent = pp.Person(model)
+            new_agent.father = kingpin
+            the_family.append(new_agent)
+            model.schedule.add(new_agent)
+            age = model.rng.choice(np.arange(agelist.size))
+            new_agent.birth_tick = -1 * agelist[age] * model.ticks_per_year
+            agelist = np.delete(agelist, age)
+            new_agent.propensity = 0
+            new_agent.gender_is_male = True
+            kingpin.makeParent_OffspringsLinks(new_agent)
+        for agent in the_family:
+            agent.addSiblingLinks(the_family)
+        baby = [agent for agent in the_family if agent.age() == 0]
+        model.targets_addressed_percent = 100
+        model.family_intervention = "remove-if-OC-member"
+        model.family_intervene()
+
+        assert np.sum([len(agent.neighbors.get("friendship")) for agent in the_family]) >= 40
+        assert len(extra.weighted_one_of(model.schedule.agents, lambda x: x.age() == 16 and x.propensity == 0,
+                                         model.rng).neighbors.get("sibling")) == 11
+        assert len([agent for agent in baby[0].neighbors.get("sibling") if agent.my_job != None]) == 8
+        assert np.sum([agent.max_education_level for agent in the_family]) == 8
+
+    def test2():
+        """
+        Test Educational intervention
+        :return: None
+        """
+        def target_educational():
+            """
+            Get the mean of max_education_level
+            :return: float
+            """
+            return np.mean([agent.max_education_level for agent in model.schedule.agents
+                           if agent.age() <= 18 and agent.age() >= 12 and agent.my_school is not None])
+
+        def target_psychological():
+            """
+            Get the sum of friends
+            :return: int
+            """
+            return np.sum([len(agent.neighbors.get("friendship")) for agent in model.schedule.agents
+                         if agent.age() <= 18 and agent.age() >= 12 and agent.my_school is not None])
+
+        model = MesaPROTON_OC()
+        model.setup(1000)
+        model.targets_addressed_percent = 0
+        for i in range(5):
+            model.step()
+        model.social_support = "educational"
+        model.ticks_between_intervention = 2
+        model.targets_addressed_percent = 20
+
+        #Test Educational
+        before = target_educational()
+        for i in range(10):
+            model.socialization_intervene()
+        after = target_educational()
+        assert after > before
+
+        #Test psychological
+        model.social_support = "psychological"
+        before = target_psychological()
+        for i in range(10):
+            model.socialization_intervene()
+        after = target_psychological()
+        assert after > before
+
+        #Test target_psychological()
+        model.social_support = "more-friends"
+        before = target_psychological()
+        for i in range(10):
+            model.socialization_intervene()
+        after = target_psychological()
+        assert after > before
+
+    test1() #Test the Intervention on OC families
+    test2() #Test Educational intervention
+
+def test_oc_job():
+    """
+    Work system stays coherent
+    :return: None
+    """
+    model = MesaPROTON_OC()
+    model.setup(1000)
+    for i in range(36):
+        model.step()
+        # No minor working
+        assert any([agent for agent in model.schedule.agents if agent.age() < 16 and agent.my_job is not None]) == False
+        # Unemployed stay so
+        assert any([agent for agent in model.schedule.agents if (agent.job_level == 1 or agent.job_level) == 0 and agent.my_job is not None]) == False
+        # Nobody has two jobs
+        assert len([agent for agent in model.schedule.agents if agent.my_job is not None]) == len([job for job in model.jobs if job.my_worker is not None])
+
+def test_oc_retirement():
+    """
+    Old people do not have a job, Young people are not retired, Retired people are old
+    note that persons have a birth tick, not an age (age is a reporter)
+    thus, after the tick, a person can be just turned 65 but not retired yet (it will be after the go)
+    that's why we use age > retirement-age and not >=. During runtime the inequalities are different from the `setup` case because tick
+    happens at the end of `go`, so I can be 49 at time of retire-check and 50 at time of report
+    :return: None
+    """
+    model = MesaPROTON_OC()
+    model.retirement_age = 65
+    model.setup(100)
+    assert len([agent for agent in model.schedule.agents
+                if agent.age() >= model.retirement_age and agent.neighbors.get("professional")]) == 0
+    assert len([agent for agent in model.schedule.agents
+                if agent.age() < model.retirement_age and agent.retired]) == 0
+    assert len([agent for agent in model.schedule.agents
+                if agent.age() >= model.retirement_age and not agent.retired]) == 0
+
+    for i in range(20):
+        model.step()
+        assert len([agent for agent in model.schedule.agents
+                    if agent.age() > model.retirement_age and agent.neighbors.get("professional")]) == 0
+        assert len([agent for agent in model.schedule.agents
+                    if agent.age() < model.retirement_age and agent.retired]) == 0
+        assert len([agent for agent in model.schedule.agents
+                    if agent.age() > model.retirement_age and not agent.retired]) == 0
+
+def test_school():
+    """
+    Check the correct status of schools and students during setup and during runtime
+    :return: None
+    """
+    def possible_school_level(model,agent):
+        """
+        Get the expected school level of the agent
+        :param model: The model
+        :param agent: The agent
+        :return: int, the expected school level
+        """
+        for level in model.education_levels:
+            if agent.age() <= model.education_levels[level][1] and agent.age() >= model.education_levels[level][0]:
+                the_level = level
+                return the_level
+
+    def assertions(model,agent):
+        """
+        List of assertions that are performed on every agents
+        :param model: The model
+        :param agent: The agent
+        :return: None
+        """
+        expected_school_level = possible_school_level(model, agent)
+        #1 There must be no agents who work and go to school
+        assert not (agent.my_school != None and agent.my_job != None)
+        if agent.my_school:
+            #2 No agent acquires the level of education before finishing school
+            assert agent.education_level  == agent.my_school.diploma_level - 1
+            #3 All agents who go to school at a certain level respect age limits
+            assert agent.my_school.diploma_level == expected_school_level  and agent.education_level == expected_school_level - 1
+            #4 The agent who goes to that school must be in the students of that school
+            assert agent in agent.my_school.my_students
+            #5 The agent who goes to that school must be in the students of that school
+            assert agent.my_school in model.schools
+            #6 The agent can only be found among students at a single school
+            assert len([school for school in model.schools if agent in school.my_students]) == 1
+
+
+    model = MesaPROTON_OC()
+    model.setup(500)
+    for agent in model.schedule.agents:
+        assertions(model,agent)
+    for i in range(36):
+        for agent in model.schedule.agents:
+            assertions(model, agent)
+
+
+
+
+
+
+
+
+

@@ -432,7 +432,8 @@ class Person(Agent):
             for di in range(d-1):
                 for agent_in_radius in radius:
                     radius = radius.union(agent_in_radius._agents_in_radius(context))
-            radius.remove(self)
+            if self in radius:
+                radius.remove(self)
             return radius
 
     def oc_embeddedness(self):
@@ -456,7 +457,7 @@ class Person(Agent):
 
     def find_oc_weight_distance(self, agents):
         """
-        Based on the graph self.model.meta_graph calculates the distance of self from each agent passed to the agents parameter
+        Based on the graph self.model.meta_graph calculates the weighted distance of self from each agent passed to the agents parameter
         :param agents: list or set, of Person objects
         :return: float, the distance
         """
@@ -468,6 +469,22 @@ class Person(Agent):
                                                                                        self.unique_id, agent.unique_id,
                                                                                        weight='weight')
         return distance
+
+    def find_oc_distance(self, agents):
+        """
+        Based on the graph self.model.meta_graph calculates the weighted distance of self from each agent passed to the agents parameter
+        :param agents: list or set, of Person objects
+        :return: float, the distance
+        """
+        if self in agents:
+            agents.remove(self)
+        distance = 0
+        for agent in agents:
+                distance += self.model.meta_graph[self.unique_id][agent.unique_id]["weight"]
+        return distance
+
+
+
 
     def calculate_oc_member_position(self):
         """
