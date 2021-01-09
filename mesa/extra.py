@@ -62,15 +62,15 @@ def at_most(agentset, n, rng_istance):
     if len(agentset) < n:
         return agentset
     else:
-        return list(rng_istance.choice(agentset,n, replace=False))
+        return list(rng_istance.choice(agentset, n, replace=False))
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):
     p = [float(weight_function(x)) for x in agentset]
-    n = np.min([len(agentset), n])
-    #Check for negative
-    if any([True for i in p if i < 0]):
-        min_value = min(p)
-        p = [i-min_value for i in p]
+    for pi in p:
+        if pi < 0:
+            min_value = np.min(p)
+            p = [i - min_value for i in p]
+            break
     sump = sum(p)
     #if there are more zeros than n required in p
     if np.count_nonzero(p) < n:

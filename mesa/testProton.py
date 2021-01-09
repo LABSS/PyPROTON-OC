@@ -17,9 +17,9 @@ def test_networks():
     pp.Person.persons = []
     # testing link exploration
     links = [[4, 5], [2, 3], [1], [1, 8], [0, 6, 5, 7], [4, 0], [4], [4, 8], [9, 3, 8], [8]]
-    m = MesaPROTON_OC()
+    model = MesaPROTON_OC()
     for i in range(0, 10):
-        pp.Person(m)
+        pp.Person(model)
     for i in range(0, 10):
         for l in links[i]: pp.Person.persons[i].neighbors.get('friendship').add(pp.Person.persons[l])
     # for i in range(0,10):
@@ -35,7 +35,7 @@ def test_generate_households():
     2. Take a random household and check if all the members of the household are in the other members' network
     3. Take the first simple family (we're sure it's in the first 5) and check if all the networks work.
     4. wealth must be the same for all members of the household
-    5. nobody should have more than one father and one mather
+    5. nobody should have more than one father and one mother
     """
     model = MesaPROTON_OC()
     model.initial_agents = 1000
@@ -62,16 +62,13 @@ def test_generate_households():
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
     #3
-    for test_simple_family in model.families[:5]:
+    for test_simple_family in model.families:
         if len(test_simple_family) >= 3 and test_family[0].neighbors["partner"] == test_family[1] and test_family[1].neighbors["partner"]  == test_family[0]:
             assert set(test_simple_family[1:]) == test_simple_family[0].neighbors["household"]
             assert test_simple_family[-1] in test_simple_family[0].neighbors["offspring"]
             assert test_simple_family[-1] in test_simple_family[1].neighbors["offspring"]
-            if type(test_simple_family[2:]) == list:
-                for son in test_simple_family[2:]:
-                    assert son.neighbors["parent"] == set(test_simple_family[:2])
-            else:
-                assert test_simple_family[-1].neighbors["parent"] == set(test_simple_family[:2])
+            for son in test_simple_family[2:]:
+                assert son.neighbors["parent"] == set(test_simple_family[:2])
     #4
     for agent in model.schedule.agents:
         for household in agent.neighbors["household"]:
@@ -89,14 +86,14 @@ def test_weddings():
     :return: None
     """
     model = MesaPROTON_OC()
-    model.setup(500)
-    initial_wedding = len([x for x in model.schedule.agents if x.get_link_list("partner")])
+    model.setup(1000)
+    initial_wedding = len([x for x in model.schedule.agents if x.get_neighbor_list("partner")])
     for tick in range(100):
         model.wedding()
     for agent in model.schedule.agents:
-        if agent.get_link_list("partner"):
-            assert agent.get_link_list("partner")[0].get_link_list("partner")[0] == agent
-    assert model.number_weddings * 2 == (len([x for x in model.schedule.agents if x.get_link_list("partner")]) - initial_wedding)
+        if agent.get_neighbor_list("partner"):
+            assert agent.get_neighbor_list("partner")[0].get_neighbor_list("partner")[0] == agent
+    assert model.number_weddings == (len([x for x in model.schedule.agents if x.get_neighbor_list("partner")]) - initial_wedding) / 2
     assert model.number_weddings > 0
 
 
@@ -263,7 +260,7 @@ def test_oc_embeddedness():
         pool[0].makePartnerLinks(pool[1])
         pool[0].makeFriends(pool[2])
         pool[0].makeProfessionalLinks(pool[3])
-        pool[0].makeSchoolLinks(pool[4])
+        pool[0].makeSchoolLinks([pool[4]])
         pool[0].addCriminalLink(pool[5])
         pool[0].num_co_offenses[pool[5]] = 5
         pool[5].num_co_offenses[pool[0]] = 5
@@ -322,7 +319,6 @@ def test_oc_intervention():
         baby = [agent for agent in the_family if agent.age == 0]
         model.targets_addressed_percent = 100
         model.family_intervention = "remove-if-OC-member"
-        model.cal_criminal_tendency_addme()
         model.family_intervene()
 
         assert np.sum([len(agent.neighbors.get("friendship")) for agent in the_family]) >= 40
