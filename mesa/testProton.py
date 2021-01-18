@@ -129,7 +129,7 @@ def test_oc_crime_stats():
         model.step()
         for cell, value in model.c_range_by_age_and_sex:
             pool = [agent for agent in model.schedule.agents
-                if agent.age() > cell[1] and agent.age() <= value[0] and agent.gender_is_male]
+                    if agent.age > cell[1] and agent.age <= value[0] and agent.gender_is_male]
             if pool and np.sum([agent.num_crimes_committed for agent in pool]) > 0:
                 result = np.abs(value[1]) * model.ticks / model.ticks_per_year \
                 - np.mean([agent.num_crimes_committed for agent in pool]) < \
@@ -309,19 +309,20 @@ def test_oc_intervention():
             model.schedule.add(new_agent)
             age = model.rng.choice(np.arange(agelist.size))
             new_agent.birth_tick = -1 * agelist[age] * model.ticks_per_year
+            new_agent.calculate_age()
             agelist = np.delete(agelist, age)
             new_agent.propensity = 0
             new_agent.gender_is_male = True
             kingpin.makeParent_OffspringsLinks(new_agent)
         for agent in the_family:
             agent.addSiblingLinks(the_family)
-        baby = [agent for agent in the_family if agent.age() == 0]
+        baby = [agent for agent in the_family if agent.age == 0]
         model.targets_addressed_percent = 100
         model.family_intervention = "remove-if-OC-member"
         model.family_intervene()
 
         assert np.sum([len(agent.neighbors.get("friendship")) for agent in the_family]) >= 40
-        assert len(extra.weighted_one_of(model.schedule.agents, lambda x: x.age() == 16 and x.propensity == 0,
+        assert len(extra.weighted_one_of(model.schedule.agents, lambda x: x.age == 16 and x.propensity == 0,
                                          model.rng).neighbors.get("sibling")) == 11
         assert len([agent for agent in baby[0].neighbors.get("sibling") if agent.my_job != None]) == 8
         assert np.sum([agent.max_education_level for agent in the_family]) == 8
@@ -337,7 +338,7 @@ def test_oc_intervention():
             :return: float
             """
             return np.mean([agent.max_education_level for agent in model.schedule.agents
-                           if agent.age() <= 18 and agent.age() >= 12 and agent.my_school is not None])
+                            if agent.age <= 18 and agent.age >= 12 and agent.my_school is not None])
 
         def target_psychological():
             """
@@ -345,7 +346,7 @@ def test_oc_intervention():
             :return: int
             """
             return np.sum([len(agent.neighbors.get("friendship")) for agent in model.schedule.agents
-                         if agent.age() <= 18 and agent.age() >= 12 and agent.my_school is not None])
+                           if agent.age <= 18 and agent.age >= 12 and agent.my_school is not None])
 
         model = MesaPROTON_OC()
         model.setup(1000)
@@ -392,7 +393,7 @@ def test_oc_job():
     for i in range(36):
         model.step()
         # No minor working
-        assert any([agent for agent in model.schedule.agents if agent.age() < 16 and agent.my_job is not None]) == False
+        assert any([agent for agent in model.schedule.agents if agent.age < 16 and agent.my_job is not None]) == False
         # Unemployed stay so
         assert any([agent for agent in model.schedule.agents if (agent.job_level == 1 or agent.job_level) == 0 and agent.my_job is not None]) == False
         # Nobody has two jobs
@@ -411,20 +412,20 @@ def test_oc_retirement():
     model.retirement_age = 65
     model.setup(100)
     assert len([agent for agent in model.schedule.agents
-                if agent.age() >= model.retirement_age and agent.neighbors.get("professional")]) == 0
+                if agent.age >= model.retirement_age and agent.neighbors.get("professional")]) == 0
     assert len([agent for agent in model.schedule.agents
-                if agent.age() < model.retirement_age and agent.retired]) == 0
+                if agent.age < model.retirement_age and agent.retired]) == 0
     assert len([agent for agent in model.schedule.agents
-                if agent.age() >= model.retirement_age and not agent.retired]) == 0
+                if agent.age >= model.retirement_age and not agent.retired]) == 0
 
     for i in range(20):
         model.step()
         assert len([agent for agent in model.schedule.agents
-                    if agent.age() > model.retirement_age and agent.neighbors.get("professional")]) == 0
+                    if agent.age > model.retirement_age and agent.neighbors.get("professional")]) == 0
         assert len([agent for agent in model.schedule.agents
-                    if agent.age() < model.retirement_age and agent.retired]) == 0
+                    if agent.age < model.retirement_age and agent.retired]) == 0
         assert len([agent for agent in model.schedule.agents
-                    if agent.age() > model.retirement_age and not agent.retired]) == 0
+                    if agent.age > model.retirement_age and not agent.retired]) == 0
 
 def test_school():
     """
@@ -439,7 +440,7 @@ def test_school():
         :return: int, the expected school level
         """
         for level in model.education_levels:
-            if agent.age() <= model.education_levels[level][1] and agent.age() >= model.education_levels[level][0]:
+            if agent.age <= model.education_levels[level][1] and agent.age >= model.education_levels[level][0]:
                 the_level = level
                 return the_level
 

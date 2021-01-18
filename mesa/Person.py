@@ -27,6 +27,7 @@ class Person(Agent):
         # networks
         self.model = m
         self.networks_init()
+        self.age = 0
         self.sentence_countdown = 0
         self.num_crimes_committed = 0
         self.num_crimes_committed_this_tick = 0
@@ -63,13 +64,12 @@ class Person(Agent):
         # print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.model)]))
         #If imprisoned
         self.prisoner = False
-        self.sentence_countdown = 0
 
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
 
-    def age(self):
-        return extra._age(self.model.ticks, self.birth_tick)
+    def calculate_age(self):
+        self.age = extra._age(self.model.ticks, self.birth_tick)
 
     def random_init(self, random_relationships=False, exclude_partner_net=False):
         self.education_level = self.model.rng.choice(range(0, 4))
@@ -191,7 +191,7 @@ class Person(Agent):
         self.remove_link(forlorn, 'professional')
 
     def age_between(self, low, high):
-        return self.age() >= low and self.age() < high
+        return self.age >= low and self.age < high
 
     def potential_friends(self):
         """
@@ -202,7 +202,7 @@ class Person(Agent):
             self.neighbors.get("friendship"))
 
     def dunbar_number(self):
-        return (150 - abs(self.age() - 30))
+        return (150 - abs(self.age - 30))
 
     def init_person(self):  # person command
         """
@@ -212,8 +212,9 @@ class Person(Agent):
         row = extra.weighted_one_of(self.model.age_gender_dist, lambda x: x[-1],
                                     self.model.rng)  # select a row from our age_gender distribution
         self.birth_tick = 0 - row[0] * self.model.ticks_per_year  # ...and set age... =
+        self.calculate_age()
         self.gender_is_male = bool(row[1])  # ...and gender according to values in that row.
-        self.retired = self.age() >= self.model.retirement_age  # persons older than retirement_age are retired
+        self.retired = self.age >= self.model.retirement_age  # persons older than retirement_age are retired
         # education level is chosen, job and wealth follow in a conditioned sequence
         self.max_education_level = extra.pick_from_pair_list(self.model.edu[self.gender_is_male], self.model.rng)
         # apply model-wide education modifier
@@ -228,7 +229,7 @@ class Person(Agent):
         self.education_level = self.max_education_level
         for level in sorted(list(self.model.education_levels.keys()), reverse=True):
             max_age = self.model.education_levels[level][1]
-            if self.age() <= max_age or self.education_level > self.max_education_level:
+            if self.age <= max_age or self.education_level > self.max_education_level:
                 self.education_level = level - 1
         self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
 
@@ -238,15 +239,15 @@ class Person(Agent):
         and modifies my_school atribute in-place.
         :param level: int, level of education to enroll
         """
-        self.potential_school = list()
+        potential_school = list()
         for school in [agent.my_school for agent in self.neighbors.get("household") if agent.my_school]:
             if school.diploma_level == level:
-                self.potential_school.append(school)
-        if self.potential_school:
-            self.my_school = self.model.rng.choice(self.potential_school)
+                potential_school.append(school)
+        if potential_school:
+            self.my_school = self.model.rng.choice(potential_school)
         else:
-            self.potential_school = [x for x in self.model.schools if x.diploma_level == level]
-            self.my_school = self.model.rng.choice(self.potential_school)
+            potential_school = [x for x in self.model.schools if x.diploma_level == level]
+            self.my_school = self.model.rng.choice(potential_school)
         self.my_school.my_students.add(self)
 
     def get_neighbor_list(self, net_name):
@@ -337,7 +338,7 @@ class Person(Agent):
         :return: None
         """
         self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][
-            self.age()] else 1
+            self.age] else 1
 
     def find_accomplices(self, n_of_accomplices):
         """
@@ -523,8 +524,8 @@ class Person(Agent):
         Calculate the fertility
         :return: flot, the fertility
         """
-        if np.min([self.number_of_children, 2]) in self.model.fertility_table[self.age()]:
-            return self.model.fertility_table[self.age()][np.min([self.number_of_children, 2])] / self.model.ticks_per_year
+        if np.min([self.number_of_children, 2]) in self.model.fertility_table[self.age]:
+            return self.model.fertility_table[self.age][np.min([self.number_of_children, 2])] / self.model.ticks_per_year
         else:
             return 0
 
@@ -533,12 +534,12 @@ class Person(Agent):
         Base on the table self.model.mortality_table calculate a probability that this agent die
         :return:
         """
-        if self.age() in self.model.mortality_table:
-            p = self.model.mortality_table[self.age()][self.gender_is_male] / self.model.ticks_per_year
-        elif self.age() > max(self.model.mortality_table):
+        if self.age in self.model.mortality_table:
+            p = self.model.mortality_table[self.age][self.gender_is_male] / self.model.ticks_per_year
+        elif self.age > max(self.model.mortality_table):
             p = 1
         else:
-            raise Exception(self.__repr__() + " age: " + str(self.age()) + ", not in mortality table keys")
+            raise Exception(self.__repr__() + " age: " + str(self.age) + ", not in mortality table keys")
         return p
 
     def init_baby(self):

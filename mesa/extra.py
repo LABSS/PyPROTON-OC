@@ -40,6 +40,7 @@ def wedding_proximity_with(ego, pool):
     proximity /= np.sum(proximity)
     return proximity
 
+
 def social_proximity(ego:Person, alter:Person):
     """
     This function calculates the social proximity between two agents based on age, gender, wealth level, education level and friendship
@@ -49,7 +50,8 @@ def social_proximity(ego:Person, alter:Person):
     """
     acc = 0
     #normalization =  0
-    acc += 1 - abs(alter.age() - ego.age()) / 18 if abs(alter.age() - ego.age()) < 18 else 0
+    acc += 1 - abs(alter.age - ego.age) / 18 if abs(
+        alter.age - ego.age) < 18 else 0
     acc += 1 if alter.gender_is_male == ego.gender_is_male else 0
     acc += 1 if alter.wealth_level == ego.wealth_level else 0
     acc += 1 if alter.education_level == ego.education_level else 0
