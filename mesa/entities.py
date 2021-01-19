@@ -73,7 +73,7 @@ class Person(Agent):
         base on Person.birth_tick and Person.model.ticks.
         :return: None
         """
-        self.age = extra.age(self.model.ticks, self.birth_tick)
+        self.age = extra._age(self.model.ticks, self.birth_tick)
 
 
     def networks_init(self) -> Dict:

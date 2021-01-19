@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr  7 19:05:04 2020
-
-@author: paolucci
-"""
 from __future__ import annotations
 import numpy as np
 import numba
@@ -14,11 +7,9 @@ if typing.TYPE_CHECKING:
     from entities import Person
     from typing import List, Set, Dict, Tuple, Optional, Union, Any
     import pandas as pd
-# basic graph methods could be copied from https://www.python-course.eu/graphs_python.php
-def print_id(p):
-    print([x.pid for x in p])
-    
-def find_neighb(netname, togo, found, border):
+
+
+def find_neighb(netname: str, togo: int, found: Set, border: Set[Person]):
     # found and border must have null intersection
     # includes the initial found
     # https://stackoverflow.com/questions/12555627/python-3-starred-expression-to-unpack-a-list
@@ -31,6 +22,7 @@ def find_neighb(netname, togo, found, border):
     else:
         togo -= 1
         return find_neighb(netname, togo, found, nextlayer)
+
 
 def wedding_proximity_with(ego, pool):
     """
@@ -67,15 +59,15 @@ def at_most(agentset, n, rng_istance):
     if len(agentset) < n:
         return agentset
     else:
-        return list(rng_istance.choice(agentset,n, replace=False))
+        return list(rng_istance.choice(agentset, n, replace=False))
 
 def weighted_n_of(n, agentset, weight_function, rng_istance):
     p = [float(weight_function(x)) for x in agentset]
-    n = np.min([len(agentset), n])
-    #Check for negative
-    if any([True for i in p if i < 0]):
-        min_value = min(p)
-        p = [i-min_value for i in p]
+    for pi in p:
+        if pi < 0:
+            min_value = np.min(p)
+            p = [i - min_value for i in p]
+            break
     sump = sum(p)
     #if there are more zeros than n required in p
     if np.count_nonzero(p) < n:
@@ -231,7 +223,7 @@ def commit_crime( co_offenders: List[Person]) -> None:
 
 #Numba functions
 @numba.jit(nopython=True)
-def age(tick, birth_tick):
+def _age(tick, birth_tick):
     return np.floor((tick - birth_tick) / 12)
 
 
