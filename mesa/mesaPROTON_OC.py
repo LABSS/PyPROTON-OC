@@ -52,7 +52,6 @@ class ProtonOC(Model):
         self.number_weddings: int = 0
         self.number_weddings_mean: float = 100
         self.number_weddings_sd: float = 0
-        self.criminal_tendency_addme: float = 0  # criminal_tendency_addme_for_weighted_extraction
         self.number_law_interventions_this_tick: int = 0
         self.correction_for_non_facilitators: float = 0
         self.number_protected_recruited_this_tick: int = 0
@@ -91,7 +90,7 @@ class ProtonOC(Model):
         self.nat_propensity_threshold: float = 1.0
         self.facilitator_repression: bool = False
         self.facilitator_repression_multiplier: float = 2.0
-        self.percentage_of_facilitators: float = 0.005
+        self.likelihood_of_facilitators: float = 0.005
         self.targets_addressed_percent: float = 10
         self.threshold_use_facilitators: float = 4
         self.oc_embeddedness_radius: int = 2
@@ -354,7 +353,7 @@ class ProtonOC(Model):
                     (agent.age - ego.age) < 8 and
                     agent not in ego.neighbors.get("sibling") and
                     agent not in ego.neighbors.get("offspring") and
-                    ego not in agent.neighbors.get("offspring")] # directed network
+                    ego not in agent.neighbors.get("offspring")]  # directed network
             if pool: # TODO: add link to Netlogo2Mesa
                 partner = self.rng.choice(pool, p=extra.wedding_proximity_with(ego, pool))
                 for agent in [ego, partner]:
@@ -390,7 +389,7 @@ class ProtonOC(Model):
                              agent.age <= 18 >= 6 and agent.my_school is not None]
         how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(potential_targets)))
         targets = extra.weighted_n_of(how_many, potential_targets,
-                                      lambda x: x.criminal_tendency + self.criminal_tendency_addme,
+                                      lambda x: x.criminal_tendency,
                                       self.rng)
         if self.social_support == "educational" or self.social_support == "all":
             self.soc_add_educational(targets)
@@ -1380,17 +1379,6 @@ class ProtonOC(Model):
                 new_agent.migrant = True
 
 
-    def cal_criminal_tendency_addme(self) -> None:
-        """
-        Calculates the attribute ProtonOC.criminal_tendency_addme
-        :return: None
-        """
-        min_criminal_tendencies = np.min([agent.criminal_tendency for agent
-                                          in self.schedule.agents])
-        self.criminal_tendency_addme = -1 * min_criminal_tendencies \
-            if min_criminal_tendencies < 0 else 0
-
-
     def commit_crimes(self) -> None:
         """
         This procedure is central in the model, allowing agents to find accomplices and commit
@@ -1562,6 +1550,3 @@ if __name__ == "__main__":
     model = ProtonOC()
     model.intervention = "baseline"
     model.run(1000, 60, verbose=True)
-
-    agent = model.schedule.agents[0]
-    fo = model.schedule.agents[32]
