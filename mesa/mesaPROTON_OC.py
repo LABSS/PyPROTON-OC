@@ -216,7 +216,6 @@ class ProtonOC(Model):
             if self.welfare_support:
                 self.welfare_intervene()
             # OC-members-repression works in arrest-probability-with-intervention in commmit-crime
-        # things we only update yearly
         if (self.ticks % self.ticks_per_year) == 0:
             self.calculate_criminal_tendency()
             self.calculate_crime_multiplier()  # we should update it, if population change
@@ -240,7 +239,6 @@ class ProtonOC(Model):
                     agent.make_professional_link(employees)
             self.let_migrants_in()
             self.return_kids()
-        self.cal_criminal_tendency_addme()
         self.wedding()
         self.reset_oc_embeddedness()
         self.commit_crimes()
@@ -319,8 +317,7 @@ class ProtonOC(Model):
         :return: None
         """
         for agent in self.schedule.agent_buffer(shuffled=True):
-            agent.facilitator = True if not agent.oc_member and agent.age > 18 and (
-                        self.rng.uniform(0, 1) < self.percentage_of_facilitators) else False
+            agent.facilitator = True if not agent.oc_member and agent.age > 18 and (self.rng.uniform(0, 1) < self.likelihood_of_facilitators) else False
 
 
     def read_csv_city(self, filename: str) -> pd.DataFrame:
@@ -357,8 +354,8 @@ class ProtonOC(Model):
                     (agent.age - ego.age) < 8 and
                     agent not in ego.neighbors.get("sibling") and
                     agent not in ego.neighbors.get("offspring") and
-                    ego not in agent.neighbors.get("offspring")]  # directed network
-            if pool:
+                    ego not in agent.neighbors.get("offspring")] # directed network
+            if pool: # TODO: add link to Netlogo2Mesa
                 partner = self.rng.choice(pool, p=extra.wedding_proximity_with(ego, pool))
                 for agent in [ego, partner]:
                     agent.remove_from_household()
@@ -448,8 +445,9 @@ class ProtonOC(Model):
         :param targets: Union[List[Person], Set[Person], the target
         :return: None
         """
-        max_criminal_tendency = max([0] + [agent.criminal_tendency for
-                                           agent in self.schedule.agents])
+        # todo: calculate max_criminal_tendency could be expensive  Maybe we should only
+        #  recalculate it when criminal tendency changes?
+        max_criminal_tendency = max([0] + [agent.criminal_tendency for agent in self.schedule.agents])
         for target in targets:
             support_set = extra.at_most([agent for
                                         agent in self.schedule.agents if agent != target],
@@ -485,7 +483,7 @@ class ProtonOC(Model):
                     if agent.father.oc_member:
                         targets.append(agent)
         if targets:
-            how_many = int(np.ceil(self.targets_addressed_percent / 100 * len(targets)))
+            how_many = np.ceil(self.targets_addressed_percent / 100 * len(targets))
             targets = self.rng.choice(targets, how_many, replace=False)
             self.welfare_createjobs(targets)
 
@@ -545,8 +543,8 @@ class ProtonOC(Model):
                 # this also removes household links, leaving the household in an incoherent state.
                 kid.neighbors.get("parent").remove(kid.father)
                 kid.father.neighbors.get("offspring").remove(kid)
-                self.removed_fatherships.append(
-                    [((18 * self.ticks_per_year + kid.birth_tick) - self.ticks), kid.father, kid])
+                self.removed_fatherships.append([((18 * self.ticks_per_year + kid.birth_tick) - self.ticks), kid.father, kid])
+                # we do not modify Person.father, this attribute is implemented so that it is possible to remove the father from the network and keep the information.
                 # at this point bad dad is out and we help the remaining with the whole package
                 # family_links_neighbors also include siblings that could be assigned during
                 # setup through the
@@ -637,20 +635,12 @@ class ProtonOC(Model):
             self.num_oc_persons * self.initial_agents / 10000)
         # families first.
         # we assume here that we'll never get a negative criminal tendency.
-        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents,
-                                              lambda x: x.criminal_tendency, self.rng)
-        candidates = list()
+        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
         for head in oc_family_heads:
             head.oc_member = True
-            candidates += [relative for relative in head.neighbors.get('household')
-                           if relative.age >= 18]
-        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:
-            # family members will be enough
-            members_in_families = extra.weighted_n_of(scaled_num_oc_persons -
-                                                      scaled_num_oc_families,
-                                                      candidates,
-                                                      lambda x: x.criminal_tendency,
-                                                      self.rng)
+            candidates = [relative for relative in head.neighbors.get('household') if relative.age >= 18]
+        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
+            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
             # fill up the families as much as possible
             for member in members_in_families:
                 member.oc_member = True
@@ -680,7 +670,20 @@ class ProtonOC(Model):
         for agent in self.schedule.agents:
             agent.cached_oc_embeddedness = None
 
-
+    def list_contains_problems(self, ego, candidates):
+        """
+        This procedure checks if there are any links between partners within the candidate pool.
+        Returns True if there are, None if there are not.
+        It is used during the setup_siblings procedure to avoid incestuous marriages.
+        :param ego: Person
+        :param candidates: list of Person objects
+        :return: bool, True if there are links between partners, None otherwise.
+        """
+        all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
+        for sibling in all_potential_siblings:
+            if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[0] in all_potential_siblings:
+                return True
+   
     def setup_persons_and_friendship(self) -> None:
         """
         This procedure initializes the agents and creates the first "friendship" links based on an
@@ -697,6 +700,7 @@ class ProtonOC(Model):
             for neighbor in list(watts_strogatz.neighbors(node)):
                 watts_strogatz.nodes[neighbor]['person'].make_friendship_link(
                     watts_strogatz.nodes[node]['person'])
+
 
 
     def setup_siblings(self) -> None:
@@ -722,7 +726,7 @@ class ProtonOC(Model):
             # remove couples from candidates and their neighborhoods (siblings)
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
-            while len(candidates) > 0 and extra.incestuos(agent, candidates):
+            while len(candidates) > 0 and self.list_contains_problems(agent, candidates):
                 # trouble should exist, or check-all-siblings would fail
                 potential_trouble = [x for x in candidates if agent.get_neighbor_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
@@ -1098,8 +1102,7 @@ class ProtonOC(Model):
             employees = employer.employees()
             conn = extra.decide_conn_number(employees, 20)
             for employee in employees:
-                total_pool = employees.copy()
-                total_pool.remove(employee)
+                total_pool = [agent for agent in employees if agent != employee]
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
                 employee.make_professional_link(conn_pool)
 
@@ -1408,9 +1411,7 @@ class ProtonOC(Model):
                 value[1] * len(people_in_cell) / self.ticks_per_year * self.crime_multiplier
             for _target in np.arange(np.round(target_n_of_crimes)):
                 self.number_crimes += 1
-                agent = extra.weighted_one_of(people_in_cell,
-                                              lambda x: x.criminal_tendency + self.criminal_tendency_addme,
-                                              self.rng)
+                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency, self.rng)
                 number_of_accomplices = self.number_of_accomplices()
                 accomplices = agent.find_accomplices(number_of_accomplices)
                 # this takes care of facilitators as well.
@@ -1564,4 +1565,3 @@ if __name__ == "__main__":
 
     agent = model.schedule.agents[0]
     fo = model.schedule.agents[32]
-
