@@ -237,7 +237,7 @@ class ProtonOC(Model):
                         self.rng.choice(total_pool, extra.decide_conn_number(total_pool, 20,
                                                                              also_me=False),
                                         replace=False))
-                    agent.makeProfessionalLinks(employees)
+                    agent.make_professional_link(employees)
             self.let_migrants_in()
             self.return_kids()
         self.cal_criminal_tendency_addme()
@@ -438,7 +438,7 @@ class ProtonOC(Model):
                 chosen = extra.weighted_one_of(support_set,
                                                lambda x: 1 - abs((x.age - agent.age) / 120),
                                                self.rng)
-                chosen.makeFriends(agent)
+                chosen.make_friendship_link(agent)
 
 
     def soc_add_more_friends(self, targets: Union[List[Person], Set[Person]]) -> None:
@@ -455,7 +455,7 @@ class ProtonOC(Model):
                                         agent in self.schedule.agents if agent != target],
                                         50, self.rng)
             if support_set:
-                target.makeFriends(
+                target.make_friendship_link(
                     extra.weighted_one_of(support_set,
                                           lambda x: max_criminal_tendency - x.criminal_tendency,
                                           self.rng))
@@ -476,7 +476,7 @@ class ProtonOC(Model):
         if self.welfare_support == "job-mother":
             for mother in [agent.mother for agent in self.schedule.agents if agent.mother]:
                 if not mother.my_job and mother.neighbors.get("partner"):
-                    if mother.get_link_list("partner")[0].oc_member:
+                    if mother.get_neighbor_list("partner")[0].oc_member:
                         targets.append(mother)
         if self.welfare_support == "job-child":
             for agent in self.schedule.agents:
@@ -501,7 +501,7 @@ class ProtonOC(Model):
             the_level = agent.job_level if agent.job_level >= 2 else 2
             the_employer.create_job(the_level, agent)
             for new_professional_link in extra.at_most(the_employer.employees(), 20, self.rng):
-                agent.makeProfessionalLinks(new_professional_link)
+                agent.make_professional_link(new_professional_link)
 
 
     def family_intervene(self) -> None:
@@ -590,7 +590,7 @@ class ProtonOC(Model):
                                               lambda x: extra.social_proximity(agent, x),
                                               self.rng)
                 for chosen in friends:
-                    chosen.makeFriends(agent)
+                    chosen.make_friendship_link(agent)
 
 
     def remove_excess_friends(self) -> None:
@@ -616,7 +616,7 @@ class ProtonOC(Model):
         :return: None
         """
         for agent in self.schedule.agents:
-            friends = agent.get_link_list('professional')
+            friends = agent.get_neighbor_list('professional')
             if len(friends) > 30:
                 for friend in self.rng.choice(friends, int(len(friends) - 30), replace=False):
                     friend.remove_professional(agent)
@@ -668,7 +668,7 @@ class ProtonOC(Model):
         oc_members_pool = [oc_member for oc_member in self.schedule.agents
                            if oc_member.oc_member]
         for (i, j) in combinations(oc_members_pool, 2):
-            i.addCriminalLink(j)
+            i.add_criminal_link(j)
 
 
     def reset_oc_embeddedness(self) -> None:
@@ -695,7 +695,7 @@ class ProtonOC(Model):
             watts_strogatz.nodes[node].update({'person': new_agent})
         for node in list(watts_strogatz.nodes()):
             for neighbor in list(watts_strogatz.neighbors(node)):
-                watts_strogatz.nodes[neighbor]['person'].makeFriends(
+                watts_strogatz.nodes[neighbor]['person'].make_friendship_link(
                     watts_strogatz.nodes[node]['person'])
 
 
@@ -724,7 +724,7 @@ class ProtonOC(Model):
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
             while len(candidates) > 0 and extra.incestuos(agent, candidates):
                 # trouble should exist, or check-all-siblings would fail
-                potential_trouble = [x for x in candidates if agent.get_link_list("partner")]
+                potential_trouble = [x for x in candidates if agent.get_neighbor_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
                 candidates.remove(trouble)
             targets = [agent] + self.rng.choice(candidates,
@@ -733,13 +733,13 @@ class ProtonOC(Model):
                 if sib in agent_left_household:
                     agent_left_household.remove(sib)
             for target in targets:
-                target.addSiblingLinks(targets)
+                target.add_sibling_link(targets)
                 # this is a good place to remind that the number of links in the sibling link
                 # neighbors is not the "number of brothers and sisters"
                 # because, for example, 4 brothers = 6 links.
             other_targets = targets + [s for c in targets for s in c.neighbors.get('sibling')]
             for target in other_targets:
-                target.addSiblingLinks(other_targets)
+                target.add_sibling_link(other_targets)
 
 
     def generate_households(self) -> None:
@@ -820,15 +820,15 @@ class ProtonOC(Model):
                         # if it's a couple, partner up the first two members and
                         # set the others as offspring
                         if hh_type == "couple":
-                            hh_members[0].makePartnerLinks(hh_members[1])
+                            hh_members[0].make_partner_link(hh_members[1])
                             couple = hh_members[0:2]
                             offsprings = hh_members[2:]
                             for partner in couple:
-                                partner.makeParent_OffspringsLinks(offsprings)
+                                partner.make_parent_offsprings_link(offsprings)
                             for sibling in offsprings:
-                                sibling.addSiblingLinks(offsprings)
+                                sibling.add_sibling_link(offsprings)
                         for member in hh_members:
-                            member.makeHouseholdLinks(hh_members)
+                            member.make_household_link(hh_members)
                             member.wealth_level = family_wealth_level
                         self.families.append(hh_members)
                     else:
@@ -850,7 +850,7 @@ class ProtonOC(Model):
             family_wealth_level = complex_hh_members[max_age_index].wealth_level
             for member in complex_hh_members:
                 population.remove(member)  # remove persons from the population
-                member.makeHouseholdLinks(complex_hh_members)  # and link them up.
+                member.make_household_link(complex_hh_members)  # and link them up.
                 member.wealth_level = family_wealth_level
             if len(complex_hh_members) > 1:
                 self.families.append(complex_hh_members)
@@ -963,7 +963,7 @@ class ProtonOC(Model):
             for student in school.my_students:
                 total_pool = school.my_students.difference({student})
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
-                student.makeSchoolLinks(conn_pool)
+                student.make_school_link(conn_pool)
 
 
     def setup(self, n_agent: int) -> None:
@@ -1002,8 +1002,8 @@ class ProtonOC(Model):
             agent.hobby = self.rng.integers(low=1, high=5, endpoint=True)
         self.calc_correction_for_non_facilitators()
         for agent in self.schedule.agents:
-            if not agent.gender_is_male and agent.get_link_list("offspring"):
-                agent.number_of_children = len(agent.get_link_list("offspring"))
+            if not agent.gender_is_male and agent.get_neighbor_list("offspring"):
+                agent.number_of_children = len(agent.get_neighbor_list("offspring"))
         elapsed_time = time.time() - start
         hours = elapsed_time // 3600
         temp = elapsed_time - 3600 * hours
@@ -1101,7 +1101,7 @@ class ProtonOC(Model):
                 total_pool = employees.copy()
                 total_pool.remove(employee)
                 conn_pool = list(self.rng.choice(list(total_pool), conn, replace=False))
-                employee.makeProfessionalLinks(conn_pool)
+                employee.make_professional_link(conn_pool)
 
 
     def calculate_crime_multiplier(self) -> None:
@@ -1139,7 +1139,7 @@ class ProtonOC(Model):
                 # c is the cell value. Now we calculate criminal-tendency with the factors.
                 for agent in subpop:
                     agent.criminal_tendency = c
-                    agent.factors_c()
+                    agent.update_criminal_tendency()
                 # then derive the correction epsilon by solving
                 # $\sum_{i} ( c f_i + \epsilon ) = \sum_i c$
                 epsilon = c - np.mean([agent.criminal_tendency for agent in subpop])
@@ -1371,7 +1371,7 @@ class ProtonOC(Model):
                     self.rng.choice(total_pool, extra.decide_conn_number(total_pool, 20,
                                                                          also_me=False),
                                     replace=False))
-                new_agent.makeProfessionalLinks(employees)
+                new_agent.make_professional_link(employees)
                 new_agent.bird_tick = self.ticks - (self.rng.integers(0, 20) + 18) * self.ticks_per_year
                 new_agent.wealth_level = job.job_level
                 new_agent.migrant = True
@@ -1467,12 +1467,12 @@ class ProtonOC(Model):
         """
         return extra.pick_from_pair_list(self.num_co_offenders_dist, self.rng) - 1
 
-    def update_meta_links(self, agents: List[Person]) -> None:
+    def update_meta_links(self, agents: Set[Person]) -> None:
         """
         This method creates a new temporary graph that is used to colculate the
         oc_embeddedness of an agent.
 
-        :param agents: List[Person], the agentset
+        :param agents: Set[Person], the agentset
         :return: None
         """
         self.meta_graph = nx.Graph()
@@ -1561,3 +1561,7 @@ if __name__ == "__main__":
     model = ProtonOC()
     model.intervention = "baseline"
     model.run(1000, 60, verbose=True)
+
+    agent = model.schedule.agents[0]
+    fo = model.schedule.agents[32]
+

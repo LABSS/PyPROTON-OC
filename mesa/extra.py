@@ -3,7 +3,7 @@ import numpy as np
 import numba
 import typing
 if typing.TYPE_CHECKING:
-    from model import ProtonOC
+    from mesaPROTON_OC import ProtonOC
     from entities import Person
     from typing import List, Set, Dict, Tuple, Optional, Union, Any
     import pandas as pd
@@ -105,12 +105,12 @@ def incestuos(ego: Person, candidates: Union[List[Person], Set[Person]]) -> Unio
     :param candidates: Union[List[Person], Set[Person]], the candidates
     :return: Union[bool, None], True if there are links between partners, None otherwise.
     """
-    all_potential_siblings = [ego] + ego.get_link_list("sibling") + candidates + [sibling for candidate in
+    all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in
                                                                                       candidates for sibling in
                                                                                       candidate.neighbors.get(
                                                                                           'sibling')]
     for sibling in all_potential_siblings:
-        if sibling.get_link_list("partner") and sibling.get_link_list("partner")[0] in all_potential_siblings:
+        if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[0] in all_potential_siblings:
             return True
 
 def df_to_dict(df: pd.DataFrame, extra_depth: bool = False) -> Dict:
@@ -212,7 +212,7 @@ def commit_crime( co_offenders: List[Person]) -> None:
         other_co_offenders = [agent for agent in co_offenders if agent != co_offender]
         for agent in other_co_offenders:
             if agent not in co_offender.neighbors.get("criminal"):
-                co_offender.addCriminalLink(agent)
+                co_offender.add_criminal_link(agent)
                 co_offender.co_off_flag[agent] = 0
     for co_offender in co_offenders:
         for co_off_key in co_offender.co_off_flag.keys():

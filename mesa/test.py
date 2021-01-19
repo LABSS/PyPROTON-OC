@@ -1,5 +1,5 @@
 import pytest
-from model import ProtonOC
+from mesaPROTON_OC import ProtonOC
 from entities import Person
 import numpy as np
 import extra
@@ -76,13 +76,13 @@ def test_weddings():
     """
     model = ProtonOC()
     model.setup(500)
-    initial_wedding = len([x for x in model.schedule.agents if x.get_link_list("partner")])
+    initial_wedding = len([x for x in model.schedule.agents if x.get_neighbor_list("partner")])
     for tick in range(100):
         model.wedding()
     for agent in model.schedule.agents:
-        if agent.get_link_list("partner"):
-            assert agent.get_link_list("partner")[0].get_link_list("partner")[0] == agent
-    assert model.number_weddings * 2 == (len([x for x in model.schedule.agents if x.get_link_list("partner")]) - initial_wedding)
+        if agent.get_neighbor_list("partner"):
+            assert agent.get_neighbor_list("partner")[0].get_neighbor_list("partner")[0] == agent
+    assert model.number_weddings * 2 == (len([x for x in model.schedule.agents if x.get_neighbor_list("partner")]) - initial_wedding)
     assert model.number_weddings > 0
 
 
@@ -151,7 +151,7 @@ def test_oc_embeddedness():
         agent1 = Person(model)
         agent2 = Person(model)
         agent2.oc_member = True
-        agent1.addSiblingLinks([agent2])
+        agent1.add_sibling_link([agent2])
         assert agent1.oc_embeddedness() == 1
         assert agent1.find_oc_distance([agent2]) == 1
 
@@ -169,7 +169,7 @@ def test_oc_embeddedness():
         pool.remove(father)
         for agent in list(model.rng.choice(pool, size=5, replace=False)):
             agent.oc_member = True
-        father.makeParent_OffspringsLinks(pool)
+        father.make_parent_offsprings_link(pool)
         assert father.oc_embeddedness() == 0.5
         distances = list()
         for agent in pool:
@@ -187,9 +187,9 @@ def test_oc_embeddedness():
             agent = Person(model)
             pool.append(agent)
         pool[2].oc_member = True
-        pool[0].addSiblingLinks([pool[1]])
-        pool[0].makePartnerLinks(pool[2])
-        pool[0].makeFriends(pool[2])
+        pool[0].add_sibling_link([pool[1]])
+        pool[0].make_partner_link(pool[2])
+        pool[0].make_friendship_link(pool[2])
         assert pool[0].oc_embeddedness() == 2 / 3
         distances = list()
         for agent in pool[1:]:
@@ -207,9 +207,9 @@ def test_oc_embeddedness():
             agent = Person(model)
             pool.append(agent)
         pool[2].oc_member = True
-        pool[0].makePartnerLinks(pool[1])
-        pool[0].makeFriends(pool[1])
-        pool[0].makeFriends(pool[2])
+        pool[0].make_partner_link(pool[1])
+        pool[0].make_friendship_link(pool[1])
+        pool[0].make_friendship_link(pool[2])
         assert pool[0].oc_embeddedness() == 1 / 3
         distances = list()
         for agent in pool[1:]:
@@ -226,9 +226,9 @@ def test_oc_embeddedness():
         for i in range(3):
             agent = Person(model)
             pool.append(agent)
-        pool[0].addSiblingLinks([pool[1]])
-        pool[0].makeParent_OffspringsLinks(pool[2])
-        pool[0].addCriminalLink(pool[2])
+        pool[0].add_sibling_link([pool[1]])
+        pool[0].make_parent_offsprings_link(pool[2])
+        pool[0].add_criminal_link(pool[2])
         pool[0].num_co_offenses[pool[2]] = 4
         pool[2].num_co_offenses[pool[0]] = 4
         pool[2].oc_member = True
@@ -249,14 +249,14 @@ def test_oc_embeddedness():
             agent = Person(model)
             pool.append(agent)
 
-        pool[0].makePartnerLinks(pool[1])
-        pool[0].makeFriends(pool[2])
-        pool[0].makeProfessionalLinks(pool[3])
-        pool[0].makeSchoolLinks(pool[4])
-        pool[0].addCriminalLink(pool[5])
+        pool[0].make_partner_link(pool[1])
+        pool[0].make_friendship_link(pool[2])
+        pool[0].make_professional_link(pool[3])
+        pool[0].make_school_link(pool[4])
+        pool[0].add_criminal_link(pool[5])
         pool[0].num_co_offenses[pool[5]] = 5
         pool[5].num_co_offenses[pool[0]] = 5
-        pool[0].makeParent_OffspringsLinks(pool[5])
+        pool[0].make_parent_offsprings_link(pool[5])
         pool[5].oc_member = True
 
         assert pool[0].oc_embeddedness() == 0.6
@@ -307,9 +307,9 @@ def test_oc_intervention():
             agelist = np.delete(agelist, age)
             new_agent.propensity = 0
             new_agent.gender_is_male = True
-            kingpin.makeParent_OffspringsLinks(new_agent)
+            kingpin.make_parent_offsprings_link(new_agent)
         for agent in the_family:
-            agent.addSiblingLinks(the_family)
+            agent.add_sibling_link(the_family)
         baby = [agent for agent in the_family if agent.age == 0]
         model.targets_addressed_percent = 100
         model.family_intervention = "remove-if-OC-member"
