@@ -354,7 +354,7 @@ class ProtonOC(Model):
                     agent not in ego.neighbors.get("sibling") and
                     agent not in ego.neighbors.get("offspring") and
                     ego not in agent.neighbors.get("offspring")]  # directed network
-            if pool: # TODO: add link to Netlogo2Mesa
+            if pool:  # TODO: add link to Netlogo2Mesa
                 partner = self.rng.choice(pool, p=extra.wedding_proximity_with(ego, pool))
                 for agent in [ego, partner]:
                     agent.remove_from_household()
@@ -669,18 +669,22 @@ class ProtonOC(Model):
         for agent in self.schedule.agents:
             agent.cached_oc_embeddedness = None
 
-    def list_contains_problems(self, ego, candidates):
+    def list_contains_problems(self, ego: Person, candidates:List[Person]) -> Union[bool, None]:
         """
         This procedure checks if there are any links between partners within the candidate pool.
-        Returns True if there are, None if there are not.
-        It is used during the setup_siblings procedure to avoid incestuous marriages.
-        :param ego: Person
-        :param candidates: list of Person objects
-        :return: bool, True if there are links between partners, None otherwise.
+        Returns True if there are, None if there are not. It is used during ProtonOc.setup_siblings
+        procedure to avoid incestuous marriages.
+        :param ego: Person, the agent
+        :param candidates: Union[List[Person], Set[Person]], the candidates
+        :return: Union[bool, None], True if there are links between partners, None otherwise.
         """
-        all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in candidates for sibling in candidate.neighbors.get('sibling')]
+        all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in
+                                                                                          candidates for sibling in
+                                                                                          candidate.neighbors.get(
+                                                                                              'sibling')]
         for sibling in all_potential_siblings:
-            if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[0] in all_potential_siblings:
+            if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[
+                0] in all_potential_siblings:
                 return True
    
     def setup_persons_and_friendship(self) -> None:
@@ -699,7 +703,6 @@ class ProtonOC(Model):
             for neighbor in list(watts_strogatz.neighbors(node)):
                 watts_strogatz.nodes[neighbor]['person'].make_friendship_link(
                     watts_strogatz.nodes[node]['person'])
-
 
 
     def setup_siblings(self) -> None:

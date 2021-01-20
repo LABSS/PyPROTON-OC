@@ -3,16 +3,20 @@ import numpy as np
 import numba
 import typing
 if typing.TYPE_CHECKING:
-    from mesaPROTON_OC import ProtonOC
     from entities import Person
-    from typing import List, Set, Dict, Tuple, Optional, Union, Any
+    from typing import List, Set, Dict, Union, Callable, Any
     import pandas as pd
+    import numpy
 
 
 def find_neighb(netname: str, togo: int, found: Set, border: Set[Person]):
+    """
+
     # found and border must have null intersection
     # includes the initial found
     # https://stackoverflow.com/questions/12555627/python-3-starred-expression-to-unpack-a-list
+    """
+
     found = found | border
     if togo == 0: return found
     #print_id(set().union(*[x.neighbors.get(netname) for x in border]))
@@ -24,26 +28,26 @@ def find_neighb(netname: str, togo: int, found: Set, border: Set[Person]):
         return find_neighb(netname, togo, found, nextlayer)
 
 
-def wedding_proximity_with(ego, pool):
+def wedding_proximity_with(ego: Person, pool: List[Person]) -> np.ndarray:
     """
     Given an agent and a pool of agents this function returns a list of proximities with ego. Careful not to shuffle it!
     :param ego: Person
     :param pool: list of Person objects
     :return: list, list of proximities with ego.
     """
-    proximity = np.array([(social_proximity(ego,x) + (4 - abs(x.hobby - ego.hobby)) / 4 ) / 2 for x in pool])
+    proximity = np.array([(social_proximity(ego, x) + (4 - abs(x.hobby - ego.hobby)) / 4) / 2 for x in pool])
     if all([True for n in proximity if n <= 0]):
         proximity = np.ones(len(proximity))
     proximity /= np.sum(proximity)
     return proximity
 
 
-def social_proximity(ego, alter):
+def social_proximity(ego: Person, alter: Person) -> float:
     """
     This function calculates the social proximity between two agents based on age, gender, wealth level, education level and friendship
     :param ego: Person
     :param alter: Person
-    :return: int, social proximity
+    :return: float, social proximity
     """
     acc = 0
     #normalization =  0
@@ -55,13 +59,33 @@ def social_proximity(ego, alter):
     acc += 1 if [x for x in alter.neighbors.get("friendship") if (x in ego.neighbors.get("friendship"))] else 0
     return acc
 
-def at_most(agentset, n, rng_istance):
+
+def at_most(agentset: Union[List[Person], Set[Person]], n: int, rng_istance: numpy.random.default_rng) -> Union[List[Person], Set[Person]]:
+    """
+    Given an @agentset and an integer @n, this function returns the initial @agentset if there are
+    less than @n agents, a subset of those agents of length @n if there are more than @n agents.
+    :param agentset: Union[List[Person], Set[Person]]
+    :param n: int
+    :param rng_istance: numpy.random.default_rng
+    :return: Union[List[Person], Set[Person]]
+    """
     if len(agentset) < n:
         return agentset
     else:
         return list(rng_istance.choice(agentset, n, replace=False))
 
-def weighted_n_of(n, agentset, weight_function, rng_istance):
+def weighted_n_of(n: int, agentset: Union[List[Person], Set[Person]],
+                  weight_function: Callable, rng_istance: numpy.random.default_rng) -> List[Person]:
+    """
+    Given a set or List of agents @agentset, an integer @n, and a lambda function @weight_function.
+    This function performs a weighted extraction, without replacing based on the lambda function.
+    This procedure takes into account negative numbers and weights equal to zero.
+    :param n: int
+    :param agentset: Union[List[Person], Set[Person]]
+    :param weight_function: Callable
+    :param rng_istance: numpy.random.default_rng
+    :return: List[Person]
+    """
     p = [float(weight_function(x)) for x in agentset]
     for pi in p:
         if pi < 0:
@@ -82,10 +106,13 @@ def weighted_n_of(n, agentset, weight_function, rng_istance):
         agentset = list(agentset)
     return rng_istance.choice(agentset, int(n), replace=False, p=p)
 
-def weighted_one_of(agentset, weight_function, rng_istance):
+
+def weighted_one_of(agentset: Union[List[Person], Set[Person]],
+                    weight_function: Callable, rng_istance: numpy.random.default_rng) -> Any:
     return weighted_n_of(1, agentset, weight_function, rng_istance)[0]
 
-def pick_from_pair_list(a_list_of_pairs, rng_istance):
+
+def pick_from_pair_list(a_list_of_pairs: List, rng_istance: numpy.random.default_rng) -> Any:
     """
     given a list of pairs, containing an object and a probability (e.g. [[object, p],[object, p]])
     return an object based on the probability(p)
@@ -95,23 +122,6 @@ def pick_from_pair_list(a_list_of_pairs, rng_istance):
     """
     return weighted_one_of(a_list_of_pairs, lambda x: x[-1], rng_istance)[0]
 
-
-def incestuos(ego: Person, candidates: Union[List[Person], Set[Person]]) -> Union[bool, None]:
-    """
-    This procedure checks if there are any links between partners within the candidate pool.
-    Returns True if there are, None if there are not. It is used during ProtonOc.setup_siblings
-    procedure to avoid incestuous marriages.
-    :param ego: Person, the agent
-    :param candidates: Union[List[Person], Set[Person]], the candidates
-    :return: Union[bool, None], True if there are links between partners, None otherwise.
-    """
-    all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in
-                                                                                      candidates for sibling in
-                                                                                      candidate.neighbors.get(
-                                                                                          'sibling')]
-    for sibling in all_potential_siblings:
-        if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[0] in all_potential_siblings:
-            return True
 
 def df_to_dict(df: pd.DataFrame, extra_depth: bool = False) -> Dict:
     """
@@ -149,6 +159,7 @@ def df_to_dict(df: pd.DataFrame, extra_depth: bool = False) -> Dict:
             dic[key] = subdic
     return dic
 
+
 def decide_conn_number(agents: Union[List, Set], max_lim: int, also_me: bool = True) -> int:
     """
     Given a set of agents decides the number of connections to be created between them based on a maximum number.
@@ -170,6 +181,7 @@ def df_to_lists(df: pd.DataFrame, split_row: bool =True) -> List:
 
     This transformation ensures a faster access to the values using the position in the list
     :param df: pandas df, the df to be transformed
+    :param split_row: bool, default = True
     :return: list, a new list
     """
     output_list = list()
@@ -182,7 +194,7 @@ def df_to_lists(df: pd.DataFrame, split_row: bool =True) -> List:
     return output_list
 
 
-def calculate_oc_status( co_offenders: List[Person]) -> None:
+def calculate_oc_status(co_offenders: List[Person]) -> None:
     """
     This procedure modify in-place the arrest_weigh attribute of the Person objects passed to co_offenders
     :param co_offenders: list, of Person object
@@ -199,7 +211,7 @@ def calculate_oc_status( co_offenders: List[Person]) -> None:
             agent.arrest_weight = 1
 
 
-def commit_crime( co_offenders: List[Person]) -> None:
+def commit_crime(co_offenders: List[Person]) -> None:
     """
     This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
     attributes of the Person objects passed to co_offenders
@@ -223,8 +235,5 @@ def commit_crime( co_offenders: List[Person]) -> None:
 
 #Numba functions
 @numba.jit(nopython=True)
-def _age(tick, birth_tick):
+def _age(tick: int, birth_tick: int) -> int:
     return np.floor((tick - birth_tick) / 12)
-
-
-

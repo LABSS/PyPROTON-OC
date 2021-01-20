@@ -618,7 +618,7 @@ class Job:
     def __init__(self, model: ProtonOC):
         self.model: ProtonOC = model
         self.job_level: int = 0
-        self.my_employer: Union[Person, None] = None
+        self.my_employer: Union[Employer, None] = None
         self.my_worker: Union[Person, None] = None
         self.unique_id: int = Job.max_id
         Job.max_id = Job.max_id + 1
