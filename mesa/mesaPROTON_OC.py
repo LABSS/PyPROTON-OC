@@ -10,7 +10,7 @@ from tqdm import tqdm
 from itertools import combinations, chain
 from numpy.random import default_rng
 import time
-from entities import Person, School, Employer, Job
+from Person import Person, School, Employer, Job
 import extra
 from typing import List, Set, Union, Dict
 

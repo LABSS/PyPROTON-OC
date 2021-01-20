@@ -1,6 +1,6 @@
 import pytest
 from mesaPROTON_OC import ProtonOC
-from entities import Person
+from Person import Person
 import numpy as np
 import extra
 

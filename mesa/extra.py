@@ -3,7 +3,7 @@ import numpy as np
 import numba
 import typing
 if typing.TYPE_CHECKING:
-    from entities import Person
+    from Person import Person
     from typing import List, Set, Dict, Union, Callable, Any
     import pandas as pd
     import numpy
