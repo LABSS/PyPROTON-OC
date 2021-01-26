@@ -1,18 +1,19 @@
-# -*- coding: utf-8 -*-
-import extra
+from __future__ import annotations
+from typing import List, Set, Union, Dict
+import typing
+if typing.TYPE_CHECKING:
+    from mesaPROTON_OC import ProtonOC
 from mesa import Agent
-import mesaPROTON_OC
 import numpy as np
 import networkx as nx
 from itertools import chain
+import extra
 
 
 class Person(Agent):
-    max_id = 0
-    # https://stackoverflow.com/questions/12101958/how-to-keep-track-of-class-instances
-    # note that if we run multiple models, persons will be all the ones created in any of them
-    persons = []
-    network_names = [
+
+    max_id: int = 0
+    network_names: List[str] = [
         'sibling',
         'offspring',
         'parent',
@@ -23,102 +24,89 @@ class Person(Agent):
         'professional',
         'school']
 
-    def __init__(self, m: mesaPROTON_OC):
+    def __init__(self, model: ProtonOC):
+        self.unique_id: int = Person.max_id
+        Person.max_id += 1
+        super().__init__(self.unique_id, model=model)
+        self.model = model
         # networks
-        self.model = m
-        self.networks_init()
-        self.age = 0
-        self.sentence_countdown = 0
-        self.num_crimes_committed = 0
-        self.num_crimes_committed_this_tick = 0
-        self.education_level = 0  # level: last school I finished (for example, 4: I finished university)
-        self.max_education_level = 0
-        self.wealth_level = 1
-        self.job_level = 0
-        self.my_job = None  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick = self.model.ticks
-        self.gender_is_male = self.model.rng.choice([True, False])  # True male False female
-        self.father = None
-        self.mother = None
-        self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
-        self.oc_member = False
-        self.cached_oc_embeddedness = None
-        self.oc_embeddedness_fresh = 0
-        self.retired = False
-        self.number_of_children = 0
-        self.facilitator = False
-        self.hobby = self.model.rng.integers(low=1, high=5, endpoint=True)
-        self.new_recruit = -2
-        self.migrant = False
-        self.criminal_tendency = 0
-        self.my_school = None
-        self.target_of_intervention = False
-        self.arrest_weight = 0
-        self.num_co_offenses = dict()  # criminal-links
-        self.co_off_flag = dict()  # criminal-links
-        self.unique_id = Person.max_id
-        Person.max_id = Person.max_id + 1
-        Person.persons.append(self)
-        self.co_off_flag = dict()
-        # print(model)
-        # print(" ".join(["I am person", str(self.unique_id), "and my model is", str(self.model)]))
-        #If imprisoned
-        self.prisoner = False
+        self.neighbors: Dict = self.networks_init()  #todo: this could be a Subclassed-dict
+        self.gender_is_male: bool = self.model.rng.choice([True, False])  # True male False female
+        self.prisoner: bool = False
+        self.age: Union[int, float] = 0
+        self.sentence_countdown: Union[int, float] = 0
+        self.num_crimes_committed: Union[int, float] = 0
+        self.num_crimes_committed_this_tick: Union[int, float] = 0
+        self.education_level: Union[int, float] = 0  # level: last school I finished (for example, 4: I finished university)
+        self.max_education_level: Union[int, float] = 0
+        self.wealth_level: Union[int, float] = 1
+        self.job_level: Union[int, float] = 0
+        self.my_job: Union[Job, None] = None  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
+        self.birth_tick: Union[int, float] = self.model.ticks
+        self.father: Union[Person, None] = None
+        self.mother: Union[Person, None] = None
+        self.propensity: Union[int, float] = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
+        self.oc_member: bool = False
+        self.cached_oc_embeddedness: Union[int, float, None] = None
+        self.retired: bool = False
+        self.number_of_children: Union[int, float] = 0
+        self.facilitator: bool = False
+        self.hobby: int = self.model.rng.integers(low=1, high=5, endpoint=True)
+        self.new_recruit: int = -2
+        self.migrant: bool = False
+        self.criminal_tendency: float = 0
+        self.my_school: Union[None, School] = None
+        self.target_of_intervention: bool = False
+        self.arrest_weight: Union[int, float] = 0
+        self.num_co_offenses: Dict = dict()  # criminal-links
+        self.co_off_flag: Dict = dict()  # criminal-links
+
 
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
 
-    def calculate_age(self):
+
+    def calculate_age(self) -> None:
+        """
+        This method modifies the Person.age attribute in-place. Calculates the age of the agent
+        base on Person.birth_tick and Person.model.ticks.
+        :return: None
+        """
         self.age = extra._age(self.model.ticks, self.birth_tick)
 
-    def random_init(self, random_relationships=False, exclude_partner_net=False):
-        self.education_level = self.model.rng.choice(range(0, 4))
-        self.max_education_level = self.education_level
-        self.wealth_level = self.model.rng.choice(range(0, 4))
-        self.job_level = self.model.rng.choice(range(0, 4))
-        self.my_job = 0  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick = -1 * self.model.rng.choice(range(0, 80 * 12))
-        self.gender_is_male = self.model.rng.choice([True, False])
-        self.hobby = 0
-        self.criminal_tendency = self.model.rng.uniform(0, 1)
-        if random_relationships == True:
-            self.random_links(exclude_partner_net)
 
-    def networks_init(self):
-        self.neighbors = {i: set() for i in Person.network_names}
+    def networks_init(self) -> Dict:
+        """
+        This method generates the structure of the agent's networks that will be preserved
+        within the Person.neighbors attribute.
+        :return: Dict
+        """
+        return {i: set() for i in Person.network_names}
 
-    def neighbors_range(self, netname, dist):
+
+    def neighbors_range(self, netname: str, dist: int) -> Set[Person]:
+        """
+        Given the name of a network @netname returns the agents in radius @dist from this agent.
+        :param netname: str: the network name
+        :param dist: int, the distance
+        :return: Set[Person], a set of agents
+        """
         return extra.find_neighb(netname, dist, set(), {self}) - {self}
 
-    def isneighbor(self, other):
+
+    def isneighbor(self, other: Person) -> bool:
+        """
+        Given another agent @other this function returns true if the two agents are neighbors, false otherwise.
+        :param other: Person, the other agent
+        :return: bool, true if the two agents are neighbors, false otherwise.
+        """
         return any([other in self.neighbors[x] for x in Person.network_names])
 
     def step(self):
         pass
 
-    def random_links(self, exclude_partner_net=False):
-        """
-        Caution: Use only in test phase. This function generates blood relations and not, randomly
-        :param exclude_partner: exclude partner network
-        :return: None
-        """
-        networks = Person.network_names.copy()
-        if exclude_partner_net:
-            networks.remove("partner")
-        for net in networks:
-            for i in range(0, self.model.rng.integers(0, min(len(Person.persons), 100))):
-                self.neighbors.get(net).add(self.model.rng.choice(Person.persons))
-            self.neighbors.get(net).discard(self)
 
-    @staticmethod
-    def NumberOfLinks():
-        return sum([
-            sum([
-                len(x.neighbors.get(net)) for x in Person.persons
-            ])
-            for net in Person.network_names])
-
-    def makeFriends(self, asker):
+    def make_friendship_link(self, asker: Person) -> None:
         """
         Create a two-way friend links in-place
         :param asker: agent
@@ -127,35 +115,57 @@ class Person(Agent):
         self.neighbors.get("friendship").add(asker)
         asker.neighbors.get("friendship").add(self)
 
-    def makeProfessionalLinks(self, asker):
+    def make_professional_link(self, asker: Union[Person, List[Person]]) -> None:
         """
         Create a two-way professional links in-place
-        :param asker: agent
+        :param asker: Union[Person, List[Person]]
         :return: None
         """
-        if type(asker) != list:
-            asker = [asker]
-        for person in asker:
-            self.neighbors.get("professional").add(person)
-            person.neighbors.get("professional").add(self)
+        if type(asker) == list:
+            for person in asker:
+                self.neighbors.get("professional").add(person)
+                person.neighbors.get("professional").add(self)
+        else:
+            self.neighbors.get("professional").add(asker)
+            asker.neighbors.get("professional").add(self)
 
-    def addSiblingLinks(self, targets):
+    def add_sibling_link(self, targets: List[Person]) -> None:
+        """
+        Create a two-way sibling links in-place
+        :param targets: List[Person]
+        :return: None
+        """
         for x in targets:
             if x != self:
                 self.neighbors.get("sibling").add(x)
                 x.neighbors.get("sibling").add(self)
 
-    def makeHouseholdLinks(self, targets):
+    def make_household_link(self, targets: List[Person]) -> None:
+        """
+        Create a two-way household link in-place
+        :param targets: List[Person]
+        :return: None
+        """
         for x in targets:
             if x != self:
                 self.neighbors.get("household").add(x)
                 x.neighbors.get("household").add(self)
 
-    def makePartnerLinks(self, asker):
+    def make_partner_link(self, asker: Person) -> None:
+        """
+        Create a two-way partner link in-place
+        :param asker: Person
+        :return: None
+        """
         self.neighbors.get("partner").add(asker)
         asker.neighbors.get("partner").add(self)
 
-    def makeParent_OffspringsLinks(self, asker):
+    def make_parent_offsprings_link(self, asker: Union[List[Person], Person]) -> None:
+        """
+        Create a link between parent and offspring. Askers are the offspring.
+        :param asker: Union[List[Person], Person]
+        :return: None
+        """
         if type(asker) == list:
             for person in asker:
                 self.neighbors.get("offspring").add(person)
@@ -164,15 +174,24 @@ class Person(Agent):
             self.neighbors.get("offspring").add(asker)
             asker.neighbors.get("parent").add(self)
 
-    def makeSchoolLinks(self, asker):
-        for person in asker:
-            self.neighbors.get("school").add(person)
-            person.neighbors.get("school").add(self)
+    def make_school_link(self, asker: Union[List[Person], Person]) -> None:
+        """
+        Create a two-way school link in-place
+        :param asker: Union[List[Person], Person]
+        :return: None
+        """
+        if type(asker) == list:
+            for person in asker:
+                self.neighbors.get("school").add(person)
+                person.neighbors.get("school").add(self)
+        else:
+            self.neighbors.get("school").add(asker)
+            asker.neighbors.get("school").add(self)
 
-    def addCriminalLink(self, asker):
+    def add_criminal_link(self, asker: Person) -> None:
         """
         Create a two-way criminal links in-place and update the connection weight
-        :param asker: agent
+        :param asker: Person
         :return: None
         """
         self.neighbors.get("criminal").add(asker)
@@ -180,9 +199,18 @@ class Person(Agent):
         asker.neighbors.get("criminal").add(self)
         asker.num_co_offenses[self] = 1
 
-    def remove_link(self, forlorn, kind):
-        self.neighbors.get(kind).discard(forlorn)
-        forlorn.neighbors.get(kind).discard(self)
+    def remove_link(self, forlorn: Person, context: str) -> None:
+        """
+        Removes a @context type link between @self and @forlorn :(
+        :param forlorn: Person
+        :param context: str, the network name
+        :return: None
+        """
+        if self not in forlorn.neighbors.get(context):
+            raise Exception(str(forlorn) + str(" not in context: " + context + " of " + str(self)))
+        else:
+            self.neighbors.get(context).discard(forlorn)
+            forlorn.neighbors.get(context).discard(self)
 
     def remove_friendship(self, forlorn):
         self.remove_link(forlorn, 'friendship')
@@ -190,24 +218,29 @@ class Person(Agent):
     def remove_professional(self, forlorn):
         self.remove_link(forlorn, 'professional')
 
-    def age_between(self, low, high):
-        return self.age >= low and self.age < high
 
-    def potential_friends(self):
+    def potential_friends(self) -> Set[Person]:
         """
-        The potential friends in my networks
+        This function searches for potential friends within school and professional networks.
         :return: set, potential friends
         """
-        return set(self.family_link_neighbors()).union(self.neighbors.get("school")).union(self.neighbors.get("professional")).difference(
+        return set(self.family_link_neighbors()).union(
+            self.neighbors.get("school")).union(
+            self.neighbors.get("professional")).difference(
             self.neighbors.get("friendship"))
 
-    def dunbar_number(self):
-        return (150 - abs(self.age - 30))
+    def dunbar_number(self) -> int:
+        """
+        Calculate Dunbar number, https://en.wikipedia.org/wiki/Dunbar%27s_number
+        :return: int, Dunbar number
+        """
+        return 150 - abs(self.age - 30)
 
-    def init_person(self):  # person command
+    def init_person(self) -> None:
         """
         This method modifies the attributes of the person instance based on the model's
         stats_tables as part of the initial setup of the model agents.
+        :return: None
         """
         row = extra.weighted_one_of(self.model.age_gender_dist, lambda x: x[-1],
                                     self.model.rng)  # select a row from our age_gender distribution
@@ -221,9 +254,8 @@ class Person(Agent):
         if self.model.education_modifier != 1.0:
             if self.model.rng.random() < abs(self.model.education_modifier - 1):
                 self.max_education_level = self.max_education_level + (1 if (self.model.education_modifier > 1) else -1)
-                self.max_education_level = len(self.model.edu[True]) \
-                    if self.max_education_level > len(self.model.edu[True]) \
-                    else 1 if self.max_education_level < 1 else self.max_education_level
+                self.max_education_level = len(self.model.edu[True]) if self.max_education_level > len(
+                    self.model.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
         # limit education by age
         # notice how this deforms a little the initial setup
         self.education_level = self.max_education_level
@@ -233,7 +265,7 @@ class Person(Agent):
                 self.education_level = level - 1
         self.propensity = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
 
-    def enroll_to_school(self, level):
+    def enroll_to_school(self, level: int) -> None:
         """
         Given a level of education, this method chooses a school where to enroll the agent
         and modifies my_school atribute in-place.
@@ -250,7 +282,7 @@ class Person(Agent):
             self.my_school = self.model.rng.choice(potential_school)
         self.my_school.my_students.add(self)
 
-    def get_neighbor_list(self, net_name):
+    def get_neighbor_list(self, net_name: str) -> Union[List[Person], List]:
         """
         Given the name of a network, this method returns a list of agents within the network.
         If the network is empty, it returns an empty list.
@@ -263,21 +295,21 @@ class Person(Agent):
         else:
             return []
 
-    def find_job(self):
+    def find_job(self) -> None:
         """
         This method assigns a job to the Person based on those available and their level. Modify in-place the
         my_worker attribute of Job and the my_job attribute of Person.
         :return: None
         """
-        jobs_pool = [j for j in self.model.jobs if j.my_worker == None and j.job_level == self.job_level]
+        jobs_pool = [j for j in self.model.jobs if j.my_worker is None and j.job_level == self.job_level]
         if not jobs_pool:
-            jobs_pool = [j for j in self.model.jobs if j.my_worker == None and j.job_level < self.job_level]
+            jobs_pool = [j for j in self.model.jobs if j.my_worker is None and j.job_level < self.job_level]
         if jobs_pool:
             the_job = self.model.rng.choice(jobs_pool)
             self.my_job = the_job
             the_job.my_worker = self
 
-    def update_criminal_tendency(self):
+    def update_criminal_tendency(self) -> None:
         """
         This procedure modifies the attribute self.criminal_tendency in-place, based on the individual characteristics of the agent.
         The original nomenclature of the model in Netlogo is: [employment, education, propensity, crim-hist, crim-fam, crim-neigh, oc-member]
@@ -298,25 +330,38 @@ class Person(Agent):
         self.criminal_tendency *= 1.62 if self.num_crimes_committed >= 0 else 1.0
         # crim-fam
         self.criminal_tendency *= 1.45 if self.family_link_neighbors() and (
-                len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) / len(
-            self.family_link_neighbors())) > 0.5 else 1.0
+                len([agent for agent in self.family_link_neighbors() if agent.num_crimes_committed > 0]) /
+                len(self.family_link_neighbors())) > 0.5 else 1.0
         # crim-neigh
         self.criminal_tendency *= 1.81 if self.get_neighbor_list("friendship") or self.get_neighbor_list("professional") and (
                 len([agent for agent in self.get_neighbor_list("friendship") if agent.num_crimes_committed > 0]
-                    + [agent for agent in self.get_neighbor_list("professional") if agent.num_crimes_committed > 0]) / len(
-            [agent for agent in self.get_neighbor_list("friendship")] + [agent for agent in self.get_neighbor_list(
-                "professional")])) > 0.5 else 1.0
+                    + [agent for agent in self.get_neighbor_list("professional") if agent.num_crimes_committed > 0]) /
+                len([agent for agent in self.get_neighbor_list("friendship")] +
+                    [agent for agent in self.get_neighbor_list("professional")])) > 0.5 else 1.0
         # oc-member
         self.criminal_tendency *= 4.50 if self.oc_member else 1.0
 
-    def family_link_neighbors(self):
+
+    def family_link_neighbors(self) -> List[Person]:
         """
         This function returns a list of all agents that have sibling,offspring,partner type connection with the agent.
-        :return: list, the agents
+        :return: List[Person], the agents
         """
-        return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list("partner")
+        return self.get_neighbor_list("sibling") + self.get_neighbor_list("offspring") + self.get_neighbor_list(
+            "partner")
 
-    def leave_school(self):
+    def remove_from_household(self) -> None:
+        """
+        This method removes the agent from household, keeping the networks consistent.
+        Modify the Person.neighbors attribute in-place
+        :return: None
+        """
+        for member in self.neighbors.get("household").copy():
+            if self in member.neighbors.get("household"):
+                member.neighbors.get("household").remove(self)
+                self.neighbors.get("household").remove(member)
+
+    def leave_school(self) -> None:
         """
         This method modifies in-place the my_school attribute and the School.my_students attribute.
         :return: None
@@ -324,15 +369,15 @@ class Person(Agent):
         self.my_school.my_students.remove(self)
         self.my_school = None
 
-    def just_changed_age(self):
+    def just_changed_age(self) -> bool:
         """
         If the agent has changed years during this tick this function returns true, otherwise it returns false.
-        :return: bool,
+        :return: bool
         """
         return np.floor((self.model.ticks - self.birth_tick) / self.model.ticks_per_year) \
                == ((self.model.ticks - self.birth_tick) / self.model.ticks_per_year)
 
-    def update_unemployment_status(self):
+    def update_unemployment_status(self) -> None:
         """
         This function modifies the job_level attribute in-place according to table model.labour_status_by_age_and_sex
         :return: None
@@ -340,11 +385,11 @@ class Person(Agent):
         self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][
             self.age] else 1
 
-    def find_accomplices(self, n_of_accomplices):
+    def find_accomplices(self, n_of_accomplices: int) -> List[Person]:
         """
         This method is used to find accomplices during commit_crimes procedure
         :param n_of_accomplices: int, number of accomplices
-        :return: list, of Person objects
+        :return: List[Person]
         """
         if n_of_accomplices == 0:
             return [self]
@@ -382,62 +427,53 @@ class Person(Agent):
                 else:
                     self.model.facilitator_fails += 1
         return list(accomplices)
-        
-        
-    def remove_from_household(self):
-        """
-        This method removes the agent from household, keeping the networks consistent.
-        Modify the Person.neighbors attribute in-place
-        :return: None
-        """
-        for member in self.neighbors.get("household").copy():
-            if self in member.neighbors.get("household"):
-                member.neighbors.get("household").remove(self)
-                self.neighbors.get("household").remove(member)
 
-    def candidates_weight(self, agent):
+    def candidates_weight(self, agent: Person) -> float:
         """
         This is what in the paper is called r - this is r R is then operationalised as the proportion
         of OC members among the social relations of each individual (comprising family, friendship, school,
         working and co-offending relations)
+        :param agent: Person
         :return: float, the candidates weight
         """
         return -1 * (extra.social_proximity(self,
                                             agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
             else (extra.social_proximity(self, agent) * self.criminal_tendency)
 
-    def _agents_in_radius(self, context=network_names):
+    def _agents_in_radius(self, context: List[str] =network_names) -> Set[Person]:
         """
         It finds the agents distant 1 in the specified networks, by default it finds it on all networks.
-        :param context: list, of strings, limit to networks name
-        :return: set, of Person objects
+        :param context: List[str], limit to networks name
+        :return: Set[Person]
         """
         agents_in_radius = set()
         for net in context:
-            for agent in self.neighbors.get(net):
-                agents_in_radius.add(agent)
+            if self.neighbors.get(net):
+                for agent in self.neighbors.get(net):
+                    agents_in_radius.add(agent)
         return agents_in_radius
 
-    def agents_in_radius(self, d, context=network_names):
+    def agents_in_radius(self, d: int, context: List[str] =network_names) -> Set[Person]:
         """
         It finds the agents distant "d" in the specified networks "context", by default it finds it on all networks.
         :param d: int, the distance
-        :param context: list, of strings, limit to networks name
-        :return: set, of Person objects
+        :param context: List[str], limit to networks name
+        :return: Set[Person]
         """
-        #todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
+        # todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
+        # todo: This function can be unified to neighbors_range
         radius = self._agents_in_radius(context)
         if d == 1:
             return radius
         else:
-            for di in range(d-1):
+            for di in range(d - 1):
                 for agent_in_radius in radius:
                     radius = radius.union(agent_in_radius._agents_in_radius(context))
             if self in radius:
                 radius.remove(self)
             return radius
 
-    def oc_embeddedness(self):
+    def oc_embeddedness(self) -> float:
         """
         Calculates the cached_oc_embeddedness of self.
         :return: float, the cached_oc_embeddedness
@@ -456,10 +492,11 @@ class Person(Agent):
                     agents)
         return self.cached_oc_embeddedness
 
-    def find_oc_weight_distance(self, agents):
+
+    def find_oc_weight_distance(self, agents: Union[Set[Person], List[Person]]) -> float:
         """
         Based on the graph self.model.meta_graph calculates the weighted distance of self from each agent passed to the agents parameter
-        :param agents: list or set, of Person objects
+        :param agents: Union[Set[Person], List[Person]]
         :return: float, the distance
         """
         if self in agents:
@@ -471,23 +508,20 @@ class Person(Agent):
                                                                                        weight='weight')
         return distance
 
-    def find_oc_distance(self, agents):
+    def find_oc_distance(self, agents: Union[Set[Person], List[Person]]) -> float:
         """
         Based on the graph self.model.meta_graph calculates the weighted distance of self from each agent passed to the agents parameter
-        :param agents: list or set, of Person objects
+        :param agents: Union[Set[Person], List[Person]]
         :return: float, the distance
         """
         if self in agents:
             agents.remove(self)
         distance = 0
         for agent in agents:
-                distance += self.model.meta_graph[self.unique_id][agent.unique_id]["weight"]
+            distance += self.model.meta_graph[self.unique_id][agent.unique_id]["weight"]
         return distance
 
-
-
-
-    def calculate_oc_member_position(self):
+    def calculate_oc_member_position(self) -> float:
         """
         Calculate the oc-member position of self
         :return: float, the oc-member-position
@@ -496,7 +530,7 @@ class Person(Agent):
         my_oc_crim = [agent for agent in self.neighbors.get("criminal") if agent.oc_member]
         return n + np.sum([self.num_co_offenses[agent] for agent in my_oc_crim]) - len(my_oc_crim)
 
-    def get_caught(self):
+    def get_caught(self) -> None:
         """
         When an agent is caught during a crime and goes to prison, this procedure is activated.
         :return: None
@@ -519,7 +553,7 @@ class Person(Agent):
         self.neighbors.get("school").clear()
         # we keep the friendship links and the family links
 
-    def p_fertility(self):
+    def p_fertility(self) -> float:
         """
         Calculate the fertility
         :return: flot, the fertility
@@ -529,10 +563,10 @@ class Person(Agent):
         else:
             return 0
 
-    def p_mortality(self):
+    def p_mortality(self) -> float:
         """
         Base on the table self.model.mortality_table calculate a probability that this agent die
-        :return:
+        :return: float
         """
         if self.age in self.model.mortality_table:
             p = self.model.mortality_table[self.age][self.gender_is_male] / self.model.ticks_per_year
@@ -542,7 +576,7 @@ class Person(Agent):
             raise Exception(self.__repr__() + " age: " + str(self.age) + ", not in mortality table keys")
         return p
 
-    def init_baby(self):
+    def init_baby(self) -> None:
         """
         This method is for mothers only and allows to create new agents
         :return: None
@@ -555,18 +589,18 @@ class Person(Agent):
         new_agent.birth_tick = self.model.ticks
         new_agent.mother = self
         if self.get_neighbor_list("offspring"):
-            new_agent.addSiblingLinks(self.get_neighbor_list("offspring"))
-        self.makeParent_OffspringsLinks(new_agent)
+            new_agent.add_sibling_link(self.get_neighbor_list("offspring"))
+        self.make_parent_offsprings_link(new_agent)
         if self.get_neighbor_list("partner"):
             dad = self.get_neighbor_list("partner")[0]
-            dad.makeParent_OffspringsLinks(new_agent)
+            dad.make_parent_offsprings_link(new_agent)
             new_agent.father = dad
             new_agent.max_education_level = dad.max_education_level
         else:
             new_agent.max_education_level = self.max_education_level
-        new_agent.makeHouseholdLinks(self.get_neighbor_list("household"))
+        new_agent.make_household_link(self.get_neighbor_list("household"))
 
-    def die(self):
+    def die(self) -> None:
         """
         When an agent dies all his links cease to exist.
         :return: None
@@ -576,6 +610,67 @@ class Person(Agent):
             for net in self.network_names:
                 if self in agent.neighbors.get(net):
                     agent.neighbors.get(net).remove(self)
+
+
+class Job:
+    max_id = 0
+
+    def __init__(self, model: ProtonOC):
+        self.model: ProtonOC = model
+        self.job_level: int = 0
+        self.my_employer: Union[Employer, None] = None
+        self.my_worker: Union[Person, None] = None
+        self.unique_id: int = Job.max_id
+        Job.max_id = Job.max_id + 1
+
+    def __repr__(self):
+        return "Job: " + str(self.unique_id) + " Level: " + str(self.job_level)
+
+
+class Employer:
+    max_id = 0
+
+    def __init__(self, model: ProtonOC):
+        self.my_jobs: List = list()
+        self.model: ProtonOC = model
+        self.unique_id: int = Employer.max_id
+        Employer.max_id = Employer.max_id + 1
+
+    def __repr__(self) -> str:
+        return "Employer: " + str(self.unique_id)
+
+    def create_job(self, level: int, worker: Person) -> None:
+        """
+        This function creates new jobs and assigns a @level and a @worker.
+        :param level: int, the job level
+        :param worker: Person, the worker
+        :return: None
+        """
+        newjob = Job(self.model)
+        newjob.level = level
+        worker.my_job = newjob
+        self.my_jobs.append(newjob)
+
+    def employees(self) -> List[Person]:
+        """
+        This function returns employees related to this employer
+        :return: List[Person]
+        """
+        return [x.my_worker for x in self.my_jobs if x.my_worker != None]
+
+
+class School:
+    max_id = 0
+
+    def __init__(self, model: ProtonOC, diploma_level: int):
+        self.model: ProtonOC = model
+        self.diploma_level: int = diploma_level
+        self.my_students: Set[Person] = set()
+        self.unique_id = School.max_id
+        School.max_id = School.max_id + 1
+
+    def __repr__(self):
+        return "School: " + str(self.unique_id) + " Level: " + str(self.diploma_level)
 
 
 if __name__ == "__main__":
