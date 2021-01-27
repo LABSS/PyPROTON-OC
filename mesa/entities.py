@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List, Set, Union, Dict
 import typing
 if typing.TYPE_CHECKING:
-    from mesaPROTON_OC import ProtonOC
+    from model import ProtonOC
 from mesa import Agent
 import numpy as np
 import networkx as nx

@@ -1,3 +1,26 @@
+# MIT License
+#
+# Copyright (c) 2019 Mario Paolucci
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
 from __future__ import annotations
 import os
 from mesa import Model
@@ -10,7 +33,7 @@ from tqdm import tqdm
 from itertools import combinations, chain
 from numpy.random import default_rng
 import time
-from Person import Person, School, Employer, Job
+from entities import Person, School, Employer, Job
 import extra
 from typing import List, Set, Union, Dict
 
@@ -25,8 +48,8 @@ class ProtonOC(Model):
         super().__init__(seed=seed)
         self.seed: int = seed
         self.rng: np.random.default_rng = default_rng(seed)
-        self.verbose = False
-        self.check_random = [self.rng.random(), self.random.random()]
+        self.verbose: bool = False
+        self.check_random: List[float] = [self.rng.random(), self.random.random()]
         self.education_levels: Dict = dict()  # table from education level to data
         self.removed_fatherships: list = list()
         self.schools: List[School] = list()
@@ -276,12 +299,9 @@ class ProtonOC(Model):
 
     def fix_unemployment(self, correction: Union[float, int, str]) -> None:
         """
-        This function strictly depends on the Proton_OC.unemployment_multiplier parameter.
-        If this parameter is different from "base" a correction to unemployment is activated;
-        with a correction > 1 increase unemployment otherwise decrease unemployment.
-        This policy is applied by modifying in-place the Person.job_level attribute of the
-        eligible agents
-
+        Applies a correction to the employment level, with a correction > 1 increase unemployment
+        otherwise decrease unemployment. This policy is applied by modifying in-place the
+        Person.job_level attribute of the eligible agents
         :param correction: Union[float, int, str], the correction
         :return: None
         """
