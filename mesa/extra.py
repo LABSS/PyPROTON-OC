@@ -3,18 +3,20 @@ import numpy as np
 import numba
 import typing
 if typing.TYPE_CHECKING:
-    from Person import Person
+    from entities import Person
     from typing import List, Set, Dict, Union, Callable, Any
     import pandas as pd
     import numpy
 
 
-def find_neighb(netname: str, togo: int, found: Set, border: Set[Person]):
+def find_neighb(netname: str, togo: int, found: Set, border: Set[Person]) -> Union[Set, Any]:
     """
-
-    # found and border must have null intersection
-    # includes the initial found
-    # https://stackoverflow.com/questions/12555627/python-3-starred-expression-to-unpack-a-list
+    Find the nearest agent in @netname within range @togo, return a Set of agents
+    :param netname: str, network name to search
+    :param togo: int, search range
+    :param found: Set,
+    :param border: Set[Person]
+    :return: Set,
     """
 
     found = found | border
@@ -77,7 +79,7 @@ def at_most(agentset: Union[List[Person], Set[Person]], n: int, rng_istance: num
 def weighted_n_of(n: int, agentset: Union[List[Person], Set[Person]],
                   weight_function: Callable, rng_istance: numpy.random.default_rng) -> List[Person]:
     """
-    Given a set or List of agents @agentset, an integer @n, and a lambda function @weight_function.
+    Given a set or List of agents @agentset an integer @n and a lambda function @weight_function.
     This function performs a weighted extraction, without replacing based on the lambda function.
     This procedure takes into account negative numbers and weights equal to zero.
     :param n: int
