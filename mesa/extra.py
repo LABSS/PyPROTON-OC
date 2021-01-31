@@ -2,9 +2,10 @@ from __future__ import annotations
 import numpy as np
 import numba
 import typing
+
 if typing.TYPE_CHECKING:
     from entities import Person
-    from typing import List, Set, Dict, Union, Callable, Any
+    from typing import List, Set, Dict, Union, Callable, Any, Tuple
     import pandas as pd
     import numpy
 
@@ -233,6 +234,24 @@ def commit_crime(co_offenders: List[Person]) -> None:
             co_offender.co_off_flag[co_off_key] += 1
             if co_offender.co_off_flag[co_off_key] == 2:
                 co_offender.num_co_offenses[co_off_key] += 1
+
+
+def generate_collector_dicts(model_reporters: List[str],
+                             agent_reporters: List[str]) -> Tuple[Dict, Dict]:
+    """
+    This returns two dictionaries consisting of as many key/value pairs as the elements
+    contained within the @model_reporters, @agent_reporters parameters.
+    :param model_reporters: List[str]
+    :param agent_reporters: List[str]
+    :return: Tuple[Dict, Dict]
+    """
+    net_names = ['sibling', 'offspring', 'parent', 'partner', 'household', 'friendship',
+                 'criminal', 'professional', 'school']
+    model_reporters = {key: key for key in model_reporters}
+    agent_reporters = {key: key  if key not in net_names else lambda x: x.dump_net(key)
+                       for key in agent_reporters }
+    return agent_reporters, model_reporters
+
 
 
 #Numba functions

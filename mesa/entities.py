@@ -42,7 +42,7 @@ class Person(Agent):
         self.wealth_level: Union[int, float] = 1
         self.job_level: Union[int, float] = 0
         self.my_job: Union[Job, None] = None  # could be known from `one_of job_link_neighbors`, but is stored directly for performance _ need to be kept in sync
-        self.birth_tick: Union[int, float] = self.model.ticks
+        self.birth_tick: Union[int, float] = self.model.tick
         self.father: Union[Person, None] = None
         self.mother: Union[Person, None] = None
         self.propensity: Union[int, float] = self.model.lognormal(self.model.nat_propensity_m, self.model.nat_propensity_sigma)
@@ -72,7 +72,7 @@ class Person(Agent):
         base on Person.birth_tick and Person.model.ticks.
         :return: None
         """
-        self.age = extra._age(self.model.ticks, self.birth_tick)
+        self.age = extra._age(self.model.tick, self.birth_tick)
 
 
     def networks_init(self) -> Dict:
@@ -374,8 +374,8 @@ class Person(Agent):
         If the agent has changed years during this tick this function returns true, otherwise it returns false.
         :return: bool
         """
-        return np.floor((self.model.ticks - self.birth_tick) / self.model.ticks_per_year) \
-               == ((self.model.ticks - self.birth_tick) / self.model.ticks_per_year)
+        return np.floor((self.model.tick - self.birth_tick) / self.model.ticks_per_year) \
+               == ((self.model.tick - self.birth_tick) / self.model.ticks_per_year)
 
     def update_unemployment_status(self) -> None:
         """
@@ -586,7 +586,7 @@ class Person(Agent):
         new_agent = Person(self.model)
         self.model.schedule.add(new_agent)
         new_agent.wealth_level = self.wealth_level
-        new_agent.birth_tick = self.model.ticks
+        new_agent.birth_tick = self.model.tick
         new_agent.mother = self
         if self.get_neighbor_list("offspring"):
             new_agent.add_sibling_link(self.get_neighbor_list("offspring"))
@@ -610,6 +610,17 @@ class Person(Agent):
             for net in self.network_names:
                 if self in agent.neighbors.get(net):
                     agent.neighbors.get(net).remove(self)
+
+    def dump_net(self, network_name: str) -> List[int]:
+        """
+        Given a @network_name this function returns a list with the unique_id of all agents within
+        this network from self.
+        :param network_name: str
+        :return: List[int]
+        """
+        if network_name not in self.network_names:
+            raise Exception(network_name + " is not a valid network name")
+        return [agent.unique_id for agent in self.neighbors.get(network_name)]
 
 
 class Job:
