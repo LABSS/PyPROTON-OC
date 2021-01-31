@@ -689,29 +689,31 @@ class ProtonOC(Model):
         # families first.
         # we assume here that we'll never get a negative criminal tendency.
         oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.rng)
+        candidates = list()
         for head in oc_family_heads:
             head.oc_member = True
-            candidates = [relative for relative in head.neighbors.get('household') if relative.age >= 18]
-            if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
-                members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
-                # fill up the families as much as possible
-                for member in members_in_families:
-                    member.oc_member = True
-            else:  # take more as needed (note that this modifies the count of families)
-                for candidate in candidates:
-                    candidate.oc_member = True
-                out_of_family_candidates = [agent for agent in self.schedule.agents
-                                            if not agent.oc_member]
-                out_of_family_candidates = extra.weighted_n_of(
-                    scaled_num_oc_persons - len(candidates) - len(oc_family_heads),
-                    out_of_family_candidates, lambda x: x.criminal_tendency, self.rng)
-                for out_of_family_candidate in out_of_family_candidates:
-                    out_of_family_candidate.oc_member = True
-            # and now, the network with its weights..
-            oc_members_pool = [oc_member for oc_member in self.schedule.agents
-                               if oc_member.oc_member]
-            for (i, j) in combinations(oc_members_pool, 2):
-                i.add_criminal_link(j)
+            candidates += [relative for relative in head.neighbors.get('household') if
+                           relative.age >= 18]
+        if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
+            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.rng)
+            # fill up the families as much as possible
+            for member in members_in_families:
+                member.oc_member = True
+        else:  # take more as needed (note that this modifies the count of families)
+            for candidate in candidates:
+                candidate.oc_member = True
+            out_of_family_candidates = [agent for agent in self.schedule.agents
+                                        if not agent.oc_member]
+            out_of_family_candidates = extra.weighted_n_of(
+                scaled_num_oc_persons - len(candidates) - len(oc_family_heads),
+                out_of_family_candidates, lambda x: x.criminal_tendency, self.rng)
+            for out_of_family_candidate in out_of_family_candidates:
+                out_of_family_candidate.oc_member = True
+        # and now, the network with its weights..
+        oc_members_pool = [oc_member for oc_member in self.schedule.agents
+                           if oc_member.oc_member]
+        for (i, j) in combinations(oc_members_pool, 2):
+            i.add_criminal_link(j)
 
 
     def reset_oc_embeddedness(self) -> None:
@@ -1413,7 +1415,7 @@ class ProtonOC(Model):
             # calculate the difference between deaths and birth
             to_replace = self.initial_agents - len(self.schedule.agents) \
                 if self.initial_agents - len(self.schedule.agents) > 0 else 0
-            free_jobs = [job for job in self.jobs if job.my_worker]
+            free_jobs = [job for job in self.jobs if job.my_worker == None]
             n_to_add = np.min([to_replace, len(free_jobs)])
             self.number_migrants += n_to_add
             for job in self.rng.choice(free_jobs, n_to_add, replace=False):
