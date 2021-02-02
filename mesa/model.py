@@ -36,6 +36,7 @@ import time
 from entities import Person, School, Employer, Job
 import extra
 from typing import List, Set, Union, Dict
+from xml.dom import minidom
 
 
 class ProtonOC(Model):
@@ -1625,6 +1626,29 @@ class ProtonOC(Model):
         elif save_mode == "csv":
             agent_data.to_csv(os.path.join(new_dir, "agents" + ".csv"))
             model_data.to_csv(os.path.join(new_dir, "model" + ".csv"))
+
+    def override_xml(self, xml_file: str) -> None:
+        """
+        This function override model parameters based on xml file.
+        :param xml_file: str, xml path
+        :return: None
+        """
+        map_attr = {"education_rate": "education_modifier",
+                    "data_folder": "city",
+                    "[num_oc_persons]": "num_oc_persons"}
+        self.override_xml_active = True
+        mydoc = minidom.parse(xml_file)
+        parameters = mydoc.getElementsByTagName('enumeratedValueSet')
+        ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
+        setattr(self, "num_ticks", extra.standardize_value(ticks))
+        for par in parameters:
+            attribute = par.attributes['variable'].value.replace("-", "_").replace("?", "").lower()
+            if attribute == "output" or attribute == "oc_members_scrutinize":
+                continue
+            if attribute in map_attr:
+                attribute = map_attr[attribute]
+            value = par.getElementsByTagName("value")[0].attributes["value"].value
+            setattr(self, attribute, extra.standardize_value(value))
 
 
 if __name__ == "__main__":

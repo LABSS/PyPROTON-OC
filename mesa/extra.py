@@ -2,7 +2,7 @@ from __future__ import annotations
 import numpy as np
 import numba
 import typing
-
+from ast import literal_eval
 if typing.TYPE_CHECKING:
     from entities import Person
     from typing import List, Set, Dict, Union, Callable, Any, Tuple
@@ -252,6 +252,49 @@ def generate_collector_dicts(model_reporters: List[str],
                        for key in agent_reporters }
     return agent_reporters, model_reporters
 
+
+def convert_numerical(s: str) -> Union[int, float, str]:
+    """
+    This takes as argument a string, if this is composed of a number (integer or float) it
+    returns the transformed string otherwise it returns a string.
+    :param s: str, the string to convert
+    :return: Union[int, float, str]
+    """
+    if isinstance(s, str):
+        try:
+            val = literal_eval(s)
+        except:
+            val = s
+    else:
+        val = s
+    if isinstance(val, float):
+        if val.is_integer():
+            return int(val)
+        return val
+    return val
+
+
+def standardize_value(value: str) -> Union[str, int, float, None]:
+    """
+    This takes a string as a parameter and standardizes this value respecting
+    the standard naming of the model.
+    :param value: str
+    :return: Union[str, int, float, None]
+    """
+    if any([ch.isdigit() for ch in value]):
+        return convert_numerical(value)
+    elif value == "\"none\"":
+        return None
+    elif value == "true":
+        return True
+    elif value == "false":
+        return False
+    elif "palermo" in value:
+        return "palermo"
+    elif "eindhoven" in value:
+        return "eindhoven"
+    else:
+        return value.replace("\"", "")
 
 
 #Numba functions
