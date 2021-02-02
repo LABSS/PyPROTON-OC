@@ -119,9 +119,9 @@ def test_oc_crime_stats():
             pool = [agent for agent in model.schedule.agents
                     if agent.age > cell[1] and agent.age <= value[0] and agent.gender_is_male]
             if pool and np.sum([agent.num_crimes_committed for agent in pool]) > 0:
-                result = np.abs(value[1]) * model.ticks / model.ticks_per_year \
-                - np.mean([agent.num_crimes_committed for agent in pool]) < \
-                2 * np.std([agent.num_crimes_committed for agent in pool])
+                result = np.abs(value[1]) * model.tick / model.ticks_per_year \
+                         - np.mean([agent.num_crimes_committed for agent in pool]) < \
+                         2 * np.std([agent.num_crimes_committed for agent in pool])
                 assert result
 
 
