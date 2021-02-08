@@ -255,8 +255,8 @@ def generate_collector_dicts(model_reporters: List[str],
 
 def convert_numerical(s: str) -> Union[int, float, str]:
     """
-    This takes as argument a string, if this is composed of a number (integer or float) it
-    returns the transformed string otherwise it returns a string.
+    This takes as argument a string, if this is composed of a number (integer or float)
+    returns the number otherwise returns a string.
     :param s: str, the string to convert
     :return: Union[int, float, str]
     """
