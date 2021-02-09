@@ -23,7 +23,8 @@ class BaseMode:
         """
         self._single_run(None, self.save_path, self.name)
 
-    def _single_run(self, loc_xml: Union[str, None], save_dir: str, name: str) -> None:
+    def _single_run(self, loc_xml: Union[str, None], save_dir: str, name: str, verbose=True) -> \
+            None:
         """
         This instantiates a model, performs a parameter override (if necessary),
         runs a simulation, and saves the data.
@@ -34,7 +35,7 @@ class BaseMode:
         """
         model = ProtonOC()
         model.override_xml(loc_xml)
-        model.run(verbose=False)
+        model.run(verbose=verbose)
         model.save_data(save_dir=save_dir, name=name)
 
 
@@ -114,7 +115,8 @@ class XmlMode(BaseMode):
         """
         processes = list()
         for file, name in zip(self.files, self.filenames):
-            p = multiprocessing.Process(target=self._single_run, args=(file, self.save_path, name))
+            p = multiprocessing.Process(target=self._single_run, args=(file, self.save_path,
+                                                                       name, False))
             processes.append(p)
             p.start()
         for process in processes:
@@ -127,7 +129,7 @@ class XmlMode(BaseMode):
         :return: None
         """
         for file, name in zip(self.files, self.filenames):
-            self._single_run(file, self.save_path, name)
+            self._single_run(file, self.save_path, name, True)
 
 
 @click.group(help="PROTON-OC command line interface")

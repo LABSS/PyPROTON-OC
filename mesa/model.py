@@ -203,7 +203,7 @@ class ProtonOC(Model):
                                 'number_offspring_recruited_this_tick', 'number_crimes',
                                 'crime_multiplier', 'kids_intervention_counter',
                                 'big_crime_from_small_fish', 'arrest_rate', 'migration_on',
-                                'num_persons',
+                                'initial_agents',
                                 'intervention', 'max_accomplice_radius', 'number_arrests_per_year',
                                 'ticks_per_year', 'num_ticks', 'tick', 'ticks_between_intervention',
                                 'intervention_start', 'intervention_end', 'num_oc_persons',
@@ -1638,8 +1638,8 @@ class ProtonOC(Model):
         else:
             map_attr = {"education_rate": "education_modifier",
                         "data_folder": "city",
-                        "[num_oc_persons]": "num_oc_persons"}
-            self.override_xml_active = True
+                        "[num_oc_persons]": "num_oc_persons",
+                        "num_persons": "initial_agents"}
             mydoc = minidom.parse(xml_file)
             parameters = mydoc.getElementsByTagName('enumeratedValueSet')
             ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
