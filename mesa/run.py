@@ -22,6 +22,7 @@ class BaseMode:
         :return: None
         """
         self._single_run(None, self.save_path, self.name)
+        click.echo(click.style("Done!", fg="red"))
 
     def _single_run(self, loc_xml: Union[str, None], save_dir: str, name: str, verbose=True) -> \
             None:
@@ -84,8 +85,10 @@ class XmlMode(BaseMode):
                 self.run_parallel()
             else:
                 self.run_sequential()
+            click.echo(click.style("Done!", fg="red"))
         else:
             click.echo(click.style("\nAborted!", fg="red"))
+
 
     def read_repetitions(self, xml: str) -> int:
         """
