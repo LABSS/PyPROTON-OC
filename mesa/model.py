@@ -45,7 +45,7 @@ class ProtonOC(Model):
     Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu
     """
 
-    def __init__(self, seed: int = int(time.time())) -> None:
+    def __init__(self, seed: int = os.urandom(3)[0]) -> None:
         super().__init__(seed=seed)
         self.seed: int = seed
         self.rng: np.random.default_rng = default_rng(seed)
@@ -203,7 +203,7 @@ class ProtonOC(Model):
                                 'number_offspring_recruited_this_tick', 'number_crimes',
                                 'crime_multiplier', 'kids_intervention_counter',
                                 'big_crime_from_small_fish', 'arrest_rate', 'migration_on',
-                                'num_persons',
+                                'initial_agents',
                                 'intervention', 'max_accomplice_radius', 'number_arrests_per_year',
                                 'ticks_per_year', 'num_ticks', 'tick', 'ticks_between_intervention',
                                 'intervention_start', 'intervention_end', 'num_oc_persons',
@@ -1605,7 +1605,7 @@ class ProtonOC(Model):
             self.schedule.remove(agent)
             del agent
 
-    def save_data(self, save_dir: str, name: str, save_mode: str = "feather") -> None:
+    def save_data(self, save_dir: str, name: str, save_mode: str = "pickle") -> None:
         """
         This creates a new folder named name in the save_dir location and generates
         two files:agents.xxx related to historical data of all agents and model.xxx
@@ -1613,7 +1613,7 @@ class ProtonOC(Model):
         "feather")
         :param save_dir: str, location
         :param name: str, run name
-        :param save_mode: str, can be either "cvs" or "feather"
+        :param save_mode: str, can be either "pickle" or "feather"
         :return: None
         """
         new_dir = os.path.join(save_dir, name)
@@ -1623,32 +1623,35 @@ class ProtonOC(Model):
         if save_mode == "feather":
             agent_data.to_feather(os.path.join(new_dir, "agents" + ".feather"))
             model_data.to_feather(os.path.join(new_dir, "model" + ".feather"))
-        elif save_mode == "csv":
-            agent_data.to_csv(os.path.join(new_dir, "agents" + ".csv"))
-            model_data.to_csv(os.path.join(new_dir, "model" + ".csv"))
+        elif save_mode == "pickle":
+            agent_data.to_pickle(os.path.join(new_dir, "agents" + ".pickle"))
+            model_data.to_pickle(os.path.join(new_dir, "model" + ".pickle"))
 
-    def override_xml(self, xml_file: str) -> None:
+    def override_xml(self, xml_file: Union[str, None]) -> None:
         """
         This function override model parameters based on xml file.
         :param xml_file: str, xml path
         :return: None
         """
-        map_attr = {"education_rate": "education_modifier",
-                    "data_folder": "city",
-                    "[num_oc_persons]": "num_oc_persons"}
-        self.override_xml_active = True
-        mydoc = minidom.parse(xml_file)
-        parameters = mydoc.getElementsByTagName('enumeratedValueSet')
-        ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
-        setattr(self, "num_ticks", extra.standardize_value(ticks))
-        for par in parameters:
-            attribute = par.attributes['variable'].value.replace("-", "_").replace("?", "").lower()
-            if attribute == "output" or attribute == "oc_members_scrutinize":
-                continue
-            if attribute in map_attr:
-                attribute = map_attr[attribute]
-            value = par.getElementsByTagName("value")[0].attributes["value"].value
-            setattr(self, attribute, extra.standardize_value(value))
+        if xml_file is None:
+            pass
+        else:
+            map_attr = {"education_rate": "education_modifier",
+                        "data_folder": "city",
+                        "[num_oc_persons]": "num_oc_persons",
+                        "num_persons": "initial_agents"}
+            mydoc = minidom.parse(xml_file)
+            parameters = mydoc.getElementsByTagName('enumeratedValueSet')
+            ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
+            setattr(self, "num_ticks", extra.standardize_value(ticks))
+            for par in parameters:
+                attribute = par.attributes['variable'].value.replace("-", "_").replace("?", "").lower()
+                if attribute == "output" or attribute == "oc_members_scrutinize":
+                    continue
+                if attribute in map_attr:
+                    attribute = map_attr[attribute]
+                value = par.getElementsByTagName("value")[0].attributes["value"].value
+                setattr(self, attribute, extra.standardize_value(value))
 
 
 if __name__ == "__main__":
