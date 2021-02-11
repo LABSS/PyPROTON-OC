@@ -37,6 +37,7 @@ from entities import Person, School, Employer, Job
 import extra
 from typing import List, Set, Union, Dict
 from xml.dom import minidom
+import json
 
 
 class ProtonOC(Model):
@@ -58,6 +59,8 @@ class ProtonOC(Model):
         self.employers: List[Employer] = list()
         self.datacollector: Union[DataCollector, None] = None
         self.meta_graph: nx.Graph = nx.Graph()
+        self.ticks_per_year: int = 12
+        self.tick: int = 0 # current tick
 
         # Intervention
         self.family_intervention: Union[str, None] = None
@@ -91,36 +94,34 @@ class ProtonOC(Model):
         #Scheduler
         self.schedule: BaseScheduler = BaseScheduler(self)
 
-        # from graphical interface
-        self.migration_on: bool = False
-        self.initial_agents: int = 100
+        # from graphical interface (free params)
+        self.migration_on: bool = False #True / False
+        self.initial_agents: int = 1000 #500 -> n
+        self.num_ticks: int = 480  # tick limit
         self.intervention: str = "baseline"
-        self.max_accomplice_radius: int = 2
-        self.number_arrests_per_year: int = 30
-        self.ticks_per_year: int = 12
-        self.number_crimes_yearly_per10k: int = 2000
-        self.tick: int = 0
-        self.num_ticks: int = 480 # tick limit
-        self.ticks_between_intervention: int = 1
-        self.intervention_start: int = 13
-        self.intervention_end: int = 999
-        self.num_oc_persons: int = 30
-        self.num_oc_families: int = 8
-        self.education_modifier: float = 1.0  # education-rate in Netlogo model
-        self.retirement_age: int = 65
-        self.unemployment_multiplier: Union[str, int] = "base"
-        self.nat_propensity_m: float = 1.0
-        self.nat_propensity_sigma: float = 0.25
-        self.nat_propensity_threshold: float = 1.0
-        self.facilitator_repression: bool = False
-        self.facilitator_repression_multiplier: float = 2.0
-        self.likelihood_of_facilitators: float = 0.005
-        self.targets_addressed_percent: float = 10
-        self.threshold_use_facilitators: float = 4
-        self.oc_embeddedness_radius: int = 2
-        self.oc_boss_repression: bool = False
-        self.punishment_length: int = 1
-        self.constant_population: bool = False
+        self.max_accomplice_radius: int = 2 #2 -> 4
+        self.number_arrests_per_year: int = 30 #0 -> 100
+        self.number_crimes_yearly_per10k: int = 2000 #0 -> 3000
+        self.ticks_between_intervention: int = 12 #1 -> 24
+        self.intervention_start: int = 13 #1 -> 100
+        self.intervention_end: int = 999 #n
+        self.num_oc_persons: int = 30 #2 -> 200
+        self.num_oc_families: int = 8 #1 -> 50
+        self.education_modifier: float = 1.0  # education-rate in Netlogo model 0.1 -> 2.0
+        self.retirement_age: int = 65 # 50 -> 80
+        self.unemployment_multiplier: Union[str, int] = "base" #0.2 -> 2.0
+        self.nat_propensity_m: float = 1.0 #0.1 -> 10
+        self.nat_propensity_sigma: float = 0.25 #0.1 -> 10.0
+        self.nat_propensity_threshold: float = 1.0 #0.1 -> 2.0
+        self.facilitator_repression: bool = False #True/False
+        self.facilitator_repression_multiplier: float = 2.0 #1 -> 5
+        self.likelihood_of_facilitators: float = 0.005 #0.001 -> 0.010
+        self.targets_addressed_percent: float = 10 #1 -> 100
+        self.threshold_use_facilitators: float = 4 #1 -> 10
+        self.oc_embeddedness_radius: int = 2 #1 -> 4
+        self.oc_boss_repression: bool = False #True/False
+        self.punishment_length: int = 1 #0.5 -> 2
+        self.constant_population: bool = False #True/False->
 
         # Folders definition
         self.mesa_dir: str = os.getcwd()
@@ -1178,7 +1179,7 @@ class ProtonOC(Model):
             n_of_crimes = line[1][1] * len(people_in_cell)
             total_crime += n_of_crimes
         self.crime_multiplier = \
-            self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
+            self.number_crimes_yearly_per10k / 10000 * len(self.schedule.agents) / total_crime
 
 
     def calculate_criminal_tendency(self) -> None:
@@ -1415,7 +1416,7 @@ class ProtonOC(Model):
             # calculate the difference between deaths and birth
             to_replace = self.initial_agents - len(self.schedule.agents) \
                 if self.initial_agents - len(self.schedule.agents) > 0 else 0
-            free_jobs = [job for job in self.jobs if job.my_worker == None]
+            free_jobs = [job for job in self.jobs if job.my_worker is None]
             n_to_add = np.min([to_replace, len(free_jobs)])
             self.number_migrants += n_to_add
             for job in self.rng.choice(free_jobs, n_to_add, replace=False):
@@ -1652,8 +1653,22 @@ class ProtonOC(Model):
                 value = par.getElementsByTagName("value")[0].attributes["value"].value
                 setattr(self, attribute, extra.standardize_value(value))
 
+    def override_json(self, json_file):
+        pass
+
+    def get_json_snapshot(self):
+        snap_keys = ["number_deceased",
+         "facilitator_fails", "facilitator_crimes", "crime_size_fails",
+         "number_born", "number_migrants", "number_law_interventions_this_tick",
+         "number_protected_recruited_this_tick", "people_jailed",
+         "number_offspring_recruited_this_tick", "number_crimes",
+         "big_crime_from_small_fish",
+         "tick"]
+
+
 
 if __name__ == "__main__":
     model = ProtonOC()
     model.intervention = "baseline"
-    model.run(1000, verbose=True)
+    model.likelihood_of_facilitators = 0.010
+    model.run(500, 309)
