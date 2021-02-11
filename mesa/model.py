@@ -24,7 +24,7 @@
 from __future__ import annotations
 import os
 from mesa import Model
-from mesa.time import RandomActivation
+from mesa.time import BaseScheduler
 from mesa.datacollection import DataCollector
 import pandas as pd
 import numpy as np
@@ -74,7 +74,6 @@ class ProtonOC(Model):
         self.number_born: int = 0
         self.number_migrants: int = 0
         self.number_weddings: int = 0
-        self.number_weddings_mean: float = 100
         self.number_weddings_sd: float = 0
         self.number_law_interventions_this_tick: int = 0
         self.correction_for_non_facilitators: float = 0
@@ -90,7 +89,7 @@ class ProtonOC(Model):
         self.arrest_rate: Union[int, float] = 0
 
         #Scheduler
-        self.schedule: RandomActivation = RandomActivation(self)
+        self.schedule: BaseScheduler = BaseScheduler(self)
 
         # from graphical interface
         self.migration_on: bool = False
@@ -750,7 +749,7 @@ class ProtonOC(Model):
         watts strogatz net.
         :return: None
         """
-        watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
+        watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1, seed=self.random)
         for node in watts_strogatz.nodes():
             new_agent = Person(self)
             new_agent.init_person()
@@ -1524,7 +1523,7 @@ class ProtonOC(Model):
         :param agents: Set[Person], the agentset
         :return: None
         """
-        self.meta_graph = nx.Graph()
+        self.meta_graph = nx.Graph(seed=self.random)
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
             for in_radius_agent in agent.agents_in_radius(
