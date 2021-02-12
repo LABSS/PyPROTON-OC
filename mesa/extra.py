@@ -21,7 +21,8 @@ def find_neighb(netname: str, togo: int, found: Set, border: Set[Person]) -> Uni
     """
 
     found = found | border
-    if togo == 0: return found
+    if togo == 0:
+        return found
     #print_id(set().union(*[x.neighbors.get(netname) for x in border]))
     nextlayer = set().union(*[x.neighbors.get(netname) for x in border]) - found
     if not nextlayer:
@@ -77,6 +78,7 @@ def at_most(agentset: Union[List[Person], Set[Person]], n: int, rng_istance: num
     else:
         return list(rng_istance.choice(agentset, n, replace=False))
 
+
 def weighted_n_of(n: int, agentset: Union[List[Person], Set[Person]],
                   weight_function: Callable, rng_istance: numpy.random.default_rng) -> List[Person]:
     """
@@ -115,7 +117,8 @@ def weighted_one_of(agentset: Union[List[Person], Set[Person]],
     return weighted_n_of(1, agentset, weight_function, rng_istance)[0]
 
 
-def pick_from_pair_list(a_list_of_pairs: List, rng_istance: numpy.random.default_rng) -> Any:
+def pick_from_pair_list(a_list_of_pairs: Union[List, np.ndarray],
+                        rng_istance: numpy.random.default_rng) -> Any:
     """
     given a list of pairs, containing an object and a probability (e.g. [[object, p],[object, p]])
     return an object based on the probability(p)
@@ -177,7 +180,7 @@ def decide_conn_number(agents: Union[List, Set], max_lim: int, also_me: bool = T
         return max_lim
 
 
-def df_to_lists(df: pd.DataFrame, split_row: bool =True) -> List:
+def df_to_lists(df: pd.DataFrame, split_row: bool = True) -> List:
     """
     This function transforms a pandas DataFrame into nested lists as follows:
     df-columns = age, sex, education, p --> list = [[age,sex],[education,p]]
@@ -296,6 +299,23 @@ def standardize_value(value: str) -> Union[str, int, float, None]:
     else:
         return value.replace("\"", "")
 
+def list_contains_problems(ego: Person, candidates:List[Person]) -> Union[bool, None]:
+    """
+    This procedure checks if there are any links between partners within the candidate pool.
+    Returns True if there are, None if there are not. It is used during ProtonOc.setup_siblings
+    procedure to avoid incestuous marriages.
+    :param ego: Person, the agent
+    :param candidates: Union[List[Person], Set[Person]], the candidates
+    :return: Union[bool, None], True if there are links between partners, None otherwise.
+    """
+    all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in
+                                                                                      candidates for sibling in
+                                                                                      candidate.neighbors.get(
+                                                                                          'sibling')]
+    for sibling in all_potential_siblings:
+        if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[
+            0] in all_potential_siblings:
+            return True
 
 #Numba functions
 @numba.jit(nopython=True)

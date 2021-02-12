@@ -24,7 +24,7 @@
 from __future__ import annotations
 import os
 from mesa import Model
-from mesa.time import RandomActivation
+from mesa.time import BaseScheduler
 from mesa.datacollection import DataCollector
 import pandas as pd
 import numpy as np
@@ -37,6 +37,7 @@ from entities import Person, School, Employer, Job
 import extra
 from typing import List, Set, Union, Dict
 from xml.dom import minidom
+import json
 
 
 class ProtonOC(Model):
@@ -45,7 +46,7 @@ class ProtonOC(Model):
     Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu
     """
 
-    def __init__(self, seed: int = os.urandom(3)[0]) -> None:
+    def __init__(self, seed: int = os.urandom(10)[0], collect: bool = True) -> None:
         super().__init__(seed=seed)
         self.seed: int = seed
         self.rng: np.random.default_rng = default_rng(seed)
@@ -58,6 +59,17 @@ class ProtonOC(Model):
         self.employers: List[Employer] = list()
         self.datacollector: Union[DataCollector, None] = None
         self.meta_graph: nx.Graph = nx.Graph()
+        self.ticks_per_year: int = 12
+        self.tick: int = 1  # current tick
+        self.collect = collect
+
+        # Scheduler
+        self.schedule: BaseScheduler = BaseScheduler(self)
+
+        #Stanpshot state
+        self.snapshot_tick: Union[int, None] = None
+        self.snapshot_keys: Union[List[str], None] = None
+        self.snapshot_path: Union[str, None] = None
 
         # Intervention
         self.family_intervention: Union[str, None] = None
@@ -74,7 +86,6 @@ class ProtonOC(Model):
         self.number_born: int = 0
         self.number_migrants: int = 0
         self.number_weddings: int = 0
-        self.number_weddings_mean: float = 100
         self.number_weddings_sd: float = 0
         self.number_law_interventions_this_tick: int = 0
         self.correction_for_non_facilitators: float = 0
@@ -88,40 +99,36 @@ class ProtonOC(Model):
         self.families: List = list()
         self.hh_size: List = list()
         self.arrest_rate: Union[int, float] = 0
+        self.city: Union[str, None] = None
 
-        #Scheduler
-        self.schedule: RandomActivation = RandomActivation(self)
-
-        # from graphical interface
-        self.migration_on: bool = False
-        self.initial_agents: int = 100
+        # from graphical interface (free params)
+        self.migration_on: bool = True # True / False
+        self.initial_agents: int = 1000  # 500 -> n
+        self.num_ticks: int = 480   # tick limit
         self.intervention: str = "baseline"
-        self.max_accomplice_radius: int = 2
-        self.number_arrests_per_year: int = 30
-        self.ticks_per_year: int = 12
-        self.number_crimes_yearly_per10k: int = 2000
-        self.tick: int = 0
-        self.num_ticks: int = 480 # tick limit
-        self.ticks_between_intervention: int = 1
-        self.intervention_start: int = 13
-        self.intervention_end: int = 999
-        self.num_oc_persons: int = 30
-        self.num_oc_families: int = 8
-        self.education_modifier: float = 1.0  # education-rate in Netlogo model
-        self.retirement_age: int = 65
-        self.unemployment_multiplier: Union[str, int] = "base"
-        self.nat_propensity_m: float = 1.0
-        self.nat_propensity_sigma: float = 0.25
-        self.nat_propensity_threshold: float = 1.0
-        self.facilitator_repression: bool = False
-        self.facilitator_repression_multiplier: float = 2.0
-        self.likelihood_of_facilitators: float = 0.005
-        self.targets_addressed_percent: float = 10
-        self.threshold_use_facilitators: float = 4
-        self.oc_embeddedness_radius: int = 2
-        self.oc_boss_repression: bool = False
-        self.punishment_length: int = 1
-        self.constant_population: bool = False
+        self.max_accomplice_radius: int = 2  # 2 -> 4
+        self.number_arrests_per_year: int = 30  # 0 -> 100
+        self.number_crimes_yearly_per10k: int = 2000  # 0 -> 3000
+        self.ticks_between_intervention: int = 12  # 1 -> 24
+        self.intervention_start: int = 13  # 1 -> 100
+        self.intervention_end: int = 999  # n
+        self.num_oc_persons: int = 30  # 2 -> 200
+        self.num_oc_families: int = 8  # 1 -> 50
+        self.education_modifier: float = 1.0  # education-rate in Netlogo model 0.1 -> 2.0
+        self.retirement_age: int = 65  # 50 -> 80
+        self.unemployment_multiplier: Union[str, int] = "base"  # 0.2 -> 2.0
+        self.nat_propensity_m: float = 1.0  # 0.1 -> 10
+        self.nat_propensity_sigma: float = 0.25  # 0.1 -> 10.0
+        self.nat_propensity_threshold: float = 1.0  # 0.1 -> 2.0
+        self.facilitator_repression: bool = False  # True/False
+        self.facilitator_repression_multiplier: float = 2.0  # 1 -> 5
+        self.likelihood_of_facilitators: float = 0.005  # 0.001 -> 0.010
+        self.targets_addressed_percent: float = 10  # 1 -> 100
+        self.threshold_use_facilitators: float = 4  # 1 -> 10
+        self.oc_embeddedness_radius: int = 2  # 1 -> 4
+        self.oc_boss_repression: bool = False  # True/False
+        self.punishment_length: int = 1  # 0.5 -> 2
+        self.constant_population: bool = False  # True/False->
 
         # Folders definition
         self.mesa_dir: str = os.getcwd()
@@ -305,9 +312,12 @@ class ProtonOC(Model):
                 if agent.sentence_countdown == 0:
                     agent.prisoner = False
         self.make_people_die()
-        self.datacollector.collect(self)
         self.schedule.step()
+        if self.collect:
+            self.datacollector.collect(self)
         self.tick += 1
+        if self.snapshot_tick is not None and self.snapshot_tick == self.tick:
+            self.take_snapshot()
 
     def run(self,
             n_agents: Union[int, None] = None,
@@ -323,15 +333,16 @@ class ProtonOC(Model):
         """
         if n_agents is None:
             n_agents = self.initial_agents
-        if num_ticks is None:
-            num_ticks = self.num_ticks
+        if num_ticks is not None:
+            self.num_ticks = num_ticks
+        self.snapshot_tick = self.num_ticks if self.snapshot_tick is not None else None
         self.verbose = verbose
         self.setup(n_agents=n_agents)
-        pbar = tqdm(np.arange(0, num_ticks)) if verbose else range(0, num_ticks)
-        for tick in pbar:
+        pbar = tqdm(np.arange(1, self.num_ticks+1)) if verbose else range(1, self.num_ticks+1)
+        for _tick in pbar:
             self.step()
             if verbose:
-                pbar.set_description("tick: %s" % tick)
+                pbar.set_description("tick: %s" % _tick)
 
     def fix_unemployment(self, correction: Union[float, int, str]) -> None:
         """
@@ -725,24 +736,6 @@ class ProtonOC(Model):
         """
         for agent in self.schedule.agents:
             agent.cached_oc_embeddedness = None
-
-    def list_contains_problems(self, ego: Person, candidates:List[Person]) -> Union[bool, None]:
-        """
-        This procedure checks if there are any links between partners within the candidate pool.
-        Returns True if there are, None if there are not. It is used during ProtonOc.setup_siblings
-        procedure to avoid incestuous marriages.
-        :param ego: Person, the agent
-        :param candidates: Union[List[Person], Set[Person]], the candidates
-        :return: Union[bool, None], True if there are links between partners, None otherwise.
-        """
-        all_potential_siblings = [ego] + ego.get_neighbor_list("sibling") + candidates + [sibling for candidate in
-                                                                                          candidates for sibling in
-                                                                                          candidate.neighbors.get(
-                                                                                              'sibling')]
-        for sibling in all_potential_siblings:
-            if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[
-                0] in all_potential_siblings:
-                return True
    
     def setup_persons_and_friendship(self) -> None:
         """
@@ -750,7 +743,7 @@ class ProtonOC(Model):
         watts strogatz net.
         :return: None
         """
-        watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1)
+        watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1, seed=self.random)
         for node in watts_strogatz.nodes():
             new_agent = Person(self)
             new_agent.init_person()
@@ -785,7 +778,7 @@ class ProtonOC(Model):
             # remove couples from candidates and their neighborhoods (siblings)
             if len(candidates) >= 50:
                 candidates = self.rng.choice(candidates, 50, replace=False).tolist()
-            while len(candidates) > 0 and self.list_contains_problems(agent, candidates):
+            while len(candidates) > 0 and extra.list_contains_problems(agent, candidates):
                 # trouble should exist, or check-all-siblings would fail
                 potential_trouble = [x for x in candidates if agent.get_neighbor_list("partner")]
                 trouble = self.rng.choice(potential_trouble)
@@ -1031,7 +1024,7 @@ class ProtonOC(Model):
     def setup(self, n_agents: Union[int, None] = None) -> None:
         """
         Standard setup of the model
-        :param n_agent: int, number of initial agents
+        :param n_agents: int, number of initial agents
         """
         self.choose_intervention_setting()
         start = time.time()
@@ -1059,14 +1052,16 @@ class ProtonOC(Model):
         self.calculate_arrest_rate()
         self.setup_oc_groups()
         self.setup_facilitators()
-        self.init_collector()
-        self.datacollector.collect(self)
+        if self.collect:
+            self.init_collector()
         for agent in self.schedule.agent_buffer(shuffled=True):
             agent.hobby = self.rng.integers(low=1, high=5, endpoint=True)
         self.calc_correction_for_non_facilitators()
         for agent in self.schedule.agents:
             if not agent.gender_is_male and agent.get_neighbor_list("offspring"):
                 agent.number_of_children = len(agent.get_neighbor_list("offspring"))
+        if self.collect:
+            self.datacollector.collect(self)
         elapsed_time = time.time() - start
         hours = elapsed_time // 3600
         temp = elapsed_time - 3600 * hours
@@ -1179,7 +1174,7 @@ class ProtonOC(Model):
             n_of_crimes = line[1][1] * len(people_in_cell)
             total_crime += n_of_crimes
         self.crime_multiplier = \
-            self.number_crimes_yearly_per10k / 10000 * self.initial_agents / total_crime
+            self.number_crimes_yearly_per10k / 10000 * len(self.schedule.agents) / total_crime
 
 
     def calculate_criminal_tendency(self) -> None:
@@ -1416,7 +1411,7 @@ class ProtonOC(Model):
             # calculate the difference between deaths and birth
             to_replace = self.initial_agents - len(self.schedule.agents) \
                 if self.initial_agents - len(self.schedule.agents) > 0 else 0
-            free_jobs = [job for job in self.jobs if job.my_worker == None]
+            free_jobs = [job for job in self.jobs if job.my_worker is None]
             n_to_add = np.min([to_replace, len(free_jobs)])
             self.number_migrants += n_to_add
             for job in self.rng.choice(free_jobs, n_to_add, replace=False):
@@ -1524,7 +1519,7 @@ class ProtonOC(Model):
         :param agents: Set[Person], the agentset
         :return: None
         """
-        self.meta_graph = nx.Graph()
+        self.meta_graph = nx.Graph(seed=self.random)
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
             for in_radius_agent in agent.agents_in_radius(
@@ -1627,6 +1622,15 @@ class ProtonOC(Model):
             agent_data.to_pickle(os.path.join(new_dir, "agents" + ".pickle"))
             model_data.to_pickle(os.path.join(new_dir, "model" + ".pickle"))
 
+    def override(self, source_file: Union[str, None] = None) -> None:
+        if source_file is None:
+            pass
+        else:
+            if os.path.splitext(source_file)[1] == ".xml":
+                self.override_xml(source_file)
+            elif os.path.splitext(source_file)[1] == ".json":
+                self.override_json(source_file)
+
     def override_xml(self, xml_file: Union[str, None]) -> None:
         """
         This function override model parameters based on xml file.
@@ -1639,7 +1643,8 @@ class ProtonOC(Model):
             map_attr = {"education_rate": "education_modifier",
                         "data_folder": "city",
                         "[num_oc_persons]": "num_oc_persons",
-                        "num_persons": "initial_agents"}
+                        "num_persons": "initial_agents",
+                        "percentage_of_facilitators": "likelihood_of_facilitators"}
             mydoc = minidom.parse(xml_file)
             parameters = mydoc.getElementsByTagName('enumeratedValueSet')
             ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
@@ -1651,10 +1656,71 @@ class ProtonOC(Model):
                 if attribute in map_attr:
                     attribute = map_attr[attribute]
                 value = par.getElementsByTagName("value")[0].attributes["value"].value
+                if attribute not in self.__dict__:
+                    raise Exception("{} is not a model attribute".format(attribute))
                 setattr(self, attribute, extra.standardize_value(value))
+
+    def override_json(self, json_file_path: str) -> None:
+        """
+        This function override model parameters based on json file.
+        :param json_file_path: str, json path
+        :return: None
+        """
+        if json_file_path is None:
+            pass
+        else:
+            with open(json_file_path) as json_file:
+                data = json.load(json_file)
+                for key, value in data.items():
+                    if key not in self.__dict__:
+                        raise Exception("{} is not a model attribute".format(key))
+                    else:
+                        setattr(self, key, value)
+
+    def init_snapshot_state(self, *args: str, name: Union[str, int, float], path: str,
+                            tick: Union[int, None] = None, ) -> None:
+        """
+        This method sets the snapshot generation options. The tick parameter defines at which
+        tick the state will be saved, path and name define the path and name of the json file that
+        will be generated. All previous positional arguments must be additional attributes of
+        the model.
+        This method does not interfere with the collect parameter in the model's __init__;
+        moreover it can be used in combination with override_xml and of course
+        with override_json.
+        :param args: str, additional attributes of the model to be saved
+        :param name: str, the json filename
+        :param path: str, the path where the json file should be saved
+        :param tick: int, which tick the model state should be saved
+        :return: None
+        """
+        self.snapshot_tick = self.num_ticks if tick is None else tick
+        self.snapshot_keys = {"number_deceased", "facilitator_fails", "facilitator_crimes",
+                              "crime_size_fails", "number_born", "number_migrants",
+                              "number_law_interventions_this_tick",
+                              "number_protected_recruited_this_tick", "people_jailed",
+                              "number_offspring_recruited_this_tick", "number_crimes",
+                              "big_crime_from_small_fish", "tick"}.union(set(args)) #num_oc # num_of_family
+        for key in self.snapshot_keys:
+            if key not in self.__dict__.keys():
+                raise Exception("{} is not a model attribute".format(key))
+        self.snapshot_path = os.path.join(path, str(name) + ".json")
+
+    def take_snapshot(self) -> None:
+        """
+        This method generates a json file in self.snapshot_path.
+        The json file is composed of the keys in self.snapshot_keys with the respective
+        value of the model at tick = self.snapshot_tick.
+        :return: None
+        """
+        dict_json = dict()
+        for key, value in self.__dict__.items():
+            if key in self.snapshot_keys:
+                dict_json[key] = value if type(value) != np.int32 else float(value)
+        with open(self.snapshot_path, 'w') as nf:
+            json.dump(dict_json, nf)
 
 
 if __name__ == "__main__":
-    model = ProtonOC()
+    model = ProtonOC(collect=False)
     model.intervention = "baseline"
-    model.run(1000, verbose=True)
+    model.run(verbose=True)
