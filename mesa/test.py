@@ -381,6 +381,7 @@ def test_oc_job():
     :return: None
     """
     model = ProtonOC()
+    model.migration_on = False
     model.setup(1000)
     for i in range(36):
         model.step()
@@ -402,6 +403,7 @@ def test_oc_retirement():
     :return: None
     """
     model = ProtonOC()
+    model.migration_on = False
     model.retirement_age = 65
     model.setup(100)
     assert len([agent for agent in model.schedule.agents
