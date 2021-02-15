@@ -130,6 +130,10 @@ class ProtonOC(Model):
         self.punishment_length: int = 1  # 0.5 -> 2
         self.constant_population: bool = False  # True/False->
 
+        #Fast reporter (calculated at each tick)
+        self.current_oc_members: int = 0
+        self.current_num_persons: int = 0
+
         # Folders definition
         self.mesa_dir: str = os.getcwd()
         self.cwd: str = os.path.dirname(self.mesa_dir)
@@ -221,7 +225,8 @@ class ProtonOC(Model):
                                 'facilitator_repression_multiplier', 'percentage_of_facilitators',
                                 'targets_addressed_percent', 'threshold_use_facilitators',
                                 'oc_embeddedness_radius', 'oc_boss_repression', 'punishment_length',
-                                'constant_population', "number_crimes_yearly_per10k"]
+                                'constant_population', "number_crimes_yearly_per10k",
+                                "current_oc_members", "current_num_persons"]
 
         self.agent_reporters = ['unique_id', 'gender_is_male', 'prisoner', 'age',
                                 'sentence_countdown',
@@ -317,6 +322,7 @@ class ProtonOC(Model):
             self.datacollector.collect(self)
         self.tick += 1
         if self.snapshot_tick is not None and self.snapshot_tick == self.tick:
+            self.calculate_fast_reporters()
             self.take_snapshot()
 
     def run(self,
@@ -667,9 +673,10 @@ class ProtonOC(Model):
         for agent in self.schedule.agents:
             friends = agent.neighbors.get('friendship')
             if len(friends) > agent.dunbar_number():
-                for friend in self.rng.choice(friends,
-                                              len(friends) - agent.dunbar_number(),
-                                              replace=False):
+                to_remove = self.rng.choice(list(friends),
+                                            int(len(friends) - agent.dunbar_number()),
+                                            replace=False)
+                for friend in to_remove:
                     friend.remove_friendship(agent)
 
 
@@ -682,9 +689,11 @@ class ProtonOC(Model):
         for agent in self.schedule.agents:
             friends = agent.get_neighbor_list('professional')
             if len(friends) > 30:
-                for friend in self.rng.choice(friends, int(len(friends) - 30), replace=False):
+                to_remove = self.rng.choice(list(friends),
+                                            int(len(friends) - 30),
+                                            replace=False)
+                for friend in to_remove:
                     friend.remove_professional(agent)
-
 
     def setup_oc_groups(self) -> None:
         """
@@ -1637,28 +1646,25 @@ class ProtonOC(Model):
         :param xml_file: str, xml path
         :return: None
         """
-        if xml_file is None:
-            pass
-        else:
-            map_attr = {"education_rate": "education_modifier",
-                        "data_folder": "city",
-                        "[num_oc_persons]": "num_oc_persons",
-                        "num_persons": "initial_agents",
-                        "percentage_of_facilitators": "likelihood_of_facilitators"}
-            mydoc = minidom.parse(xml_file)
-            parameters = mydoc.getElementsByTagName('enumeratedValueSet')
-            ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
-            setattr(self, "num_ticks", extra.standardize_value(ticks))
-            for par in parameters:
-                attribute = par.attributes['variable'].value.replace("-", "_").replace("?", "").lower()
-                if attribute == "output" or attribute == "oc_members_scrutinize":
-                    continue
-                if attribute in map_attr:
-                    attribute = map_attr[attribute]
-                value = par.getElementsByTagName("value")[0].attributes["value"].value
-                if attribute not in self.__dict__:
-                    raise Exception("{} is not a model attribute".format(attribute))
-                setattr(self, attribute, extra.standardize_value(value))
+        map_attr = {"education_rate": "education_modifier",
+                    "data_folder": "city",
+                    "[num_oc_persons]": "num_oc_persons",
+                    "num_persons": "initial_agents",
+                    "percentage_of_facilitators": "likelihood_of_facilitators"}
+        mydoc = minidom.parse(xml_file)
+        parameters = mydoc.getElementsByTagName('enumeratedValueSet')
+        ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
+        setattr(self, "num_ticks", extra.standardize_value(ticks))
+        for par in parameters:
+            attribute = par.attributes['variable'].value.replace("-", "_").replace("?", "").lower()
+            if attribute == "output" or attribute == "oc_members_scrutinize":
+                continue
+            if attribute in map_attr:
+                attribute = map_attr[attribute]
+            value = par.getElementsByTagName("value")[0].attributes["value"].value
+            if attribute not in self.__dict__:
+                raise Exception("{} is not a model attribute".format(attribute))
+            setattr(self, attribute, extra.standardize_value(value))
 
     def override_json(self, json_file_path: str) -> None:
         """
@@ -1666,16 +1672,13 @@ class ProtonOC(Model):
         :param json_file_path: str, json path
         :return: None
         """
-        if json_file_path is None:
-            pass
-        else:
-            with open(json_file_path) as json_file:
-                data = json.load(json_file)
-                for key, value in data.items():
-                    if key not in self.__dict__:
-                        raise Exception("{} is not a model attribute".format(key))
-                    else:
-                        setattr(self, key, value)
+        with open(json_file_path) as json_file:
+            data = json.load(json_file)
+            for key, value in data.items():
+                if key not in self.__dict__ and key != "repetitions":
+                    raise Exception("{} is not a model attribute".format(key))
+                else:
+                    setattr(self, key, value)
 
     def init_snapshot_state(self, *args: str, name: Union[str, int, float], path: str,
                             tick: Union[int, None] = None, ) -> None:
@@ -1699,7 +1702,11 @@ class ProtonOC(Model):
                               "number_law_interventions_this_tick",
                               "number_protected_recruited_this_tick", "people_jailed",
                               "number_offspring_recruited_this_tick", "number_crimes",
-                              "big_crime_from_small_fish", "tick"}.union(set(args)) #num_oc # num_of_family
+                              "big_crime_from_small_fish", "tick", "current_oc_members",
+                              "current_num_persons", "number_weddings",
+                              "kids_intervention_counter",
+                              }.union(set(args)) #num_oc #
+        # num_of_family
         for key in self.snapshot_keys:
             if key not in self.__dict__.keys():
                 raise Exception("{} is not a model attribute".format(key))
@@ -1713,14 +1720,28 @@ class ProtonOC(Model):
         :return: None
         """
         dict_json = dict()
+        dict_json["input"] = dict()
+        dict_json["output"] = dict()
         for key, value in self.__dict__.items():
             if key in self.snapshot_keys:
-                dict_json[key] = value if type(value) != np.int32 else float(value)
+                dict_json["output"][key] = value if type(value) != np.int32 else float(value)
+            elif key in extra.free_parameters:
+                dict_json["input"][key] = value if type(value) != np.int32 else float(value)
         with open(self.snapshot_path, 'w') as nf:
             json.dump(dict_json, nf)
+
+    def calculate_fast_reporters(self) -> None:
+        """
+        This method calculates indicators at each step.Indicators do not interfere with the
+        state of the model.
+        :return: None
+        """
+        self.current_oc_members = len([agent for agent in self.schedule.agents if agent.oc_member])
+        self.current_num_persons = len(self.schedule.agents)
 
 
 if __name__ == "__main__":
     model = ProtonOC(collect=False)
     model.intervention = "baseline"
     model.run(verbose=True)
+        
