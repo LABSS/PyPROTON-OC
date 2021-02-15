@@ -317,6 +317,22 @@ def list_contains_problems(ego: Person, candidates:List[Person]) -> Union[bool, 
             0] in all_potential_siblings:
             return True
 
+free_parameters = ["migration_on", "initial_agents", "num_ticks", "intervention",
+                   "max_accomplice_radius", "number_arrests_per_year",
+                   "number_crimes_yearly_per10k", "ticks_between_intervention",
+                   "intervention_start", "intervention_end","num_oc_persons",
+                   "num_oc_families", "education_modifier", "retirement_age",
+                   "unemployment_multiplier", "nat_propensity_m",
+                   "nat_propensity_sigma", "nat_propensity_threshold",
+                   "facilitator_repression", "facilitator_repression_multiplier",
+                   "likelihood_of_facilitators", "targets_addressed_percent",
+                   "threshold_use_facilitators", "oc_embeddedness_radius",
+                   "oc_boss_repression", "punishment_length", "constant_population"]
+
+interventions_type = ["facilitators-strong", "facilitators", "students-strong", "students",
+                      "disruptive-strong", "disruptive", "preventive-strong", "preventive",
+                      "baseline"]
+
 #Numba functions
 @numba.jit(nopython=True)
 def _age(tick: int, birth_tick: int) -> int:
