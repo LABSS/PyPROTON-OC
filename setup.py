@@ -7,12 +7,14 @@ extras_require = {
     "docs": ["sphinx", "ipython"],
 }
 
+description = " Simulation of recruitment to terrorism. Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu"
+
 setup(
-   name='PyProton-OC',
+   name='pyproton-oc',
    version='0.0.1',
-   description='A useful module',
+   description=description,
    author='LABSS(Francesco Mattioli, Mario Paolucci)',
-   author_email='foomail@foo.com',
+   author_email='francesco@nientepanico.org',
    package_dir={'proton': 'proton'},
    package_data={
       "proton": [
@@ -23,6 +25,6 @@ setup(
    packages=find_packages(),
    include_package_data=True,
    entry_points ={
-      'console_scripts': ['proton-oc=proton.main:mode'] },  #same as name
-   install_requires=requires, #external packages as dependencies
+      'console_scripts': ['proton-oc=proton.main:mode'] },
+   install_requires=requires,
 )
