@@ -1,0 +1,84 @@
+# the one-line uber-set
+set output? false set welfare-support "none" set intervention-start 13 set social-support "none" set intervention-end 36 set nat-propensity-threshold 1 set oc-embeddedness-radius 2 set data-folder "inputs/palermo/data/" set criminal-rate 1 set threshold-use-facilitators 4 set ticks-per-year 12 set percentage-of-facilitators 0.005 set nat-propensity-sigma 0.25 set targets-addressed-percent 10 set probability-of-getting-caught 0.05 set num-oc-families 8 set num-persons 550 set nat-propensity-m 1 set OC-members-scrutinize? false set family-intervention "none" set max-accomplice-radius 2 set ticks-between-intervention 1 set retirement-age 65 set num-oc-persons 20 set intervention "use current values" set punishment-length 1.0 set law-enforcement-rate 1.0 set education-rate 1.0 set employment-rate 1.0 set criminal-rate 1.0 set OC-boss-repression? false set number-crimes-yearly-per10k 2000
+
+# good queries for OC
+; finding workers
+
+# life and fate
+
+# flux: all new people born
+count all-persons with [ birth-tick >= 0 ]
+show [ age ] of persons with [ not migrant? and birth-tick >= 0 ]
+## jobs for newborns
+turtle-set [ job-neighbors ] of persons with [ not migrant? and birth-tick > 0 ]
+
+# networks
+(do not use on large number of links. With 300K, it crashes Netlogo. Go figure why.)
+map [ a -> list a count links with  [ breed = a ] ] remove-duplicates [ breed ]of links
+map [ a -> list a (count links with  [ breed = a ] / count all-persons) ] remove-duplicates [ breed ] of links
+
+# employment
+map [ a -> list a count jobs with  [ job-level = a ] ] remove-duplicates [ job-level ] of jobs
+map [ a -> list a count persons with  [ job-level = a ] ] remove-duplicates [ job-level ] of persons
+## unemployed
+count persons with  [ job-level = 1 ]
+persons with [ job-level = 1 and any? my-job-links ]
+count persons with [ age >=18 and age <= 65 and not any? my-job-links and job-level > 1 ]
+## fillable jobs
+jobs with [ not any? my-job-links and  any? persons with [ age >= 18 and age <= 65 and not any? my-job-links and job-level = [ job-level ] of myself  and not any? my-school-attendance-links ] ]
+
+# employment rate
+count all-persons with [ any? job-links ] / count all-persons
+
+# small criminals
+persons with [age <= 18 and age >= 12 and any? family-link-neighbors with [ oc-member? ] ]
+# a woman in the family
+persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
+#their jobs and job level
+[ (list job-level count my-job-links job-level)] of persons with [not male? and any? family-link-neighbors with [ oc-member? ] ]
+#unemployed women in the family
+persons with [not male? and any? family-link-neighbors with [ oc-member? ] and not any? my-job-links]
+
+
+#families with different wealth levels inside
+all? persons [all? family-link-neighbors [ wealth-level = [ wealth-level ] of myself ] ]
+persons with [any? other family-link-neighbors with [ wealth-level != [ wealth-level ] of myself ] ]
+[ (list age male? oc-member? wealth-level)] of [family-link-neighbors] of person 452
+
+# are schools teaching the right people?
+schools with [ any? school-attendance-link-neighbors with [ education-level != [ education-level ] of myself + 1 ] ]
+# all people should be in appropriate schools
+
+; people in the wrong level of school. Does not work because at the change of year, some people has different distances. The one in the test works.
+all-persons with [ any? school-attendance-link-neighbors and [ education-level ] of one-of school-attendance-link-neighbors != possible-school-level ]
+; works
+    ws.rpt("""all? persons [ 
+      not any? school-attendance-link-neighbors or 
+      education-level = (possible-school-level - 1) or 
+      (birth-tick mod ticks-per-year = 0 and
+        (age > 25 or 
+        education-level = (possible-school-level - 2))) 
+    ]""") shouldBe true
+; report
+    ws.show("[ (list who age education-level possible-school-level [ education-level ] of one-of school-attendance-link-neighbors [ who ] of one-of school-attendance-link-neighbors [ breed = schools ] of one-of school-attendance-link-neighbors) ] of persons with [ any? school-attendance-link-neighbors and education-level != (possible-school-level - 1) ]")
+
+
+; schools that have students who don't know of being one
+schools with [ any? persons with [ member? self [my-students] of myself and my-school != myself ] ]
+; people in school that don't list them
+people with [ my-school = nobody and any? schools with [ member? myself my-students ] ]
+all? all-persons [ my-school = nobody or member? self [ my-students ] of my-school ]
+; counting problems
+all? all-persons with [ my-school != nobody ] [ count schools with [ member? myself my-students ] = 1 ]
+
+# how to plot times
+
+filter them with 
+
+grep -A 1 Time netlogo.log |grep -o -E '[0-9.]+'
+
+then
+
+library(clipr)
+x <- read_clip()
+plot(x)

@@ -1,16 +1,10 @@
-sudo: false
-cache:
-  directories:
-    - $HOME/.ivy2/cache
-    - $HOME/.sbt
-before_cache:
-  # Cleanup the cached directories to avoid unnecessary cache updates
-  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
-  - find $HOME/.sbt        -name "*.lock"               -print -delete
-before_install:
- - cd proton-oc-tests
-language: scala
-scala:
-   - 2.12.4
-jdk:
-  - openjdk8
+language: python
+python:
+  - "3.8"
+# command to install dependencies
+install:
+  - pip install -r requirements.txt
+# command to run tests
+script:
+  - cd test
+  - pytest -s test.py
