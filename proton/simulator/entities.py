@@ -271,7 +271,8 @@ class Person(Agent):
         :param level: int, level of education to enroll
         """
         potential_school = list()
-        for school in [agent.my_school for agent in self.neighbors.get("household") if agent.my_school]:
+        for school in [agent.my_school for agent in self.neighbors.get("household") if
+                       agent.my_school]:
             if school.diploma_level == level:
                 potential_school.append(school)
         if potential_school:
@@ -694,7 +695,7 @@ class School:
     def __init__(self, model: ProtonOC, diploma_level: int):
         self.model: ProtonOC = model
         self.diploma_level: int = diploma_level
-        self.my_students: List[Person] = list()
+        self.my_students: Set[Person] = set()
         self.unique_id: int = model.max_ids["school"]
         model.max_ids["school"] += 1
 
