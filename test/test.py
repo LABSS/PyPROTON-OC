@@ -2,14 +2,9 @@ from proton.simulator.model import ProtonOC
 from proton.simulator.entities import Person
 import numpy as np
 from proton.simulator import extra
-
-
-def test_random():
-    """
-    Tests the random generation of numbers through the two modules (numpy random and random) with a single seed.
-    """
-    model = ProtonOC(seed=42)
-    assert model.check_random == [0.7739560485559633, 0.6394267984578837]
+import os
+import sys
+import pytest
 
 
 def test_generate_households():
@@ -41,7 +36,7 @@ def test_generate_households():
     single = len([x for x in model.hh_size if x == 1])
     assert counter_couple+counter_single_parent+single == len(model.hh_size)
     #2
-    test_family = model.rng.choice(model.families)
+    test_family = model.random.choice(model.families)
     for member in test_family:
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
@@ -161,9 +156,9 @@ def test_oc_embeddedness():
         for i in range(11):
             agent = Person(model)
             pool.append(agent)
-        father = model.rng.choice(pool)
+        father = model.random.choice(pool)
         pool.remove(father)
-        for agent in list(model.rng.choice(pool, size=5, replace=False)):
+        for agent in list(model.random.choice(pool, size=5, replace=False)):
             agent.oc_member = True
         father.make_parent_offsprings_link(pool)
         assert father.oc_embeddedness() == 0.5
@@ -297,7 +292,7 @@ def test_oc_intervention():
             new_agent.father = kingpin
             the_family.append(new_agent)
             model.schedule.add(new_agent)
-            age = model.rng.choice(np.arange(agelist.size))
+            age = model.random.choice(np.arange(agelist.size))
             new_agent.birth_tick = -1 * agelist[age] * model.ticks_per_year
             new_agent.calculate_age()
             agelist = np.delete(agelist, age)
@@ -313,7 +308,7 @@ def test_oc_intervention():
 
         assert np.sum([len(agent.neighbors.get("friendship")) for agent in the_family]) >= 40
         assert len(extra.weighted_one_of(model.schedule.agents, lambda x: x.age == 16 and x.propensity == 0,
-                                         model.rng).neighbors.get("sibling")) == 11
+                                         model.random).neighbors.get("sibling")) == 11
         assert len([agent for agent in baby[0].neighbors.get("sibling") if agent.my_job is not None]) == 8
         assert np.sum([agent.max_education_level for agent in the_family]) == 8
 
@@ -470,3 +465,4 @@ def test_school():
     for i in range(36):
         for agent in model.schedule.agents:
             assertions(model, agent)
+

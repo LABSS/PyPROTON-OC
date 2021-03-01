@@ -4,15 +4,14 @@ import typing
 if typing.TYPE_CHECKING:
     from .model import ProtonOC
 from mesa import Agent
-import numpy as np
 import networkx as nx
 from itertools import chain
-from . import extra
+from proton.simulator import extra
+import numpy as np
 
 
 class Person(Agent):
 
-    max_id: int = 0
     network_names: List[str] = [
         'sibling',
         'offspring',
@@ -25,13 +24,13 @@ class Person(Agent):
         'school']
 
     def __init__(self, model: ProtonOC):
-        self.unique_id: int = Person.max_id
-        Person.max_id += 1
+        self.unique_id: int = model.max_ids["person"]
+        model.max_ids["person"] += 1
         super().__init__(self.unique_id, model=model)
         self.model = model
         # networks
         self.neighbors: Dict = self.networks_init()  #todo: this could be a Subclassed-dict
-        self.gender_is_male: bool = self.model.rng.choice([True, False])  # True male False female
+        self.gender_is_male: bool = self.model.random.choice([True, False])  # True male False female
         self.prisoner: bool = False
         self.age: Union[int, float] = 0
         self.sentence_countdown: Union[int, float] = 0
@@ -51,7 +50,7 @@ class Person(Agent):
         self.retired: bool = False
         self.number_of_children: Union[int, float] = 0
         self.facilitator: bool = False
-        self.hobby: int = self.model.rng.integers(low=1, high=5, endpoint=True)
+        self.hobby: int = self.model.random.integers(low=1, high=5, endpoint=True)
         self.new_recruit: int = -2
         self.migrant: bool = False
         self.criminal_tendency: float = 0
@@ -243,16 +242,16 @@ class Person(Agent):
         :return: None
         """
         row = extra.weighted_one_of(self.model.age_gender_dist, lambda x: x[-1],
-                                    self.model.rng)  # select a row from our age_gender distribution
+                                    self.model.random)  # select a row from our age_gender distribution
         self.birth_tick = 0 - row[0] * self.model.ticks_per_year  # ...and set age... =
         self.calculate_age()
         self.gender_is_male = bool(row[1])  # ...and gender according to values in that row.
         self.retired = self.age >= self.model.retirement_age  # persons older than retirement_age are retired
         # education level is chosen, job and wealth follow in a conditioned sequence
-        self.max_education_level = extra.pick_from_pair_list(self.model.edu[self.gender_is_male], self.model.rng)
+        self.max_education_level = extra.pick_from_pair_list(self.model.edu[self.gender_is_male], self.model.random)
         # apply model-wide education modifier
         if self.model.education_modifier != 1.0:
-            if self.model.rng.random() < abs(self.model.education_modifier - 1):
+            if self.model.random.random() < abs(self.model.education_modifier - 1):
                 self.max_education_level = self.max_education_level + (1 if (self.model.education_modifier > 1) else -1)
                 self.max_education_level = len(self.model.edu[True]) if self.max_education_level > len(
                     self.model.edu[True]) else 1 if self.max_education_level < 1 else self.max_education_level
@@ -276,10 +275,10 @@ class Person(Agent):
             if school.diploma_level == level:
                 potential_school.append(school)
         if potential_school:
-            self.my_school = self.model.rng.choice(potential_school)
+            self.my_school = self.model.random.choice(potential_school)
         else:
             potential_school = [x for x in self.model.schools if x.diploma_level == level]
-            self.my_school = self.model.rng.choice(potential_school)
+            self.my_school = self.model.random.choice(potential_school)
         self.my_school.my_students.add(self)
 
     def get_neighbor_list(self, net_name: str) -> Union[List[Person], List]:
@@ -305,7 +304,7 @@ class Person(Agent):
         if not jobs_pool:
             jobs_pool = [j for j in self.model.jobs if j.my_worker is None and j.job_level < self.job_level]
         if jobs_pool:
-            the_job = self.model.rng.choice(jobs_pool)
+            the_job = self.model.random.choice(jobs_pool)
             self.my_job = the_job
             the_job.my_worker = self
 
@@ -382,7 +381,7 @@ class Person(Agent):
         This function modifies the job_level attribute in-place according to table model.labour_status_by_age_and_sex
         :return: None
         """
-        self.job_level = 0 if self.model.rng.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][
+        self.job_level = 0 if self.model.random.random() < self.model.labour_status_by_age_and_sex[self.gender_is_male][
             self.age] else 1
 
     def find_accomplices(self, n_of_accomplices: int) -> List[Person]:
@@ -417,7 +416,7 @@ class Person(Agent):
                     [agent.agents_in_radius(self.model.max_accomplice_radius) for agent in accomplices])) if
                                           facilitator.facilitator]
                 if available_facilitators:
-                    accomplices.add(self.model.rng.choice(available_facilitators))
+                    accomplices.add(self.model.random.choice(available_facilitators))
             if len(accomplices) < n_of_accomplices:
                 self.model.crime_size_fails += 1
             accomplices.add(self)
@@ -436,9 +435,8 @@ class Person(Agent):
         :param agent: Person
         :return: float, the candidates weight
         """
-        return -1 * (extra.social_proximity(self,
-                                            agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
-            else (extra.social_proximity(self, agent) * self.criminal_tendency)
+        return -1 * (self.social_proximity(agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
+            else (self.social_proximity(agent) * self.criminal_tendency)
 
     def _agents_in_radius(self, context: List[str] =network_names) -> Set[Person]:
         """
@@ -539,9 +537,9 @@ class Person(Agent):
         self.model.people_jailed += 1
         self.prisoner = True
         if self.gender_is_male:
-            self.sentence_countdown = extra.pick_from_pair_list(self.model.male_punishment_length, self.model.rng)
+            self.sentence_countdown = extra.pick_from_pair_list(self.model.male_punishment_length, self.model.random)
         else:
-            self.sentence_countdown = extra.pick_from_pair_list(self.model.female_punishment_length, self.model.rng)
+            self.sentence_countdown = extra.pick_from_pair_list(self.model.female_punishment_length, self.model.random)
         self.sentence_countdown = self.sentence_countdown * self.model.punishment_length
         if self.my_job:
             self.my_job.my_worker = None
@@ -622,30 +620,51 @@ class Person(Agent):
             raise Exception(network_name + " is not a valid network name")
         return [agent.unique_id for agent in self.neighbors.get(network_name)]
 
+    def social_proximity(self, target: Person) -> int:
+        """
+        This function calculates the social proximity between self and another agent based on age,
+        gender, wealth level, education level and friendship
+        :param target: Person
+        :return: int, social proximity
+        """
+        #todo: add weight? we could create a global model attribute(a dict) with weights
+        total = 0
+        total += 0 if abs(target.age - self.age) > 18 else 1 - abs(target.age - self.age)/18
+        total += 1 if self.gender_is_male == target.gender_is_male else 0
+        total += 1 if self.wealth_level == target.wealth_level else 0
+        total += 1 if self.education_level == target.education_level else 0
+        total += 1 if self.neighbors.get("friendship").intersection(
+            target.neighbors.get("friendship")) else 0
+        return total
+
+    def n_links(self):
+        result = 0
+        for net in self.network_names:
+            result += len(self.neighbors.get(net))
+        return result
+
 
 class Job:
-    max_id = 0
 
     def __init__(self, model: ProtonOC):
         self.model: ProtonOC = model
         self.job_level: int = 0
         self.my_employer: Union[Employer, None] = None
         self.my_worker: Union[Person, None] = None
-        self.unique_id: int = Job.max_id
-        Job.max_id = Job.max_id + 1
+        self.unique_id: int = model.max_ids["job"]
+        model.max_ids["job"] += 1
 
     def __repr__(self):
         return "Job: " + str(self.unique_id) + " Level: " + str(self.job_level)
 
 
 class Employer:
-    max_id = 0
 
     def __init__(self, model: ProtonOC):
         self.my_jobs: List = list()
         self.model: ProtonOC = model
-        self.unique_id: int = Employer.max_id
-        Employer.max_id = Employer.max_id + 1
+        self.unique_id: int = model.max_ids["employer"]
+        model.max_ids["employer"] += 1
 
     def __repr__(self) -> str:
         return "Employer: " + str(self.unique_id)
@@ -671,18 +690,13 @@ class Employer:
 
 
 class School:
-    max_id = 0
 
     def __init__(self, model: ProtonOC, diploma_level: int):
         self.model: ProtonOC = model
         self.diploma_level: int = diploma_level
-        self.my_students: Set[Person] = set()
-        self.unique_id = School.max_id
-        School.max_id = School.max_id + 1
+        self.my_students: List[Person] = list()
+        self.unique_id: int = model.max_ids["school"]
+        model.max_ids["school"] += 1
 
     def __repr__(self):
         return "School: " + str(self.unique_id) + " Level: " + str(self.diploma_level)
-
-
-if __name__ == "__main__":
-    pass
