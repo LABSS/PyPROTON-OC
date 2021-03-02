@@ -466,3 +466,86 @@ def test_school():
         for agent in model.schedule.agents:
             assertions(model, agent)
 
+def test_determinism():
+    """
+    Check if two simulations with the same seed give the same results.
+    """
+    def check_differences(a_model, another_model):
+        """
+        Given 2 model instance (a_model and another_model), this function check for:
+        """
+        network_names = ['sibling', 'offspring', 'parent', 'partner', 'household', 'friendship',
+                         'criminal', 'professional', 'school']
+        # 1. education level for all agents
+        assert [agent.education_level for agent in a_model.schedule.agents] \
+               == [agent.education_level for agent in another_model.schedule.agents]
+        # 2. max_education level for all agents
+        assert [agent.max_education_level for agent in a_model.schedule.agents] \
+               == [agent.max_education_level for agent in another_model.schedule.agents]
+        # 3. Initial network adges
+        assert list(a_model.watts_strogatz.edges) == list(another_model.watts_strogatz.edges)
+        # 4. education_levels table
+        assert a_model.education_levels == another_model.education_levels
+        # 5. Age of all agents
+        assert [agent.age for agent in a_model.schedule.agents] == [agent.age for agent in
+                                                                 another_model.schedule.agents]
+        # 5. birth_tick of all agents
+        assert [agent.birth_tick for agent in a_model.schedule.agents] == [agent.birth_tick for agent in
+                                                                      another_model.schedule.agents]
+        # 6. wealth_level of all agents
+        assert [agent.wealth_level for agent in a_model.schedule.agents] == [agent.wealth_level for agent
+                                                                        in another_model.schedule.agents]
+        # 7. propensity of all agents
+        assert [agent.propensity for agent in a_model.schedule.agents] == [agent.propensity for agent in
+                                                                      another_model.schedule.agents]
+        # 8. hobby of all agents
+        assert [agent.hobby for agent in a_model.schedule.agents] == [agent.hobby for agent in
+                                                                   another_model.schedule.agents]
+        # 9. gender of all agents
+        assert [agent.gender_is_male for agent in a_model.schedule.agents] == [agent.gender_is_male for
+                                                                          agent
+                                                                          in
+                                                                          another_model.schedule.agents]
+        # 10. unique_id of all_agents
+        assert [school.unique_id for school in a_model.schools] == [school.unique_id for school in
+                                                                 another_model.schools]
+        # 11. diploma level of all agents
+        assert [school.diploma_level for school in a_model.schools] == [school.diploma_level for school
+                                                                     in
+                                                                     another_model.schools]
+        # 12. students of all schools
+        for school1, school in zip(another_model.schools, a_model.schools):
+            assert  set([agent.unique_id for agent in school1.my_students]) == set([agent.unique_id for
+                                                                               agent in
+                                                                               school.my_students])
+        # 13. all network of all agents
+        for net in network_names:
+            for agent, agent1 in zip(a_model.schedule.agents, another_model.schedule.agents):
+                if agent.neighbors.get(net) and agent1.neighbors.get(net):
+                    assert  set([agent.unique_id for agent in agent.neighbors.get(net)]) == set([
+                        agent.unique_id
+                        for agent in
+                        agent1.neighbors.get(net)])
+
+        # 14. syncronization of the default_rng instace
+        assert a_model.random.random() == another_model.random.random()
+
+    common_seed = int.from_bytes(os.urandom(4), sys.byteorder)
+    a_model = ProtonOC(seed=common_seed, collect=False)
+    a_model.intervention = "baseline"
+    a_model.setup(n_agents=1000)
+
+    another_model = ProtonOC(seed=common_seed, collect=False)
+    another_model.intervention = "baseline"
+    another_model.setup(n_agents=1000)
+
+    # check setup
+    check_differences(a_model, another_model)
+
+    for i in range(200):
+        a_model.step()
+        another_model.step()
+
+    #check step
+    check_differences(a_model, another_model)
+

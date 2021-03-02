@@ -64,6 +64,9 @@ class Person(Agent):
     def __repr__(self):
         return "Agent: " + str(self.unique_id)
 
+    def __hash__(self):
+        return self.unique_id
+
 
     def calculate_age(self) -> None:
         """

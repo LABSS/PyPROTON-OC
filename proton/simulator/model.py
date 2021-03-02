@@ -1747,8 +1747,5 @@ class ProtonOC(Model):
         self.current_num_persons = len(self.schedule.agents)
 
 
-if __name__ == "__main__":
-    model = ProtonOC(collect=False)
-    model.intervention = "baseline"
-    model.run(verbose=True)
-        
+
+
