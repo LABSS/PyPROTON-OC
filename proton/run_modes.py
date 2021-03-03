@@ -128,7 +128,7 @@ class XmlMode(BaseMode):
         names = list()
         for key in rep:
             for value in range(rep[key]):
-                names.append(os.path.basename(key)[:-4] + "_run_" + str(value + 1))
+                names.append(os.path.basename(key)[:-5] + "_run_" + str(value + 1))
         return names
 
     def run_parallel(self) -> None:

@@ -38,6 +38,7 @@ from typing import List, Set, Union, Dict
 from xml.dom import minidom
 import json
 import sys
+import pickle
 
 class ProtonOC(Model):
     """
@@ -1627,16 +1628,11 @@ class ProtonOC(Model):
         :param save_mode: str, can be either "pickle" or "feather"
         :return: None
         """
-        new_dir = os.path.join(save_dir, name)
-        os.mkdir(new_dir)
         agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
         model_data = self.datacollector.get_model_vars_dataframe()
-        if save_mode == "feather":
-            agent_data.to_feather(os.path.join(new_dir, "agents" + ".feather"))
-            model_data.to_feather(os.path.join(new_dir, "model" + ".feather"))
-        elif save_mode == "pickle":
-            agent_data.to_pickle(os.path.join(new_dir, "agents" + ".pickle"))
-            model_data.to_pickle(os.path.join(new_dir, "model" + ".pickle"))
+        if save_mode == "pickle":
+            with open(os.path.join(save_dir, name + ".pkl"), 'wb') as f:
+                pickle.dump([agent_data, model_data], f)
 
     def override(self, source_file: Union[str, None] = None) -> None:
         if source_file is None:
