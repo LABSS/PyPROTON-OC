@@ -6,6 +6,7 @@ from collections import Counter
 import multiprocessing
 import json
 import click
+import sys
 
 class BaseMode:
     """
@@ -29,26 +30,26 @@ class BaseMode:
         :return: None
         """
 
-        self._single_run(None, self.save_path , self.name)
+        self._single_run([None, None, self.save_path , self.name, True])
         click.echo(click.style("Done!", fg="red"))
 
-    def _single_run(self, source_file: Union[str, None], save_dir: str, name: str,
-                    verbose =True) -> None:
+    def _single_run(self, args: List) -> None:
         """
         This instantiates a model, performs a parameter override (if necessary),
         runs a simulation, and saves the data.
-        :param loc_xml: if it is a valid string it performs a parameter override from an xml file
-        :param save_dir: directory where the results are saved
-        :param name: run name
+        :param args: List [seed, source_file, save_dir, name, verbose]
         :return: None
         """
-        model = ProtonOC(collect=self.collect)
+        if args[0] is None:
+            args[0] = int.from_bytes(os.urandom(4), sys.byteorder)
+        model = ProtonOC(seed = args[0], collect=self.collect)
         if self.snapshot_active:
-            model.init_snapshot_state(name=name, path=self.save_path)
-        model.override(source_file)
-        model.run(verbose=verbose)
-        if self.collect:
-            model.save_data(save_dir=save_dir, name=name)
+            model.init_snapshot_state(name=args[3], path=self.save_path)
+        if args[1] is not None:
+            model.override(args[1])
+        model.run(verbose=args[4])
+        if self.collect and args[2]:
+            model.save_data(save_dir=args[2], name=args[3])
 
 
 class XmlMode(BaseMode):
@@ -136,17 +137,16 @@ class XmlMode(BaseMode):
         Based on the self.files attribute runs multiple parallel simulations and saves the results.
         :return: None
         """
-        processes = list()
+        args = list()
         for file, name in zip(self.files, self.filenames):
-            p = multiprocessing.Process(target=self._single_run,
-                                        args=(file,
-                                              self.save_path,
-                                              name,
-                                              False))
-            processes.append(p)
-            p.start()
-        for process in processes:
-            process.join()
+            args.append([int.from_bytes(os.urandom(4), sys.byteorder),
+                              file,
+                              self.save_path,
+                              name, False])
+
+        cores = multiprocessing.cpu_count() - 2
+        with multiprocessing.Pool(cores) as pool:
+            results = pool.map(self._single_run, args)
 
     def run_sequential(self):
         """
@@ -155,7 +155,7 @@ class XmlMode(BaseMode):
         :return: None
         """
         for file, name in zip(self.files, self.filenames):
-            self._single_run(file, self.save_path, name, True)
+            self._single_run([None, file, self.save_path, name, True])
 
 class JsonMode(XmlMode):
     def __init__(self, source_path: str, save_path: str, 
