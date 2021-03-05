@@ -169,7 +169,7 @@ class XmlMode(BaseMode):
 
         cores = multiprocessing.cpu_count() - 2
         with multiprocessing.Pool(cores) as pool:
-            results = pool.map(self._single_run, args)
+            results = pool.map_async(self._single_run, args)
 
     def run_sequential(self):
         """
