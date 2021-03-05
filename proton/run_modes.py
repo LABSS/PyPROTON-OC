@@ -168,8 +168,16 @@ class XmlMode(BaseMode):
                               name, False])
 
         cores = multiprocessing.cpu_count() - 2
-        with multiprocessing.Pool(cores) as pool:
-            results = pool.map_async(self._single_run, args)
+        pool = multiprocessing.Pool(cores)
+        # with multiprocessing.Pool(cores) as pool:
+        #     pool.map_async(self._single_run, args)
+
+
+        for arg in enumerate(args):
+            result = pool.map_async(self._single_run, arg)
+
+        pool.close()
+        pool.join()
 
     def run_sequential(self):
         """
