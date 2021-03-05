@@ -91,7 +91,7 @@ class XmlMode(BaseMode):
         self.source_path = source_path
         self.filetype = filetype
         self.detect_file(self.filetype)
-        click.echo(click.style("Saving data in: " + self.save_path, bold=True, fg="red"))
+        # click.echo(click.style("Saving data in: " + self.save_path, bold=True, fg="red"))
         self.filenames = self.get_file_names(self.files)
 
     def detect_file(self, filetype):
@@ -112,16 +112,17 @@ class XmlMode(BaseMode):
     def setup_repetitions(self, path, runs):
         for repetition in range(runs):
             self.files.append(path)
-        click.echo(click.style(str(runs) + " runs -> " + os.path.basename(
-            path), fg="blue"))
+        # click.echo(click.style(str(runs) + " runs -> " + os.path.basename(
+            # path), fg="blue"))
 
     def run(self) -> None:
         """
         Performs multiple runs
         :return: None
         """
-        cmd = click.prompt(click.style("\nConfirm [y/n]", fg="red", blink=True, bold=True),
-                           type=str)
+        # cmd = click.prompt(click.style("\nConfirm [y/n]", fg="red", blink=True, bold=True),
+        #                    type=str)
+        cmd = "y"
         if cmd == "y":
             if self.parallel:
                 self.run_parallel()
