@@ -82,3 +82,13 @@ then
 library(clipr)
 x <- read_clip()
 plot(x)
+
+
+#Load data, "rb" not "wb" (wb flush all data)
+import pickle
+with open('C:\\Users\\franc_pyl533c\\OneDrive\\Desktop\\prova.pkl', 'rb') as f:
+    file = pickle.load(f)
+
+#Build Package in developmemnt mode
+cd to main directory and then
+pip install -e . or pip install -e <path>
