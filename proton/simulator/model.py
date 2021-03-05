@@ -1568,7 +1568,8 @@ class ProtonOC(Model):
         :return: None
         """
         dead_agents = list()
-        for agent in self.schedule.agent_buffer(True):
+        permuted = self.random.permuted(self.schedule.agents)
+        for agent in permuted:
             if self.random.random() < agent.p_mortality() or agent.age > 119:
                 dead_agents.append(agent)
                 if self.removed_fatherships:
@@ -1660,8 +1661,8 @@ class ProtonOC(Model):
             for key, value in data.items():
                 if key not in self.__dict__ and key != "repetitions":
                     raise Exception("{} is not a model attribute".format(key))
-                else:
-                    setattr(self, key, value)
+            else:
+                setattr(self, key, value)
 
     def init_snapshot_state(self, *args: str, name: Union[str, int, float], path: str,
                             tick: Union[int, None] = None, ) -> None:
@@ -1733,33 +1734,3 @@ class ProtonOC(Model):
                                             self.schedule.agents])
         self.num_crime_committed_sd = np.std([agent.num_crimes_committed for agent in
                                             self.schedule.agents])
-
-
-if __name__ == "__main__":
-    model = ProtonOC()
-    model.run(10000, 10, verbose=True)
-    model.save_data("D:\\proton\\prove_salvataggio", "model_and_agents", agent_reporter=True)
-
-    # import numba
-    # import time
-    # @numba.jit(nopython=True)
-    # def num_calculate_len_agents(lila):
-    #     return len(lila)
-    #
-    # def calculate_len_agents(li):
-    #     return len(li)
-    #
-    # start = time.time()
-    # for a in range(1000):
-    #     x = np.array([agent.unique_id for agent in model.schedule.agents])
-    #     num_calculate_len_agents(x)
-    # print("numba: {}".format(str(time.time()-start)))
-    #
-    # start = time.time()
-    # for a in range(1000):
-    #     calculate_len_agents(model.schedule.agents)
-    # print("normal: {}".format(str(time.time() - start)))
-
-# import pickle
-# with open("D:\\proton\\prove_salvataggio\\only_model_with_more_fast_reporter_.pkl", mode="rb") as f:
-#     file = pickle.load(f)
