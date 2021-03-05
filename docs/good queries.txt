@@ -86,7 +86,7 @@ plot(x)
 
 #Load data, "rb" not "wb" (wb flush all data)
 import pickle
-with open('C:\\Users\\franc_pyl533c\\OneDrive\\Desktop\\prova.pkl', 'rb') as f:
+with open(absolute_path, 'rb') as f:
     file = pickle.load(f)
 
 #Build Package in developmemnt mode

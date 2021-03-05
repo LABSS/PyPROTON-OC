@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2019 LABSS(Francesco Mattioli, Mario Paolucci)
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 import numpy as np
 import numba
@@ -8,6 +30,22 @@ if typing.TYPE_CHECKING:
     from typing import List, Set, Dict, Union, Callable, Any, Tuple
     import pandas as pd
     import numpy
+
+free_parameters = ["migration_on", "initial_agents", "num_ticks", "intervention",
+                   "max_accomplice_radius", "number_arrests_per_year",
+                   "number_crimes_yearly_per10k", "ticks_between_intervention",
+                   "intervention_start", "intervention_end","num_oc_persons",
+                   "num_oc_families", "education_modifier", "retirement_age",
+                   "unemployment_multiplier", "nat_propensity_m",
+                   "nat_propensity_sigma", "nat_propensity_threshold",
+                   "facilitator_repression", "facilitator_repression_multiplier",
+                   "likelihood_of_facilitators", "targets_addressed_percent",
+                   "threshold_use_facilitators", "oc_embeddedness_radius",
+                   "oc_boss_repression", "punishment_length", "constant_population"]
+
+interventions_type = ["facilitators-strong", "facilitators", "students-strong", "students",
+                      "disruptive-strong", "disruptive", "preventive-strong", "preventive",
+                      "baseline"]
 
 
 def find_neighb(netname: str, togo: int, found: Set, border: Set[Person]) -> Union[Set, Any]:
@@ -221,21 +259,52 @@ def commit_crime(co_offenders: List[Person]) -> None:
                 co_offender.num_co_offenses[co_off_key] += 1
 
 
-def generate_collector_dicts(model_reporters: List[str],
-                             agent_reporters: List[str]) -> Tuple[Dict, Dict]:
+def generate_collector_dicts() -> Tuple[Dict, Dict]:
     """
     This returns two dictionaries consisting of as many key/value pairs as the elements
     contained within the @model_reporters, @agent_reporters parameters.
-    :param model_reporters: List[str]
-    :param agent_reporters: List[str]
     :return: Tuple[Dict, Dict]
     """
+    model_reporters = ["seed", "family_intervention", 'social_support', 'welfare_support',
+                       'this_is_a_big_crime', 'good_guy_threshold', 'number_deceased',
+                       'facilitator_fails', 'facilitator_crimes', 'crime_size_fails',
+                       'number_born', 'number_migrants', 'number_weddings',
+                       'number_weddings_mean', 'number_law_interventions_this_tick',
+                       'correction_for_non_facilitators', 'number_protected_recruited_this_tick',
+                       'people_jailed', 'number_offspring_recruited_this_tick', 'number_crimes',
+                       'crime_multiplier', 'kids_intervention_counter', 'big_crime_from_small_fish',
+                       'arrest_rate', 'migration_on', 'initial_agents', 'intervention',
+                       'max_accomplice_radius', 'number_arrests_per_year', 'ticks_per_year',
+                       'num_ticks', 'tick', 'ticks_between_intervention', 'intervention_start',
+                       'intervention_end', 'num_oc_persons', 'num_oc_families',
+                       'education_modifier',
+                       'retirement_age', 'unemployment_multiplier', 'nat_propensity_m',
+                       'nat_propensity_sigma', 'nat_propensity_threshold', 'facilitator_repression',
+                       'facilitator_repression_multiplier', 'percentage_of_facilitators',
+                       'targets_addressed_percent', 'threshold_use_facilitators',
+                       'oc_embeddedness_radius', 'oc_boss_repression', 'punishment_length',
+                       'constant_population', "number_crimes_yearly_per10k", "current_oc_members",
+                       "current_num_persons", 'criminal_tendency_mean', 'criminal_tencency_sd',
+                       'age_mean', 'age_sd', 'education_level_mean', 'education_level_sd',
+                       'num_crime_committed_mean', 'num_crime_committed_sd']
+
+
+    agent_reporters = ['unique_id', 'gender_is_male', 'prisoner', 'age', 'sentence_countdown',
+                       'num_crimes_committed', 'num_crimes_committed_this_tick',
+                       'education_level', 'max_education_level', 'wealth_level',
+                       'job_level', 'propensity', 'oc_member', 'retired', 'number_of_children',
+                       'facilitator', 'hobby', 'new_recruit', 'migrant', 'criminal_tendency',
+                       'target_of_intervention', "cached_oc_embeddedness", 'sibling',
+                       'offspring', 'parent', 'partner', 'household', 'friendship',
+                       'criminal', 'professional', 'school']
+
     net_names = ['sibling', 'offspring', 'parent', 'partner', 'household', 'friendship',
                  'criminal', 'professional', 'school']
-    model_reporters = {key: key for key in model_reporters}
-    agent_reporters = {key: key  if key not in net_names else lambda x: x.dump_net(key)
-                       for key in agent_reporters }
-    return agent_reporters, model_reporters
+
+    model_reporters_dic = {key: key for key in model_reporters}
+    agent_reporters_dic = {key: key if key not in net_names else lambda x: x.dump_net(key)
+                                for key in agent_reporters }
+    return agent_reporters_dic, model_reporters_dic
 
 
 def convert_numerical(s: str) -> Union[int, float, str]:
@@ -298,22 +367,6 @@ def list_contains_problems(ego: Person, candidates:List[Person]) -> Union[bool, 
         if sibling.get_neighbor_list("partner") and sibling.get_neighbor_list("partner")[
             0] in all_potential_siblings:
             return True
-
-free_parameters = ["migration_on", "initial_agents", "num_ticks", "intervention",
-                   "max_accomplice_radius", "number_arrests_per_year",
-                   "number_crimes_yearly_per10k", "ticks_between_intervention",
-                   "intervention_start", "intervention_end","num_oc_persons",
-                   "num_oc_families", "education_modifier", "retirement_age",
-                   "unemployment_multiplier", "nat_propensity_m",
-                   "nat_propensity_sigma", "nat_propensity_threshold",
-                   "facilitator_repression", "facilitator_repression_multiplier",
-                   "likelihood_of_facilitators", "targets_addressed_percent",
-                   "threshold_use_facilitators", "oc_embeddedness_radius",
-                   "oc_boss_repression", "punishment_length", "constant_population"]
-
-interventions_type = ["facilitators-strong", "facilitators", "students-strong", "students",
-                      "disruptive-strong", "disruptive", "preventive-strong", "preventive",
-                      "baseline"]
 
 #Numba functions
 @numba.jit(nopython=True)

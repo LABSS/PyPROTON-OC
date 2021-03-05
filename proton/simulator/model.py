@@ -46,7 +46,9 @@ class ProtonOC(Model):
     Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu
     """
 
-    def __init__(self, seed: int = int.from_bytes(os.urandom(4), sys.byteorder), collect: bool = True) -> None:
+    def __init__(self,
+                 seed: int = int.from_bytes(os.urandom(4), sys.byteorder),
+                 collect: bool = True) -> None:
         super().__init__()
         self.seed: int = seed
         self.random: np.random.default_rng = np.random.default_rng(seed=seed)
@@ -137,6 +139,16 @@ class ProtonOC(Model):
         #Fast reporter (calculated at each tick)
         self.current_oc_members: int = 0
         self.current_num_persons: int = 0
+        self.criminal_tendency_mean = 0
+        self.criminal_tencency_sd = 0
+        self.age_mean = 0
+        self.age_sd = 0
+        self.education_level_mean = 0
+        self.education_level_sd = 0
+        self.male = 0
+        self.female = 0
+        self.num_crime_committed_mean = 0
+        self.num_crime_committed_sd = 0
 
         # Folders definition
         self.cwd, _ = os.path.split(__file__)
@@ -151,14 +163,11 @@ class ProtonOC(Model):
         Directory structure:
         ├───inputs (@self.input_directory)
         │   ├───eindhoven (@self.eindhoven)
-        │   │   ├───data
-        │   │   └───raw
+        │   │   └───data
         │   ├───general (@self.general)
-        │   │   ├───data
-        │   │   └───raw
+        │   │   └───data
         │   └───palermo (@self.palermo_inputs)
-        │       ├───data
-        │       └───raw
+        │       └───data
         generated with github.com/nfriend/tree-online
         """
         # Load tables
@@ -207,45 +216,9 @@ class ProtonOC(Model):
         self.p_single_father = self.read_csv_city("proportion_single_fathers")
         self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
 
-        self.model_reporters = ["seed", "family_intervention", 'social_support', 'welfare_support',
-                                'this_is_a_big_crime', 'good_guy_threshold', 'number_deceased',
-                                'facilitator_fails', 'facilitator_crimes', 'crime_size_fails',
-                                'number_born', 'number_migrants', 'number_weddings',
-                                'number_weddings_mean',
-                                'number_law_interventions_this_tick',
-                                'correction_for_non_facilitators',
-                                'number_protected_recruited_this_tick', 'people_jailed',
-                                'number_offspring_recruited_this_tick', 'number_crimes',
-                                'crime_multiplier', 'kids_intervention_counter',
-                                'big_crime_from_small_fish', 'arrest_rate', 'migration_on',
-                                'initial_agents',
-                                'intervention', 'max_accomplice_radius', 'number_arrests_per_year',
-                                'ticks_per_year', 'num_ticks', 'tick', 'ticks_between_intervention',
-                                'intervention_start', 'intervention_end', 'num_oc_persons',
-                                'num_oc_families', 'education_modifier', 'retirement_age',
-                                'unemployment_multiplier', 'nat_propensity_m',
-                                'nat_propensity_sigma',
-                                'nat_propensity_threshold', 'facilitator_repression',
-                                'facilitator_repression_multiplier', 'percentage_of_facilitators',
-                                'targets_addressed_percent', 'threshold_use_facilitators',
-                                'oc_embeddedness_radius', 'oc_boss_repression', 'punishment_length',
-                                'constant_population', "number_crimes_yearly_per10k",
-                                "current_oc_members", "current_num_persons"]
-
-        self.agent_reporters = ['unique_id', 'gender_is_male', 'prisoner', 'age',
-                                'sentence_countdown',
-                                'num_crimes_committed', 'num_crimes_committed_this_tick',
-                                'education_level', 'max_education_level', 'wealth_level',
-                                'job_level',
-                                'propensity', 'oc_member', 'retired', 'number_of_children',
-                                'facilitator',
-                                'hobby', 'new_recruit', 'migrant', 'criminal_tendency',
-                                'target_of_intervention', "cached_oc_embeddedness", 'sibling',
-                                'offspring', 'parent', 'partner', 'household', 'friendship',
-                                'criminal', 'professional', 'school']
 
     def __repr__(self):
-        return "PROTON-OC MODEL, seed: " + str(self.seed)
+        return "PROTON-OC MODEL, seed: {}".format(str(self.seed))
 
 
     def init_collector(self) -> None:
@@ -256,8 +229,7 @@ class ProtonOC(Model):
         collected each call.
         :return: None
         """
-        agent_reporters, model_reporters = extra.generate_collector_dicts(self.model_reporters,
-                                                                          self.agent_reporters)
+        agent_reporters, model_reporters = extra.generate_collector_dicts()
         self.datacollector = DataCollector(model_reporters=model_reporters,
                                            agent_reporters=agent_reporters)
 
@@ -323,6 +295,7 @@ class ProtonOC(Model):
         self.make_people_die()
         self.schedule.step()
         if self.collect:
+            self.calculate_fast_reporters()
             self.datacollector.collect(self)
         self.tick += 1
         if self.snapshot_tick is not None and self.snapshot_tick == self.tick:
@@ -1094,7 +1067,7 @@ class ProtonOC(Model):
 
         :return: None
         """
-        permuted_set =  self.random.permuted(self.schedule.agents)
+        permuted_set = self.random.permuted(self.schedule.agents)
         for agent in  permuted_set:
             if agent.age > 16:
                 agent.job_level = extra.pick_from_pair_list(
@@ -1617,7 +1590,10 @@ class ProtonOC(Model):
             self.schedule.remove(agent)
             del agent
 
-    def save_data(self, save_dir: str, name: str, save_mode: str = "pickle") -> None:
+    def save_data(self, save_dir: str,
+                  name: str,
+                  agent_reporter = False,
+                  save_mode: str = "pickle") -> None:
         """
         This creates a new folder named name in the save_dir location and generates
         two files:agents.xxx related to historical data of all agents and model.xxx
@@ -1628,11 +1604,15 @@ class ProtonOC(Model):
         :param save_mode: str, can be either "pickle" or "feather"
         :return: None
         """
-        agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
+        if agent_reporter:
+            agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
         model_data = self.datacollector.get_model_vars_dataframe()
         if save_mode == "pickle":
             with open(os.path.join(save_dir, name + ".pkl"), 'wb') as f:
-                pickle.dump([agent_data, model_data], f)
+                if agent_reporter:
+                    pickle.dump([agent_data, model_data], f)
+                else:
+                    pickle.dump([model_data], f)
 
     def override(self, source_file: Union[str, None] = None) -> None:
         if source_file is None:
@@ -1741,7 +1721,45 @@ class ProtonOC(Model):
         """
         self.current_oc_members = len([agent for agent in self.schedule.agents if agent.oc_member])
         self.current_num_persons = len(self.schedule.agents)
+        self.criminal_tendency_mean = np.mean([agent.criminal_tendency for agent in self.schedule.agents])
+        self.criminal_tencency_sd = np.std([agent.criminal_tendency for agent in
+                                          self.schedule.agents])
+        self.age_mean = np.mean([agent.age for agent in self.schedule.agents])
+        self.age_sd = np.std([agent.age for agent in self.schedule.agents])
+        self.education_level_mean = np.mean([agent.education_level for agent in
+                                            self.schedule.agents])
+        self.education_level_sd = np.std([agent.education_level for agent in self.schedule.agents])
+        self.num_crime_committed_mean = np.mean([agent.num_crimes_committed for agent in
+                                            self.schedule.agents])
+        self.num_crime_committed_sd = np.std([agent.num_crimes_committed for agent in
+                                            self.schedule.agents])
 
 
+if __name__ == "__main__":
+    model = ProtonOC()
+    model.run(10000, 10, verbose=True)
+    model.save_data("D:\\proton\\prove_salvataggio", "model_and_agents", agent_reporter=True)
 
+    # import numba
+    # import time
+    # @numba.jit(nopython=True)
+    # def num_calculate_len_agents(lila):
+    #     return len(lila)
+    #
+    # def calculate_len_agents(li):
+    #     return len(li)
+    #
+    # start = time.time()
+    # for a in range(1000):
+    #     x = np.array([agent.unique_id for agent in model.schedule.agents])
+    #     num_calculate_len_agents(x)
+    # print("numba: {}".format(str(time.time()-start)))
+    #
+    # start = time.time()
+    # for a in range(1000):
+    #     calculate_len_agents(model.schedule.agents)
+    # print("normal: {}".format(str(time.time() - start)))
 
+# import pickle
+# with open("D:\\proton\\prove_salvataggio\\only_model_with_more_fast_reporter_.pkl", mode="rb") as f:
+#     file = pickle.load(f)
