@@ -92,8 +92,10 @@ def info():
     click.echo("Simulation of recruitment to terrorism \n"
                "Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu/")
 
-
 mode.add_command(base_mode)
 mode.add_command(xml_mode)
 mode.add_command(json_mode)
 mode.add_command(info)
+
+if __name__ == '__main__':
+    mode()
