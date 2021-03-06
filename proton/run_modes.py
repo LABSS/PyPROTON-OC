@@ -29,7 +29,7 @@ import multiprocessing
 import json
 import click
 import sys
-from concurrent.futures import ProcessPoolExecutor as Executor
+from concurrent.futures import ThreadPoolExecutor as Executor
 
 class BaseMode:
     """
