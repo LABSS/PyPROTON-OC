@@ -29,6 +29,7 @@ import multiprocessing
 import json
 import click
 import sys
+from concurrent.futures import ProcessPoolExecutor as Executor
 
 class BaseMode:
     """
@@ -167,9 +168,17 @@ class XmlMode(BaseMode):
                               self.save_path,
                               name, False])
 
-        cores = multiprocessing.cpu_count() - 2
-        with multiprocessing.Pool(cores) as pool:
-            pool.map(self._single_run, args)
+        MAX_CONCURRENCY = multiprocessing.cpu_count() - 2
+        N_WORKERS = min(len(args), MAX_CONCURRENCY)
+        with Executor(max_workers=N_WORKERS) as executor:
+            futures = [executor.submit(self._single_run, arg) for arg in args]
+            for future in futures:
+                try:
+                    result = future.result()
+                except Exception as e:
+                    print(e)
+
+
 
     def run_sequential(self):
         """
