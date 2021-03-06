@@ -171,12 +171,7 @@ class XmlMode(BaseMode):
         MAX_CONCURRENCY = multiprocessing.cpu_count() - 2
         N_WORKERS = min(len(args), MAX_CONCURRENCY)
         with Executor(max_workers=N_WORKERS) as executor:
-            futures = [executor.submit(self._single_run, arg) for arg in args]
-            for future in futures:
-                try:
-                    result = future.result()
-                except Exception as e:
-                    print(e)
+            executor.map(self._single_run, args)
 
 
 
