@@ -168,8 +168,7 @@ class XmlMode(BaseMode):
                               self.save_path,
                               name, False])
 
-        MAX_CONCURRENCY = multiprocessing.cpu_count() - 10
-        with Executor(max_workers=MAX_CONCURRENCY) as executor:
+        with Executor(max_workers=10) as executor:
             executor.map(self._single_run, args)
 
 
