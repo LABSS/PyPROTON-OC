@@ -169,9 +169,9 @@ class XmlMode(BaseMode):
                               name, False])
         for a in args:
             print(a)
-            
-        with Executor(max_workers=10) as executor:
-            executor.map(self._single_run, args)
+        cores = multiprocessing.cpu_count() - 2
+        with multiprocessing.Pool(cores) as pool:
+            result = pool.map(self._single_run, args)
 
 
 
