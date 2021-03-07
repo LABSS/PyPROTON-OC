@@ -169,7 +169,7 @@ class XmlMode(BaseMode):
                               name, False])
         for a in args:
             print(a)
-        cores = multiprocessing.cpu_count() - 2
+        cores = 10
         with multiprocessing.Pool(cores) as pool:
             result = pool.map(self._single_run, args)
 
