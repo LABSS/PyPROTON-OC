@@ -29,7 +29,7 @@ import multiprocessing
 import json
 import click
 import sys
-from concurrent.futures import ThreadPoolExecutor as Executor
+from concurrent.futures import ProcessPoolExecutor as Executor
 
 class BaseMode:
     """
@@ -168,9 +168,8 @@ class XmlMode(BaseMode):
                               self.save_path,
                               name, False])
 
-        MAX_CONCURRENCY = multiprocessing.cpu_count() - 2
-        N_WORKERS = min(len(args), MAX_CONCURRENCY)
-        with Executor(max_workers=N_WORKERS) as executor:
+        MAX_CONCURRENCY = multiprocessing.cpu_count() - 10
+        with Executor(max_workers=MAX_CONCURRENCY) as executor:
             executor.map(self._single_run, args)
 
 
