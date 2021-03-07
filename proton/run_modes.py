@@ -167,7 +167,9 @@ class XmlMode(BaseMode):
                               file,
                               self.save_path,
                               name, False])
-
+        for a in args:
+            print(a)
+            
         with Executor(max_workers=10) as executor:
             executor.map(self._single_run, args)
 
