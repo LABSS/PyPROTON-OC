@@ -1661,8 +1661,8 @@ class ProtonOC(Model):
             for key, value in data.items():
                 if key not in self.__dict__ and key != "repetitions":
                     raise Exception("{} is not a model attribute".format(key))
-            else:
-                setattr(self, key, value)
+                else:
+                    setattr(self, key, value)
 
     def init_snapshot_state(self, *args: str, name: Union[str, int, float], path: str,
                             tick: Union[int, None] = None, ) -> None:
