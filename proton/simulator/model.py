@@ -149,6 +149,8 @@ class ProtonOC(Model):
         self.female = 0
         self.num_crime_committed_mean = 0
         self.num_crime_committed_sd = 0
+        self.crimes_committed_by_oc = 0
+        self.crimes_committed_by_facilitators = 0
 
         # Folders definition
         self.cwd, _ = os.path.split(__file__)
@@ -1734,3 +1736,7 @@ class ProtonOC(Model):
                                             self.schedule.agents])
         self.num_crime_committed_sd = np.std([agent.num_crimes_committed for agent in
                                             self.schedule.agents])
+        self.crimes_committed_by_oc = np.sum([agent.num_crimes_committed_this_tick for agent in
+                                            self.schedule.agents if agent.oc_member])
+        self.crimes_committed_by_facilitators = np.sum([agent.num_crimes_committed_this_tick for agent in
+                                            self.schedule.agents if agent.facilitator])
