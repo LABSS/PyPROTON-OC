@@ -29,6 +29,7 @@ import multiprocessing
 import json
 import click
 import sys
+import pickle
 from concurrent.futures import ProcessPoolExecutor as Executor
 
 class BaseMode:
@@ -72,7 +73,8 @@ class BaseMode:
             model.override(args[1])
         model.run(verbose=args[4])
         if self.collect and args[2]:
-            model.save_data(save_dir=args[2], name=args[3])
+            # model.save_data(save_dir=args[2], name=args[3])
+            return model.datacollector.get_model_vars_dataframe()
 
 
 class XmlMode(BaseMode):
@@ -169,10 +171,11 @@ class XmlMode(BaseMode):
                               name, False])
         for a in args:
             print(a)
-        cores = 8
+        cores = 25
         with multiprocessing.Pool(cores) as pool:
-            result = pool.map(self._single_run, args)
-
+            results = pool.map(self._single_run, args)
+        with open(os.path.join(self.save_path, "run" + ".pkl"), 'wb') as f:
+                pickle.dump(results, f)
 
 
     def run_sequential(self):
