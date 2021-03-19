@@ -286,7 +286,8 @@ def generate_collector_dicts() -> Tuple[Dict, Dict]:
                        'constant_population', "number_crimes_yearly_per10k", "current_oc_members",
                        "current_num_persons", 'criminal_tendency_mean', 'criminal_tencency_sd',
                        'age_mean', 'age_sd', 'education_level_mean', 'education_level_sd',
-                       'num_crime_committed_mean', 'num_crime_committed_sd']
+                       'num_crime_committed_mean', 'num_crime_committed_sd',
+                       "likelihood_of_facilitators", "crimes_committed_by_oc", "crimes_committed_by_facilitators"]
 
 
     agent_reporters = ['unique_id', 'gender_is_male', 'prisoner', 'age', 'sentence_countdown',

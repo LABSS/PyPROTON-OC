@@ -1,6 +1,13 @@
 from setuptools import setup, find_packages
 
-requires = ["click", "networkx", "numpy", "pandas", "tornado", "tqdm", "numba"]
+requires = ["click>=7.1.2",
+            "networkx>=2.5",
+            "numpy>=1.20",
+            "pandas>=1.1.4",
+            "tornado>=6.1",
+            "tqdm>=4.53",
+            "numba>=0.51.2",
+            "psutil>=5.8.0"]
 
 extras_require = {
     "dev": ["pytest >= 4.6", "sphinx"],
@@ -11,10 +18,10 @@ description = " Simulation of recruitment to terrorism. Developed by LABSS-CNR f
 
 setup(
    name='pyproton-oc',
-   version='0.0.1',
+   version='0.1',
    description=description,
    author='LABSS(Francesco Mattioli, Mario Paolucci)',
-   author_email='francesco@nientepanico.org',
+   author_email='francesco@nientepanico.org, mario.paolucci@istc.cnr.it',
    package_dir={'proton': 'proton'},
    package_data={
       "proton": [
