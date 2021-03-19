@@ -20,190 +20,201 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Union, List
-from .simulator.model import ProtonOC
+from typing import Union, Dict
+from proton.simulator.model import ProtonOC
+from proton.simulator.model import extra
 import os
 from xml.dom import minidom
-from collections import Counter
-import multiprocessing
 import json
 import click
 import sys
-import pickle
 from concurrent.futures import ProcessPoolExecutor as Executor
+import psutil
+
 
 class BaseMode:
     """
     Base mode class
     """
-    def __init__(self, name: Union[str, None], save_path: Union[str, bool],
-                 snapshot: Union[str, None]):
-        if snapshot is not None:
-            self.save_path = snapshot
-            self.snapshot_active = True
-            self.collect = False
-        else:   
-            self.save_path: Union[str, bool] = save_path
-            self.collect = True
-            self.snapshot_active = False
+    def __init__(self, name: Union[str, None],
+                 save_path: Union[str, bool],
+                 snapshot: Union[str, None],
+                 alldata: bool,
+                 randomstate: int):
+
+        self.save_path: str = save_path
+        self.alldata: bool = alldata
         self.name: str = name
+        self.snapshot_active = snapshot
+        self.randomstate = randomstate
+        print("Saving the data in: {}".format(self.save_path))
+        self.args = list()
 
     def run(self) -> None:
         """
         Simple run function
         :return: None
         """
-
-        self._single_run([None, None, self.save_path , self.name, True])
+        self.args.append({"seed": self.randomstate,
+                          "source_override": None,
+                          "save_path": self.save_path,
+                          "filename": self.name,
+                          "verbose": True,
+                          "snapshot": self.snapshot_active,
+                          "alldata": self.alldata})
+        self._single_run(self.args[0])
         click.echo(click.style("Done!", fg="red"))
 
-    def _single_run(self, args: List) -> None:
+    def _single_run(self, args: Dict) -> None:
         """
         This instantiates a model, performs a parameter override (if necessary),
         runs a simulation, and saves the data.
         :param args: List [seed, source_file, save_dir, name, verbose]
         :return: None
         """
-        if args[0] is None:
-            args[0] = int.from_bytes(os.urandom(4), sys.byteorder)
-        model = ProtonOC(seed = args[0], collect=self.collect)
-        if self.snapshot_active:
-            model.init_snapshot_state(name=args[3], path=self.save_path)
-        if args[1] is not None:
-            model.override(args[1])
-        model.run(verbose=args[4])
-        if self.collect and args[2]:
-            # model.save_data(save_dir=args[2], name=args[3])
-            return model.datacollector.get_model_vars_dataframe()
+        if args["seed"] is None:
+            args["seed"] = int.from_bytes(os.urandom(4), sys.byteorder)
+        model = ProtonOC(seed=args["seed"])
+        if args["source_override"] is not None:
+            model.override_dict(args["source_override"])
+        model.run(verbose=args["verbose"])
+        model.save_data(save_dir=args["save_path"],
+                        name=args["filename"],
+                        alldata=args["alldata"],
+                        snapshot=args["snapshot"])
 
 
-class XmlMode(BaseMode):
-    """
-    Xml mode class
-    """
+class OverrideMode(BaseMode):
     def __init__(self,
                  source_path: str,
-                 save_path: str,
+                 save_path: Union[str, bool],
+                 snapshot: Union[str, None],
+                 alldata: bool,
+                 randomstate: int,
                  parallel: bool,
-                 snapshot: Union[str, bool],
-                 filetype: str = ".xml") -> None:
+                 merge=bool):
+        super().__init__(name=None,
+                         save_path=save_path,
+                         snapshot=snapshot,
+                         alldata=alldata,
+                         randomstate=randomstate)
 
-        super().__init__(name=None, save_path=save_path, snapshot=snapshot)
-        self.files = list()
-        self.parallel = parallel
         self.source_path = source_path
-        self.filetype = filetype
-        self.detect_file(self.filetype)
-        # click.echo(click.style("Saving data in: " + self.save_path, bold=True, fg="red"))
-        self.filenames = self.get_file_names(self.files)
+        self.parallel = parallel
+        self.merge = merge
+        self.args = [run for subrun in self.detect_files() for run in subrun]
 
-    def detect_file(self, filetype):
+    def detect_files(self):
+        all_plans = list()
         if os.path.isfile(self.source_path):
-            if os.path.splitext(self.source_path)[1] == filetype:
-                runs = self.read_repetitions(self.source_path)
-                self.setup_repetitions(self.source_path, runs)
+            if self.source_path.endswith(".json") or self.source_path.endswith(".xml"):
+                if self.source_path.endswith(".json"):
+                    all_plans.append(self.get_from_json(self.source_path))
+                else:
+                    all_plans.append(self.get_from_xml(self.source_path))
             else:
-                click.ClickException(
-                    click.style("{} is not a valid {} file".format(self.source_path, filetype),
-                                fg="red"))
+                raise Exception(self.source_path + " is not a valid file. "
+                                                "\n Source file should be .json or .xml")
         else:
             for filename in os.scandir(self.source_path):
-                if filename.path.endswith(filetype):
-                    runs = self.read_repetitions(filename.path)
-                    self.setup_repetitions(filename.path, runs)
+                if filename.path.endswith(".xml"):
+                    all_plans.append(self.get_from_xml(filename.path))
+                elif filename.path.endswith(".json"):
+                    all_plans.append(self.get_from_json(filename.path))
+                else:
+                    pass
+        return all_plans
 
-    def setup_repetitions(self, path, runs):
-        for repetition in range(runs):
-            self.files.append(path)
-        # click.echo(click.style(str(runs) + " runs -> " + os.path.basename(
-            # path), fg="blue"))
-
-    def run(self) -> None:
+    def get_from_xml(self, xml_file):
         """
-        Performs multiple runs
+        This function override model parameters based on xml file.
+        :param xml_file: str, xml path
         :return: None
         """
-        # cmd = click.prompt(click.style("\nConfirm [y/n]", fg="red", blink=True, bold=True),
-        #                    type=str)
-        cmd = "y"
-        if cmd == "y":
-            if self.parallel:
-                self.run_parallel()
+        results = list()
+        run = dict()
+        name = os.path.basename(xml_file).replace(".xml", "")
+        map_attr = {"education_rate": "education_modifier",
+                    "data_folder": "city",
+                    "[num_oc_persons]": "num_oc_persons",
+                    "num_persons": "initial_agents",
+                    "percentage_of_facilitators": "likelihood_of_facilitators"}
+        mydoc = minidom.parse(xml_file)
+        parameters = mydoc.getElementsByTagName('enumeratedValueSet')
+        ticks = mydoc.getElementsByTagName('timeLimit')[0].attributes['steps'].value
+        run["num_ticks"] = extra.standardize_value(ticks)
+        for par in parameters:
+            attribute = par.attributes['variable'].value.replace("-", "_").replace("?", "").lower()
+            if attribute == "output" or attribute == "oc_members_scrutinize":
+                continue
+            if attribute in map_attr:
+                attribute = map_attr[attribute]
+            value = par.getElementsByTagName("value")[0].attributes["value"].value
+            run[attribute] = extra.standardize_value(value)
+        for rep in range(
+                int(minidom.parse(xml_file).getElementsByTagName('experiment')[0].attributes[
+                        'repetitions'].value)):
+            results.append({"seed": self.randomstate,
+                            "source_override": run,
+                            "save_path": self.save_path,
+                            "filename": name + "_run" + str(rep + 1),
+                            "verbose": False if self.parallel else True,
+                            "snapshot": self.snapshot_active,
+                            "alldata": self.alldata})
+        return results
+
+    def get_from_json(self, source):
+        extracted = list()
+        with open(source, "rb") as file:
+            js_file = json.load(file)
+            name = os.path.basename(source).replace(".json", "")
+            if type(js_file[list(js_file.keys())[0]]) == dict:
+                for key in js_file.keys():
+                    extracted.append({"seed": self.randomstate,
+                                      "source_override": js_file[key],
+                                      "save_path": self.save_path,
+                                      "filename": name + str(key),
+                                      "verbose": False if self.parallel else True,
+                                      "snapshot": self.snapshot_active,
+                                      "alldata": self.alldata})
             else:
-                self.run_sequential()
-            click.echo(click.style("Done!", fg="red"))
+                extracted.append({"seed": self.randomstate,
+                                  "source_override": js_file,
+                                  "save_path": self.save_path,
+                                  "filename": name,
+                                  "verbose": False if self.parallel else True,
+                                  "snapshot": self.snapshot_active,
+                                  "alldata": self.alldata})
+        return extracted
+
+    def run(self):
+        if self.parallel:
+            self._run_parallel()
         else:
-            click.echo(click.style("\nAborted!", fg="red"))
+            for arg in self.args:
+                self._single_run(arg)
+        if self.merge is not None:
+            self.merge_multiple_run()
+        print("Done!")
 
+    def _run_parallel(self):
+        N_WORKERS = 6
+        with Executor(max_workers=N_WORKERS) as executor:
+            executor.map(self._single_run, self.args)
 
-    def read_repetitions(self, source: str) -> int:
-        """
-        Given an xml file path extracts and returns the number of runs.
-        :param xml: str, a valid xml file path
-        :return: int, the number of runs
-        """
-        return int(minidom.parse(source).getElementsByTagName('experiment')[0].attributes[
-                       'repetitions'].value)
-
-    def get_file_names(self, files: List[str]) -> List[str]:
-        """
-        Given a list of xml files extracts the filename and return a list.
-        :param files: a list of valid xml file paths
-        :return: List, a list of filenames
-        """
-        rep = Counter(files)
-        names = list()
-        for key in rep:
-            for value in range(rep[key]):
-                names.append(os.path.basename(key)[:-5] + "_run_" + str(value + 1))
-        return names
-
-    def run_parallel(self) -> None:
-        """
-        Based on the self.files attribute runs multiple parallel simulations and saves the results.
-        :return: None
-        """
-        args = list()
-        for file, name in zip(self.files, self.filenames):
-            args.append([int.from_bytes(os.urandom(4), sys.byteorder),
-                              file,
-                              self.save_path,
-                              name, False])
-        for a in args:
-            print(a)
-        cores = 25
-        with multiprocessing.Pool(cores) as pool:
-            results = pool.map(self._single_run, args)
-        with open(os.path.join(self.save_path, "run" + ".pkl"), 'wb') as f:
-                pickle.dump(results, f)
-
-
-    def run_sequential(self):
-        """
-        Based on the self.files attribute runs multiple sequential simulations and saves the
-        results
-        :return: None
-        """
-        for file, name in zip(self.files, self.filenames):
-            self._single_run([None, file, self.save_path, name, True])
-
-class JsonMode(XmlMode):
-    def __init__(self, source_path: str, save_path: str, 
-                 parallel: bool, snapshot: Union[str, bool]) -> None:
-        super().__init__(source_path=source_path, save_path=save_path, parallel=parallel,
-                         filetype=".json", snapshot=snapshot)
-
-    def read_repetitions(self, source: str) -> int:
-        """
-        Given an xml file path extracts and returns the number of runs.
-        :param xml: str, a valid xml file path
-        :return: int, the number of runs
-        """
-        with open(source) as json_file:
-            data = json.load(json_file)
-            if "repetitions" in data:
-                return data["repetitions"]
-            else:
-                return 1
-
+    def merge_multiple_run(self):
+        to_merge = [file.path for file in os.scandir(self.save_path) if file.path.endswith(".pkl")]
+        import pickle
+        save_name = os.path.join(self.save_path, self.merge + ".pkl")
+        if sum([os.path.getsize(i) for i in to_merge]) > psutil.virtual_memory().free:
+            raise MemoryError("Unable to merge, not enought memory")
+        else:
+            all_data = list()
+            for i in to_merge:
+                with open(i, "rb") as file:
+                    data = pickle.load(file)
+                    all_data.append(data)
+                os.remove(i)
+            with open(save_name, "wb") as file:
+                pickle.dump(all_data, file)
 

@@ -72,11 +72,6 @@ class ProtonOC(Model):
         # Scheduler
         self.schedule: BaseScheduler = BaseScheduler(self)
 
-        #Stanpshot state
-        self.snapshot_tick: Union[int, None] = None
-        self.snapshot_keys: Union[List[str], None] = None
-        self.snapshot_path: Union[str, None] = None
-
         # Intervention
         self.family_intervention: Union[str, None] = None
         self.social_support: Union[str, None] = None
@@ -300,9 +295,6 @@ class ProtonOC(Model):
             self.calculate_fast_reporters()
             self.datacollector.collect(self)
         self.tick += 1
-        if self.snapshot_tick is not None and self.snapshot_tick == self.tick:
-            self.calculate_fast_reporters()
-            self.take_snapshot()
 
     def run(self,
             n_agents: Union[int, None] = None,
@@ -320,7 +312,6 @@ class ProtonOC(Model):
             n_agents = self.initial_agents
         if num_ticks is not None:
             self.num_ticks = num_ticks
-        self.snapshot_tick = self.num_ticks if self.snapshot_tick is not None else None
         self.verbose = verbose
         self.setup(n_agents=n_agents)
         pbar = tqdm(np.arange(1, self.num_ticks+1)) if verbose else range(1, self.num_ticks+1)
@@ -639,8 +630,9 @@ class ProtonOC(Model):
                                               p_friends,
                                               lambda x: agent.social_proximity(x),
                                               self.random)
-                for chosen in friends:
-                    chosen.make_friendship_link(agent)
+                if len(friends) > 0:
+                    for chosen in friends:
+                        chosen.make_friendship_link(agent)
 
 
     def remove_excess_friends(self) -> None:
@@ -730,6 +722,11 @@ class ProtonOC(Model):
         """
         This procedure initializes the agents and creates the first "friendship" links based on an
         watts strogatz net.
+
+        DEV-NOTE: Using Watts-Strogatz is a bit arbitrary, but it should at least give us some
+        clustering to start with. The network structure should evolve as the model runs anyway.
+        Still, if we could find some data on the properties of real world friendship networks,
+        we could use something like http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
         :return: None
         """
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1,
@@ -1593,38 +1590,37 @@ class ProtonOC(Model):
             self.schedule.remove(agent)
             del agent
 
-    def save_data(self, save_dir: str,
+    def save_data(self,
+                  save_dir: str,
                   name: str,
-                  agent_reporter = False,
-                  save_mode: str = "pickle") -> None:
+                  alldata: bool,
+                  snapshot: tuple) -> bool:
         """
-        This creates a new folder named name in the save_dir location and generates
-        two files:agents.xxx related to historical data of all agents and model.xxx
-        related to model attributes. The save_mode parameter adjusts the save format ("cvs" /
-        "feather")
-        :param save_dir: str, location
-        :param name: str, run name
-        :param save_mode: str, can be either "pickle" or "feather"
+        This method saves the model data in @save_dir as @name in pickle format.
+        If @alldata is True, saves two dataframes: one related to the attributes of the model
+        and one related to the attributes of all agents at each tick (the pkl file is clearly larger).
+        If snapshot is a tuple with a single value or with multiple values, saves model state only
+        at those ticks.
+        :param save_dir: str, direcotry to save
+        :param name: str, the pickle filename
+        :param alldata: bool, if True save a large dataframe with model and agents data
+        :param snapshot: tuple, if tuple of int saves model state only
+        at those ticks.
         :return: None
         """
-        if agent_reporter:
-            agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
         model_data = self.datacollector.get_model_vars_dataframe()
-        if save_mode == "pickle":
-            with open(os.path.join(save_dir, name + ".pkl"), 'wb') as f:
-                if agent_reporter:
-                    pickle.dump([agent_data, model_data], f)
-                else:
-                    pickle.dump([model_data], f)
-
-    def override(self, source_file: Union[str, None] = None) -> None:
-        if source_file is None:
-            pass
+        if snapshot:
+            model_data = model_data.iloc[list(snapshot)]
+        if alldata:
+            agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
+            to_save = [model_data, agent_data]
         else:
-            if os.path.splitext(source_file)[1] == ".xml":
-                self.override_xml(source_file)
-            elif os.path.splitext(source_file)[1] == ".json":
-                self.override_json(source_file)
+            to_save = model_data
+        path = os.path.join(save_dir, name + ".pkl")
+        with open((path), 'wb') as f:
+            pickle.dump(to_save, f)
+            print("Saved: {}".format(path))
+        return True if os.path.isfile(path) else False
 
     def override_xml(self, xml_file: Union[str, None]) -> None:
         """
@@ -1666,55 +1662,17 @@ class ProtonOC(Model):
                 else:
                     setattr(self, key, value)
 
-    def init_snapshot_state(self, *args: str, name: Union[str, int, float], path: str,
-                            tick: Union[int, None] = None, ) -> None:
+    def override_dict(self, dictionary):
         """
-        This method sets the snapshot generation options. The tick parameter defines at which
-        tick the state will be saved, path and name define the path and name of the json file that
-        will be generated. All previous positional arguments must be additional attributes of
-        the model.
-        This method does not interfere with the collect parameter in the model's __init__;
-        moreover it can be used in combination with override_xml and of course
-        with override_json.
-        :param args: str, additional attributes of the model to be saved
-        :param name: str, the json filename
-        :param path: str, the path where the json file should be saved
-        :param tick: int, which tick the model state should be saved
+        This function override model parameters based on a dictionary.
+        :param json_file_path: dict
         :return: None
         """
-        self.snapshot_tick = self.num_ticks if tick is None else tick
-        self.snapshot_keys = {"number_deceased", "facilitator_fails", "facilitator_crimes",
-                              "crime_size_fails", "number_born", "number_migrants",
-                              "number_law_interventions_this_tick",
-                              "number_protected_recruited_this_tick", "people_jailed",
-                              "number_offspring_recruited_this_tick", "number_crimes",
-                              "big_crime_from_small_fish", "tick", "current_oc_members",
-                              "current_num_persons", "number_weddings",
-                              "kids_intervention_counter",
-                              }.union(set(args))
-        # num_of_family
-        for key in self.snapshot_keys:
-            if key not in self.__dict__.keys():
+        for key, value in dictionary.items():
+            if key not in self.__dict__ and key != "repetitions":
                 raise Exception("{} is not a model attribute".format(key))
-        self.snapshot_path = os.path.join(path, str(name) + ".json")
-
-    def take_snapshot(self) -> None:
-        """
-        This method generates a json file in self.snapshot_path.
-        The json file is composed of the keys in self.snapshot_keys with the respective
-        value of the model at tick = self.snapshot_tick.
-        :return: None
-        """
-        dict_json = dict()
-        dict_json["input"] = dict()
-        dict_json["output"] = dict()
-        for key, value in self.__dict__.items():
-            if key in self.snapshot_keys:
-                dict_json["output"][key] = value if type(value) != np.int32 else float(value)
-            elif key in extra.free_parameters:
-                dict_json["input"][key] = value if type(value) != np.int32 else float(value)
-        with open(self.snapshot_path, 'w') as nf:
-            json.dump(dict_json, nf)
+            else:
+                setattr(self, key, value)
 
     def calculate_fast_reporters(self) -> None:
         """
@@ -1740,3 +1698,5 @@ class ProtonOC(Model):
                                             self.schedule.agents if agent.oc_member])
         self.crimes_committed_by_facilitators = np.sum([agent.num_crimes_committed_this_tick for agent in
                                             self.schedule.agents if agent.facilitator])
+
+
