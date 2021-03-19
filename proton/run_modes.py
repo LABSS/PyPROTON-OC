@@ -235,3 +235,6 @@ class OverrideMode(BaseMode):
             with open(save_name, "wb") as file:
                 pickle.dump(all_data, file)
 
+if __name__ == "__main__":
+    pass
+

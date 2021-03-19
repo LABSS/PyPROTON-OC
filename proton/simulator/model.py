@@ -1693,3 +1693,5 @@ class ProtonOC(Model):
                                             self.schedule.agents if agent.facilitator])
 
 
+if __name__ == "__main__":
+    pass

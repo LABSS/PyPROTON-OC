@@ -373,3 +373,6 @@ def list_contains_problems(ego: Person, candidates:List[Person]) -> Union[bool, 
 @numba.jit(nopython=True)
 def _age(tick: int, birth_tick: int) -> int:
     return np.floor((tick - birth_tick) / 12)
+
+if __name__ == "__main__":
+    pass
