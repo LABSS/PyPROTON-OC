@@ -118,15 +118,16 @@ def base_mode(*args,
                    "that seed for the random generator.")
 @click.option("-parallel",
               "-p",
-              is_flag=True,
-              help="adding this option launches multiple simulations in parallel using "
-                   "concurrent.futures.")
+                nargs=1,
+              default=None,
+              type=int,
+              help="adding this option with an int argument launches multiple simulations in "
+                   "parallel using concurrent.futures. The int argument specifies the number of "
+                   "concurrent processes that are spawned.")
 @click.option("-merge",
               "-m",
-              nargs=1,
-              type=str,
-              default="proton_oc_{}_{}".format(str(time.localtime().tm_hour),
-                                               str(time.localtime().tm_min)),
+              is_flag=True,
+              default=False,
               help="Each simulation generates a single pickle file with the results. If this option "
                    "is passed generates a single file instead. Raise MemoryError "
                    "if not enough memory space.")

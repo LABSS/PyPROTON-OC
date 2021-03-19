@@ -30,6 +30,9 @@ import click
 import sys
 from concurrent.futures import ProcessPoolExecutor as Executor
 import psutil
+import time
+import multiprocessing
+from sys import platform
 
 
 class BaseMode:
@@ -189,24 +192,31 @@ class OverrideMode(BaseMode):
         return extracted
 
     def run(self):
-        if self.parallel:
+        if self.parallel is not None:
             self._run_parallel()
         else:
             for arg in self.args:
                 self._single_run(arg)
-        if self.merge is not None:
+        if self.merge:
             self.merge_multiple_run()
         print("Done!")
 
     def _run_parallel(self):
-        N_WORKERS = 20
-        with Executor(max_workers=N_WORKERS) as executor:
+        if platform == "linux":
+            ctx_in_main = multiprocessing.get_context('fork')
+        else:
+            ctx_in_main = multiprocessing.get_context('spawn')
+        N_WORKERS = self.parallel
+        with Executor(max_workers=N_WORKERS, mp_context=ctx_in_main) as executor:
             executor.map(self._single_run, self.args)
 
     def merge_multiple_run(self):
         to_merge = [file.path for file in os.scandir(self.save_path) if file.path.endswith(".pkl")]
         import pickle
-        save_name = os.path.join(self.save_path, self.merge + ".pkl")
+        save_name = os.path.join(self.save_path,
+                                 "proton_oc_{}_{}".format(str(time.localtime().tm_hour),
+                                               str(time.localtime().tm_min)), + ".pkl")
+
         if sum([os.path.getsize(i) for i in to_merge]) > psutil.virtual_memory().free:
             raise MemoryError("Unable to merge, not enought memory")
         else:
