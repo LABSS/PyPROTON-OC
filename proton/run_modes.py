@@ -36,7 +36,8 @@ class BaseMode:
     """
     Base mode class
     """
-    def __init__(self, name: Union[str, None],
+    def __init__(self,
+                 name: Union[str, None],
                  save_path: Union[str, bool],
                  snapshot: Union[str, None],
                  alldata: bool,

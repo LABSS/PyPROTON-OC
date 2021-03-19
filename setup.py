@@ -7,7 +7,8 @@ requires = ["click>=7.1.2",
             "tornado>=6.1",
             "tqdm>=4.53",
             "numba>=0.51.2",
-            "psutil>=5.8.0"]
+            "psutil>=5.8.0",
+            "mesa>=0.8.8"]
 
 extras_require = {
     "dev": ["pytest >= 4.6", "sphinx"],
