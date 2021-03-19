@@ -198,11 +198,7 @@ class OverrideMode(BaseMode):
         print("Done!")
 
     def _run_parallel(self):
-<<<<<<< HEAD
         N_WORKERS = 20
-=======
-        N_WORKERS = 6
->>>>>>> run_1
         with Executor(max_workers=N_WORKERS) as executor:
             executor.map(self._single_run, self.args)
 
