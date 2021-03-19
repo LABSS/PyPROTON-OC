@@ -29,6 +29,7 @@ import json
 import click
 import sys
 from concurrent.futures import ProcessPoolExecutor as Executor
+from concurrent.futures import as_completed
 import psutil
 import time
 import multiprocessing
@@ -82,7 +83,7 @@ class BaseMode:
         if args["source_override"] is not None:
             model.override_dict(args["source_override"])
         model.run(verbose=args["verbose"])
-        model.save_data(save_dir=args["save_path"],
+        return model.save_data(save_dir=args["save_path"],
                         name=args["filename"],
                         alldata=args["alldata"],
                         snapshot=args["snapshot"])
@@ -208,7 +209,12 @@ class OverrideMode(BaseMode):
             ctx_in_main = multiprocessing.get_context('spawn')
         N_WORKERS = self.parallel
         with Executor(max_workers=N_WORKERS, mp_context=ctx_in_main) as executor:
-            executor.map(self._single_run, self.args)
+            # executor.map(self._single_run, self.args)
+            for out in as_completed([executor.submit(self._single_run, args) for args in
+                                     self.args]):
+                print(out.result())
+
+
 
     def merge_multiple_run(self):
         to_merge = [file.path for file in os.scandir(self.save_path) if file.path.endswith(".pkl")]

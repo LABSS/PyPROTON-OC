@@ -1587,7 +1587,7 @@ class ProtonOC(Model):
                   save_dir: str,
                   name: str,
                   alldata: bool,
-                  snapshot: tuple) -> bool:
+                  snapshot: tuple):
         """
         This method saves the model data in @save_dir as @name in pickle format.
         If @alldata is True, saves two dataframes: one related to the attributes of the model
@@ -1612,8 +1612,8 @@ class ProtonOC(Model):
         path = os.path.join(save_dir, name + ".pkl")
         with open((path), 'wb') as f:
             pickle.dump(to_save, f)
-        print("Saved: {}".format(path))
-        return True if os.path.isfile(path) else False
+
+        return "Saved: {}".format(path)
 
     def override_xml(self, xml_file: Union[str, None]) -> None:
         """
