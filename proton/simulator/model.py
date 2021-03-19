@@ -1612,7 +1612,7 @@ class ProtonOC(Model):
         path = os.path.join(save_dir, name + ".pkl")
         with open((path), 'wb') as f:
             pickle.dump(to_save, f)
-            print("Saved: {}".format(path))
+        print("Saved: {}".format(path))
         return True if os.path.isfile(path) else False
 
     def override_xml(self, xml_file: Union[str, None]) -> None:
