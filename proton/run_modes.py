@@ -203,12 +203,13 @@ class OverrideMode(BaseMode):
         print("Done!")
 
     def _run_parallel(self):
-        if "win" in platform:
-            ctx_in_main = multiprocessing.get_context('spawn')
-        else:
-            ctx_in_main = multiprocessing.get_context('forkserver')
+        # if "win" in platform:
+        #     ctx_in_main = multiprocessing.get_context('spawn')
+        # else:
+        #     ctx_in_main = multiprocessing.get_context('forkserver')
+        # mp_context = ctx_in_main
         N_WORKERS = self.parallel
-        with Executor(max_workers=N_WORKERS, mp_context=ctx_in_main) as executor:
+        with Executor(max_workers=N_WORKERS) as executor:
             for out in as_completed([executor.submit(self._single_run, args) for args in
                                      self.args]):
                 print(out.result())
