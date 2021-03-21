@@ -28,7 +28,7 @@ from xml.dom import minidom
 import json
 import click
 import sys
-from concurrent.futures import ThreadPoolExecutor as Executor
+from concurrent.futures import ProcessPoolExecutor as Executor
 from concurrent.futures import as_completed
 import psutil
 import time
@@ -193,7 +193,7 @@ class OverrideMode(BaseMode):
         return extracted
 
     def run(self):
-        if self.parallel is not None:
+        if self.parallel:
             self._run_parallel()
         else:
             for arg in self.args:
@@ -208,8 +208,7 @@ class OverrideMode(BaseMode):
         # else:
         #     ctx_in_main = multiprocessing.get_context('forkserver')
         # mp_context = ctx_in_main
-        N_WORKERS = self.parallel
-        with Executor(max_workers=N_WORKERS) as executor:
+        with Executor() as executor:
             for out in as_completed([executor.submit(self._single_run, args) for args in
                                      self.args]):
                 print(out.result())
