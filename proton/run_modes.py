@@ -29,14 +29,19 @@ import json
 import click
 import sys
 from concurrent.futures import ProcessPoolExecutor as Executor
+from concurrent.futures import as_completed
 import psutil
+import time
+import multiprocessing
+from sys import platform
 
 
 class BaseMode:
     """
     Base mode class
     """
-    def __init__(self, name: Union[str, None],
+    def __init__(self,
+                 name: Union[str, None],
                  save_path: Union[str, bool],
                  snapshot: Union[str, None],
                  alldata: bool,
@@ -78,7 +83,7 @@ class BaseMode:
         if args["source_override"] is not None:
             model.override_dict(args["source_override"])
         model.run(verbose=args["verbose"])
-        model.save_data(save_dir=args["save_path"],
+        return model.save_data(save_dir=args["save_path"],
                         name=args["filename"],
                         alldata=args["alldata"],
                         snapshot=args["snapshot"])
@@ -188,28 +193,31 @@ class OverrideMode(BaseMode):
         return extracted
 
     def run(self):
-        if self.parallel:
+        if self.parallel is not None:
             self._run_parallel()
         else:
             for arg in self.args:
                 self._single_run(arg)
-        if self.merge is not None:
+        if self.merge:
             self.merge_multiple_run()
         print("Done!")
 
     def _run_parallel(self):
-<<<<<<< HEAD
-        N_WORKERS = 20
-=======
-        N_WORKERS = 6
->>>>>>> run_1
-        with Executor(max_workers=N_WORKERS) as executor:
-            executor.map(self._single_run, self.args)
+        with Executor(max_workers=self.parallel) as executor:
+            for out in as_completed([executor.submit(self._single_run, args) for args in
+                                     self.args]):
+                print(out.result())
+                del out
+
+
 
     def merge_multiple_run(self):
         to_merge = [file.path for file in os.scandir(self.save_path) if file.path.endswith(".pkl")]
         import pickle
-        save_name = os.path.join(self.save_path, self.merge + ".pkl")
+        save_name = os.path.join(self.save_path,
+                                 "proton_oc_{}_{}".format(str(time.localtime().tm_hour),
+                                               str(time.localtime().tm_min)), + ".pkl")
+
         if sum([os.path.getsize(i) for i in to_merge]) > psutil.virtual_memory().free:
             raise MemoryError("Unable to merge, not enought memory")
         else:
@@ -221,4 +229,7 @@ class OverrideMode(BaseMode):
                 os.remove(i)
             with open(save_name, "wb") as file:
                 pickle.dump(all_data, file)
+
+if __name__ == "__main__":
+    pass
 

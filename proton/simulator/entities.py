@@ -727,3 +727,6 @@ class School:
 
     def __repr__(self):
         return "School: " + str(self.unique_id) + " Level: " + str(self.diploma_level)
+
+if __name__ == "__main__":
+    pass

@@ -144,6 +144,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+pyproton_oc.egg-info/
 
 # Installer logs
 pip-log.txt

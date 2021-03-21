@@ -881,9 +881,6 @@ class ProtonOC(Model):
                             population.append(member)
             if not success:
                 complex_hh_sizes.append(size)
-        if self.verbose:
-            print("Complex size: " + str(len(complex_hh_sizes))
-                  + str("/") + str(len(self.hh_size)))
         for comp_hh_size in complex_hh_sizes:
             comp_hh_size = int(min(comp_hh_size, len(population)))
             complex_hh_members = population[0:comp_hh_size]  # grab the first persons in the list
@@ -897,10 +894,6 @@ class ProtonOC(Model):
                 member.wealth_level = family_wealth_level
             if len(complex_hh_members) > 1:
                 self.families.append(complex_hh_members)
-        if self.verbose:
-            print("Singles " + str(len([x for x in self.hh_size if x == 1])))
-            print("Families " + str(len(self.families)))
-            print("Average of attempts " + str(np.mean(attempts_list)))
 
 
     def household_sizes(self, size: int) -> List[int]:
@@ -1594,7 +1587,7 @@ class ProtonOC(Model):
                   save_dir: str,
                   name: str,
                   alldata: bool,
-                  snapshot: tuple) -> bool:
+                  snapshot: tuple):
         """
         This method saves the model data in @save_dir as @name in pickle format.
         If @alldata is True, saves two dataframes: one related to the attributes of the model
@@ -1619,8 +1612,8 @@ class ProtonOC(Model):
         path = os.path.join(save_dir, name + ".pkl")
         with open((path), 'wb') as f:
             pickle.dump(to_save, f)
-            print("Saved: {}".format(path))
-        return True if os.path.isfile(path) else False
+
+        return "Saved: {}".format(path)
 
     def override_xml(self, xml_file: Union[str, None]) -> None:
         """
@@ -1700,3 +1693,5 @@ class ProtonOC(Model):
                                             self.schedule.agents if agent.facilitator])
 
 
+if __name__ == "__main__":
+    pass

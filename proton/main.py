@@ -42,7 +42,8 @@ def mode():
 @click.option("-collect",
               "-c",
               nargs=1,
-              type=click.Path(exists=True), default=os.getcwd(),
+              type=click.Path(exists=True),
+              default=os.getcwd(),
               help="Specify the path where the results are saved. (e.g. -c "
                    "/this_folder/another_folder). default is cwd")
 @click.option("-snapshot",
@@ -57,6 +58,7 @@ def mode():
 @click.option("-alldata",
               "-a",
               is_flag=True,
+              default=False,
               help="By default only model ouputs are collected. If this option is passed "
                    "the attributes of every single agent are also collected. Warning: The output "
                    "may be large.")
@@ -67,11 +69,21 @@ def mode():
               help="If this option is called with an integer value, the simulation uses "
                    "that seed for the random generator.")
 @click.pass_context
-def base_mode(name, collect, snapshot, alldata, randomstate):
+def base_mode(*args,
+              name,
+              collect,
+              snapshot,
+              alldata,
+              randomstate,
+              **kwargs):
     """
     Run a simple baseline simulation
     """
-    mode = BaseMode(name, collect, snapshot, alldata, randomstate)
+    mode = BaseMode(name=name,
+                    save_path=collect,
+                    snapshot=snapshot,
+                    alldata=alldata,
+                    randomstate=randomstate)
     mode.run()
 
 
@@ -106,25 +118,27 @@ def base_mode(name, collect, snapshot, alldata, randomstate):
                    "that seed for the random generator.")
 @click.option("-parallel",
               "-p",
-              is_flag=True,
-              help="adding this option launches multiple simulations in parallel using "
-                   "concurrent.futures.")
+              nargs=1,
+              default=None,
+              type=int,
+              help="adding this option with an int argument launches multiple simulations in "
+                   "parallel using concurrent.futures")
 @click.option("-merge",
               "-m",
-              nargs=1,
-              type=str,
-              default="proton_oc_{}_{}".format(str(time.localtime().tm_hour),
-                                               str(time.localtime().tm_min)),
+              is_flag=True,
+              default=False,
               help="Each simulation generates a single pickle file with the results. If this option "
                    "is passed generates a single file instead. Raise MemoryError "
                    "if not enough memory space.")
 @click.pass_context
-def override(source_path,collect,
+def override(*args,
+             source_path,collect,
              snapshot,
              alldata,
              randomstate,
              parallel,
-             merge):
+             merge,
+             **kwargs):
     """
     This command takes as argument an .xml file a .json file or a folder containing several .json or .xml files.
     It overwrites the model parameters with the files and performs several simulations.
