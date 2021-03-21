@@ -28,7 +28,7 @@ from xml.dom import minidom
 import json
 import click
 import sys
-from concurrent.futures import ProcessPoolExecutor as Executor
+from concurrent.futures import ThreadPoolExecutor as Executor
 from concurrent.futures import as_completed
 import psutil
 import time
@@ -83,10 +83,10 @@ class BaseMode:
         if args["source_override"] is not None:
             model.override_dict(args["source_override"])
         model.run(verbose=args["verbose"])
-        # return model.save_data(save_dir=args["save_path"],
-        #                 name=args["filename"],
-        #                 alldata=args["alldata"],
-        #                 snapshot=args["snapshot"])
+        return model.save_data(save_dir=args["save_path"],
+                        name=args["filename"],
+                        alldata=args["alldata"],
+                        snapshot=args["snapshot"])
 
 
 class OverrideMode(BaseMode):
