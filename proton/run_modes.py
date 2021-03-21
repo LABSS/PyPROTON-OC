@@ -208,10 +208,11 @@ class OverrideMode(BaseMode):
         # else:
         #     ctx_in_main = multiprocessing.get_context('forkserver')
         # mp_context = ctx_in_main
-        with Executor() as executor:
+        with Executor(max_workers=2) as executor:
             for out in as_completed([executor.submit(self._single_run, args) for args in
                                      self.args]):
                 print(out.result())
+                del out
 
 
 
