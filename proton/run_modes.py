@@ -193,7 +193,7 @@ class OverrideMode(BaseMode):
         return extracted
 
     def run(self):
-        if self.parallel:
+        if self.parallel is not None:
             self._run_parallel()
         else:
             for arg in self.args:
@@ -203,12 +203,7 @@ class OverrideMode(BaseMode):
         print("Done!")
 
     def _run_parallel(self):
-        # if "win" in platform:
-        #     ctx_in_main = multiprocessing.get_context('spawn')
-        # else:
-        #     ctx_in_main = multiprocessing.get_context('forkserver')
-        # mp_context = ctx_in_main
-        with Executor(max_workers=2) as executor:
+        with Executor(max_workers=self.parallel) as executor:
             for out in as_completed([executor.submit(self._single_run, args) for args in
                                      self.args]):
                 print(out.result())

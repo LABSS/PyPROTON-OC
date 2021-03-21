@@ -118,8 +118,9 @@ def base_mode(*args,
                    "that seed for the random generator.")
 @click.option("-parallel",
               "-p",
-              default=False,
-              is_flag=True,
+              nargs=1,
+              default=None,
+              type=int,
               help="adding this option with an int argument launches multiple simulations in "
                    "parallel using concurrent.futures")
 @click.option("-merge",
