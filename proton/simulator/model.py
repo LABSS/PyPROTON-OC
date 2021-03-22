@@ -48,7 +48,7 @@ class ProtonOC(Model):
 
     def __init__(self,
                  seed: int = int.from_bytes(os.urandom(4), sys.byteorder),
-                 collect: bool = True) -> None:
+                 collect_agents: bool = False) -> None:
         super().__init__()
         self.seed: int = seed
         self.random: np.random.default_rng = np.random.default_rng(seed=seed)
@@ -62,7 +62,7 @@ class ProtonOC(Model):
         self.meta_graph: nx.Graph = nx.Graph()
         self.ticks_per_year: int = 12
         self.tick: int = 1  # current tick
-        self.collect = collect
+        self.collect_agents = collect_agents
         self.max_ids = {"school" : 0,
                         "person": 0,
                         "employer": 0,
@@ -226,9 +226,13 @@ class ProtonOC(Model):
         collected each call.
         :return: None
         """
-        agent_reporters, model_reporters = extra.generate_collector_dicts()
-        self.datacollector = DataCollector(model_reporters=model_reporters,
-                                           agent_reporters=agent_reporters)
+        if self.collect_agents:
+            agent_reporters, model_reporters = extra.generate_collector_dicts(True)
+            self.datacollector = DataCollector(model_reporters=model_reporters,
+                                               agent_reporters=agent_reporters)
+        else:
+            model_reporters = extra.generate_collector_dicts(False)
+            self.datacollector = DataCollector(model_reporters=model_reporters)
 
 
     def step(self) -> None:
@@ -291,7 +295,6 @@ class ProtonOC(Model):
                     agent.prisoner = False
         self.make_people_die()
         self.schedule.step()
-        if self.collect:
             self.calculate_fast_reporters()
             self.datacollector.collect(self)
         self.tick += 1
@@ -1032,16 +1035,14 @@ class ProtonOC(Model):
         self.calculate_arrest_rate()
         self.setup_oc_groups()
         self.setup_facilitators()
-        if self.collect:
-            self.init_collector()
+        self.init_collector()
         for agent in self.schedule.agents:
             agent.hobby = self.random.integers(low=1, high=5, endpoint=True)
         self.calc_correction_for_non_facilitators()
         for agent in self.schedule.agents:
             if not agent.gender_is_male and agent.get_neighbor_list("offspring"):
                 agent.number_of_children = len(agent.get_neighbor_list("offspring"))
-        if self.collect:
-            self.datacollector.collect(self)
+        self.datacollector.collect(self)
         elapsed_time = time.time() - start
         hours = elapsed_time // 3600
         temp = elapsed_time - 3600 * hours
@@ -1586,7 +1587,6 @@ class ProtonOC(Model):
     def save_data(self,
                   save_dir: str,
                   name: str,
-                  alldata: bool,
                   snapshot: tuple):
         """
         This method saves the model data in @save_dir as @name in pickle format.
@@ -1604,7 +1604,7 @@ class ProtonOC(Model):
         model_data = self.datacollector.get_model_vars_dataframe()
         if snapshot:
             model_data = model_data.iloc[list(snapshot)]
-        if alldata:
+        if self.collect_agents:
             agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
             to_save = [model_data, agent_data]
         else:

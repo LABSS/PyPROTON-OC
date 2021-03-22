@@ -259,7 +259,7 @@ def commit_crime(co_offenders: List[Person]) -> None:
                 co_offender.num_co_offenses[co_off_key] += 1
 
 
-def generate_collector_dicts() -> Tuple[Dict, Dict]:
+def generate_collector_dicts(collect_agents) -> Union[Tuple[Dict, Dict], Dict]:
     """
     This returns two dictionaries consisting of as many key/value pairs as the elements
     contained within the @model_reporters, @agent_reporters parameters.
@@ -305,8 +305,10 @@ def generate_collector_dicts() -> Tuple[Dict, Dict]:
     model_reporters_dic = {key: key for key in model_reporters}
     agent_reporters_dic = {key: key if key not in net_names else lambda x: x.dump_net(key)
                                 for key in agent_reporters }
-    return agent_reporters_dic, model_reporters_dic
-
+    if collect_agents:
+        return agent_reporters_dic, model_reporters_dic
+    else:
+        return model_reporters_dic
 
 def convert_numerical(s: str) -> Union[int, float, str]:
     """
