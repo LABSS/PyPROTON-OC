@@ -79,13 +79,12 @@ class BaseMode:
         """
         if args["seed"] is None:
             args["seed"] = int.from_bytes(os.urandom(4), sys.byteorder)
-        model = ProtonOC(seed=args["seed"])
+        model = ProtonOC(seed=args["seed"], collect_agents=args["alldata"])
         if args["source_override"] is not None:
             model.override_dict(args["source_override"])
         model.run(verbose=args["verbose"])
         return model.save_data(save_dir=args["save_path"],
                         name=args["filename"],
-                        alldata=args["alldata"],
                         snapshot=args["snapshot"])
 
 
