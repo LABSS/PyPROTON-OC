@@ -32,8 +32,8 @@ import networkx as nx
 from tqdm import tqdm
 from itertools import combinations, chain
 import time
-from proton.simulator.entities import Person, School, Employer, Job
-from proton.simulator import extra
+from protonoc.simulator.entities import Person, School, Employer, Job
+from protonoc.simulator import extra
 from typing import List, Set, Union, Dict
 from xml.dom import minidom
 import json
@@ -295,8 +295,8 @@ class ProtonOC(Model):
                     agent.prisoner = False
         self.make_people_die()
         self.schedule.step()
-            self.calculate_fast_reporters()
-            self.datacollector.collect(self)
+        self.calculate_fast_reporters()
+        self.datacollector.collect(self)
         self.tick += 1
 
     def run(self,
@@ -684,14 +684,18 @@ class ProtonOC(Model):
             self.num_oc_persons * self.initial_agents / 10000)
         # families first.
         # we assume here that we'll never get a negative criminal tendency.
-        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.random)
+        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents,
+                                              lambda x: x.criminal_tendency, self.random)
         candidates = list()
         for head in oc_family_heads:
             head.oc_member = True
             candidates += [relative for relative in head.neighbors.get('household') if
                            relative.age >= 18]
         if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
-            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.random)
+            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families,
+                                                      candidates,
+                                                      lambda x: x.criminal_tendency,
+                                                      self.random)
             # fill up the families as much as possible
             for member in members_in_families:
                 member.oc_member = True
@@ -1061,7 +1065,7 @@ class ProtonOC(Model):
         :return: None
         """
         permuted_set = self.random.permuted(self.schedule.agents)
-        for agent in  permuted_set:
+        for agent in permuted_set:
             if agent.age > 16:
                 agent.job_level = extra.pick_from_pair_list(
                     self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],
@@ -1437,7 +1441,9 @@ class ProtonOC(Model):
                 value[1] * len(people_in_cell) / self.ticks_per_year * self.crime_multiplier
             for _target in np.arange(np.round(target_n_of_crimes)):
                 self.number_crimes += 1
-                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency, self.random)
+                agent = extra.weighted_one_of(people_in_cell,
+                                              lambda x: x.criminal_tendency,
+                                              self.random)
                 number_of_accomplices = self.number_of_accomplices()
                 accomplices = agent.find_accomplices(number_of_accomplices)
                 # this takes care of facilitators as well.
@@ -1694,4 +1700,5 @@ class ProtonOC(Model):
 
 
 if __name__ == "__main__":
-    pass
+    model = ProtonOC()
+    model.run(n_agents=100, num_ticks=480, verbose=True)

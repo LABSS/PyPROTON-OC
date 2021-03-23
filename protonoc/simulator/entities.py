@@ -29,7 +29,7 @@ if typing.TYPE_CHECKING:
 from mesa import Agent
 import networkx as nx
 from itertools import chain
-from proton.simulator import extra
+from protonoc.simulator import extra
 import numpy as np
 
 

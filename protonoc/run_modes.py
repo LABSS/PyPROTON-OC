@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Union, Dict
-from proton.simulator.model import ProtonOC
-from proton.simulator.model import extra
+from __future__ import annotations
+from typing import Union, Dict, List
+from protonoc.simulator.model import ProtonOC
+from protonoc.simulator.model import extra
 import os
 from xml.dom import minidom
 import json
@@ -33,12 +34,11 @@ from concurrent.futures import as_completed
 import psutil
 import time
 import multiprocessing
-from sys import platform
 
 
 class BaseMode:
     """
-    Base mode class
+    Abstract class for Base mode
     """
     def __init__(self,
                  name: Union[str, None],
@@ -74,7 +74,7 @@ class BaseMode:
         """
         This instantiates a model, performs a parameter override (if necessary),
         runs a simulation, and saves the data.
-        :param args: List [seed, source_file, save_dir, name, verbose]
+        :param args: List [seed, source_override, save_path, filename, verbose, snapshot, alldata]
         :return: None
         """
         if args["seed"] is None:
@@ -89,6 +89,9 @@ class BaseMode:
 
 
 class OverrideMode(BaseMode):
+    """
+    OverrideMode class
+    """
     def __init__(self,
                  source_path: str,
                  save_path: Union[str, bool],
@@ -109,6 +112,9 @@ class OverrideMode(BaseMode):
         self.args = [run for subrun in self.detect_files() for run in subrun]
 
     def detect_files(self):
+        """
+        This method finds files to override model parameters, accepted extensions are json or xml.
+        """
         all_plans = list()
         if os.path.isfile(self.source_path):
             if self.source_path.endswith(".json") or self.source_path.endswith(".xml"):
@@ -129,11 +135,12 @@ class OverrideMode(BaseMode):
                     pass
         return all_plans
 
-    def get_from_xml(self, xml_file):
+    def get_from_xml(self, xml_file: str) -> List[Dict]:
         """
-        This function override model parameters based on xml file.
+        This function override model parameters based on xml file and return a list with
+        detected files.
         :param xml_file: str, xml path
-        :return: None
+        :return: List[Dict]
         """
         results = list()
         run = dict()
@@ -167,7 +174,13 @@ class OverrideMode(BaseMode):
                             "alldata": self.alldata})
         return results
 
-    def get_from_json(self, source):
+    def get_from_json(self, source: str) -> List[Dict]:
+        """
+        This function override model parameters based on json file and return a list with
+        detected files.
+        :param source: str, json path
+        :return: List[Dict]
+        """
         extracted = list()
         with open(source, "rb") as file:
             js_file = json.load(file)
@@ -191,7 +204,11 @@ class OverrideMode(BaseMode):
                                   "alldata": self.alldata})
         return extracted
 
-    def run(self):
+    def run(self) -> None:
+        """
+        Simple run function
+        :return: None
+        """
         if self.parallel is not None:
             self._run_parallel()
         else:
@@ -201,7 +218,13 @@ class OverrideMode(BaseMode):
             self.merge_multiple_run()
         print("Done!")
 
-    def _run_parallel(self):
+    def _run_parallel(self) -> None:
+        """
+        This method performs numerous simulations in parallel.
+        todo: Control memory growth.
+        """
+        if self.parallel > multiprocessing.cpu_count():
+            self.parallel = multiprocessing.cpu_count()
         with Executor(max_workers=self.parallel) as executor:
             for out in as_completed([executor.submit(self._single_run, args) for args in
                                      self.args]):
@@ -209,8 +232,11 @@ class OverrideMode(BaseMode):
                 del out
 
 
-
-    def merge_multiple_run(self):
+    def merge_multiple_run(self) -> None:
+        """
+        Every simulation launched generates a single file, this function combines the generated
+        files checking that the operation does not result in an Out of Memory.
+        """
         to_merge = [file.path for file in os.scandir(self.save_path) if file.path.endswith(".pkl")]
         import pickle
         save_name = os.path.join(self.save_path,

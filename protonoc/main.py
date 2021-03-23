@@ -24,7 +24,7 @@
 
 import click
 import time
-from proton.run_modes import BaseMode, OverrideMode
+from protonoc.run_modes import BaseMode, OverrideMode
 import os
 
 @click.group(help="PROTON-OC command line interface")
@@ -121,13 +121,16 @@ def base_mode(*args,
               nargs=1,
               default=None,
               type=int,
-              help="adding this option with an int argument launches multiple simulations in "
-                   "parallel using concurrent.futures")
+              help="Adding this option with an int argument launches multiple simulations in "
+                   "parallel using concurrent.futures. The int value indicates how many cores to "
+                   "use. If the value is too high adjust the parameter based on the available "
+                   "machine's cores. Be careful, it does not control memory increase "
+                   "which may cause an out-of-memory. ")
 @click.option("-merge",
               "-m",
               is_flag=True,
               default=False,
-              help="Each simulation generates a single pickle file with the results. If this option "
+              help="Each simulation generates a single pickle file. If this option "
                    "is passed generates a single file instead. Raise MemoryError "
                    "if not enough memory space.")
 @click.pass_context
