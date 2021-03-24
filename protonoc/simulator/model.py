@@ -32,12 +32,13 @@ import networkx as nx
 from tqdm import tqdm
 from itertools import combinations, chain
 import time
-from proton.simulator.entities import Person, School, Employer, Job
-from proton.simulator import extra
-from typing import List, Set, Union, Dict
+from protonoc.simulator.entities import Person, School, Employer, Job
+from protonoc.simulator import extra
+from typing import List, Set, Union, Dict, Any
 from xml.dom import minidom
 import json
 import sys
+from prettytable import PrettyTable as pt
 import pickle
 
 class ProtonOC(Model):
@@ -46,7 +47,9 @@ class ProtonOC(Model):
     Developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu
     """
 
-    def __init__(self, seed: int = int.from_bytes(os.urandom(4), sys.byteorder), collect: bool = True) -> None:
+    def __init__(self,
+                 seed: int = int.from_bytes(os.urandom(4), sys.byteorder),
+                 collect_agents: bool = False) -> None:
         super().__init__()
         self.seed: int = seed
         self.random: np.random.default_rng = np.random.default_rng(seed=seed)
@@ -60,7 +63,7 @@ class ProtonOC(Model):
         self.meta_graph: nx.Graph = nx.Graph()
         self.ticks_per_year: int = 12
         self.tick: int = 1  # current tick
-        self.collect = collect
+        self.collect_agents = collect_agents
         self.max_ids = {"school" : 0,
                         "person": 0,
                         "employer": 0,
@@ -69,11 +72,6 @@ class ProtonOC(Model):
 
         # Scheduler
         self.schedule: BaseScheduler = BaseScheduler(self)
-
-        #Stanpshot state
-        self.snapshot_tick: Union[int, None] = None
-        self.snapshot_keys: Union[List[str], None] = None
-        self.snapshot_path: Union[str, None] = None
 
         # Intervention
         self.family_intervention: Union[str, None] = None
@@ -137,6 +135,18 @@ class ProtonOC(Model):
         #Fast reporter (calculated at each tick)
         self.current_oc_members: int = 0
         self.current_num_persons: int = 0
+        self.criminal_tendency_mean = 0
+        self.criminal_tencency_sd = 0
+        self.age_mean = 0
+        self.age_sd = 0
+        self.education_level_mean = 0
+        self.education_level_sd = 0
+        self.male = 0
+        self.female = 0
+        self.num_crime_committed_mean = 0
+        self.num_crime_committed_sd = 0
+        self.crimes_committed_by_oc = 0
+        self.crimes_committed_by_facilitators = 0
 
         # Folders definition
         self.cwd, _ = os.path.split(__file__)
@@ -151,14 +161,11 @@ class ProtonOC(Model):
         Directory structure:
         ├───inputs (@self.input_directory)
         │   ├───eindhoven (@self.eindhoven)
-        │   │   ├───data
-        │   │   └───raw
+        │   │   └───data
         │   ├───general (@self.general)
-        │   │   ├───data
-        │   │   └───raw
+        │   │   └───data
         │   └───palermo (@self.palermo_inputs)
-        │       ├───data
-        │       └───raw
+        │       └───data
         generated with github.com/nfriend/tree-online
         """
         # Load tables
@@ -207,45 +214,9 @@ class ProtonOC(Model):
         self.p_single_father = self.read_csv_city("proportion_single_fathers")
         self.job_counts = self.read_csv_city("employer_sizes").iloc[:, 0].values.tolist()
 
-        self.model_reporters = ["seed", "family_intervention", 'social_support', 'welfare_support',
-                                'this_is_a_big_crime', 'good_guy_threshold', 'number_deceased',
-                                'facilitator_fails', 'facilitator_crimes', 'crime_size_fails',
-                                'number_born', 'number_migrants', 'number_weddings',
-                                'number_weddings_mean',
-                                'number_law_interventions_this_tick',
-                                'correction_for_non_facilitators',
-                                'number_protected_recruited_this_tick', 'people_jailed',
-                                'number_offspring_recruited_this_tick', 'number_crimes',
-                                'crime_multiplier', 'kids_intervention_counter',
-                                'big_crime_from_small_fish', 'arrest_rate', 'migration_on',
-                                'initial_agents',
-                                'intervention', 'max_accomplice_radius', 'number_arrests_per_year',
-                                'ticks_per_year', 'num_ticks', 'tick', 'ticks_between_intervention',
-                                'intervention_start', 'intervention_end', 'num_oc_persons',
-                                'num_oc_families', 'education_modifier', 'retirement_age',
-                                'unemployment_multiplier', 'nat_propensity_m',
-                                'nat_propensity_sigma',
-                                'nat_propensity_threshold', 'facilitator_repression',
-                                'facilitator_repression_multiplier', 'percentage_of_facilitators',
-                                'targets_addressed_percent', 'threshold_use_facilitators',
-                                'oc_embeddedness_radius', 'oc_boss_repression', 'punishment_length',
-                                'constant_population', "number_crimes_yearly_per10k",
-                                "current_oc_members", "current_num_persons"]
-
-        self.agent_reporters = ['unique_id', 'gender_is_male', 'prisoner', 'age',
-                                'sentence_countdown',
-                                'num_crimes_committed', 'num_crimes_committed_this_tick',
-                                'education_level', 'max_education_level', 'wealth_level',
-                                'job_level',
-                                'propensity', 'oc_member', 'retired', 'number_of_children',
-                                'facilitator',
-                                'hobby', 'new_recruit', 'migrant', 'criminal_tendency',
-                                'target_of_intervention', "cached_oc_embeddedness", 'sibling',
-                                'offspring', 'parent', 'partner', 'household', 'friendship',
-                                'criminal', 'professional', 'school']
 
     def __repr__(self):
-        return "PROTON-OC MODEL, seed: " + str(self.seed)
+        return "PROTON-OC MODEL, seed: {}".format(str(self.seed))
 
 
     def init_collector(self) -> None:
@@ -256,10 +227,13 @@ class ProtonOC(Model):
         collected each call.
         :return: None
         """
-        agent_reporters, model_reporters = extra.generate_collector_dicts(self.model_reporters,
-                                                                          self.agent_reporters)
-        self.datacollector = DataCollector(model_reporters=model_reporters,
-                                           agent_reporters=agent_reporters)
+        if self.collect_agents:
+            agent_reporters, model_reporters = extra.generate_collector_dicts(True)
+            self.datacollector = DataCollector(model_reporters=model_reporters,
+                                               agent_reporters=agent_reporters)
+        else:
+            model_reporters = extra.generate_collector_dicts(False)
+            self.datacollector = DataCollector(model_reporters=model_reporters)
 
 
     def step(self) -> None:
@@ -322,12 +296,9 @@ class ProtonOC(Model):
                     agent.prisoner = False
         self.make_people_die()
         self.schedule.step()
-        if self.collect:
-            self.datacollector.collect(self)
+        self.calculate_fast_reporters()
+        self.datacollector.collect(self)
         self.tick += 1
-        if self.snapshot_tick is not None and self.snapshot_tick == self.tick:
-            self.calculate_fast_reporters()
-            self.take_snapshot()
 
     def run(self,
             n_agents: Union[int, None] = None,
@@ -345,7 +316,6 @@ class ProtonOC(Model):
             n_agents = self.initial_agents
         if num_ticks is not None:
             self.num_ticks = num_ticks
-        self.snapshot_tick = self.num_ticks if self.snapshot_tick is not None else None
         self.verbose = verbose
         self.setup(n_agents=n_agents)
         pbar = tqdm(np.arange(1, self.num_ticks+1)) if verbose else range(1, self.num_ticks+1)
@@ -664,8 +634,9 @@ class ProtonOC(Model):
                                               p_friends,
                                               lambda x: agent.social_proximity(x),
                                               self.random)
-                for chosen in friends:
-                    chosen.make_friendship_link(agent)
+                if len(friends) > 0:
+                    for chosen in friends:
+                        chosen.make_friendship_link(agent)
 
 
     def remove_excess_friends(self) -> None:
@@ -714,14 +685,18 @@ class ProtonOC(Model):
             self.num_oc_persons * self.initial_agents / 10000)
         # families first.
         # we assume here that we'll never get a negative criminal tendency.
-        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents, lambda x: x.criminal_tendency, self.random)
+        oc_family_heads = extra.weighted_n_of(scaled_num_oc_families, self.schedule.agents,
+                                              lambda x: x.criminal_tendency, self.random)
         candidates = list()
         for head in oc_family_heads:
             head.oc_member = True
             candidates += [relative for relative in head.neighbors.get('household') if
                            relative.age >= 18]
         if len(candidates) >= scaled_num_oc_persons - scaled_num_oc_families:  # family members will be enough
-            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families, candidates, lambda x: x.criminal_tendency, self.random)
+            members_in_families = extra.weighted_n_of(scaled_num_oc_persons - scaled_num_oc_families,
+                                                      candidates,
+                                                      lambda x: x.criminal_tendency,
+                                                      self.random)
             # fill up the families as much as possible
             for member in members_in_families:
                 member.oc_member = True
@@ -755,6 +730,11 @@ class ProtonOC(Model):
         """
         This procedure initializes the agents and creates the first "friendship" links based on an
         watts strogatz net.
+
+        DEV-NOTE: Using Watts-Strogatz is a bit arbitrary, but it should at least give us some
+        clustering to start with. The network structure should evolve as the model runs anyway.
+        Still, if we could find some data on the properties of real world friendship networks,
+        we could use something like http://jasss.soc.surrey.ac.uk/13/1/11.html instead.
         :return: None
         """
         self.watts_strogatz = nx.watts_strogatz_graph(self.initial_agents, 2, 0.1,
@@ -909,9 +889,6 @@ class ProtonOC(Model):
                             population.append(member)
             if not success:
                 complex_hh_sizes.append(size)
-        if self.verbose:
-            print("Complex size: " + str(len(complex_hh_sizes))
-                  + str("/") + str(len(self.hh_size)))
         for comp_hh_size in complex_hh_sizes:
             comp_hh_size = int(min(comp_hh_size, len(population)))
             complex_hh_members = population[0:comp_hh_size]  # grab the first persons in the list
@@ -925,10 +902,6 @@ class ProtonOC(Model):
                 member.wealth_level = family_wealth_level
             if len(complex_hh_members) > 1:
                 self.families.append(complex_hh_members)
-        if self.verbose:
-            print("Singles " + str(len([x for x in self.hh_size if x == 1])))
-            print("Families " + str(len(self.families)))
-            print("Average of attempts " + str(np.mean(attempts_list)))
 
 
     def household_sizes(self, size: int) -> List[int]:
@@ -1067,16 +1040,14 @@ class ProtonOC(Model):
         self.calculate_arrest_rate()
         self.setup_oc_groups()
         self.setup_facilitators()
-        if self.collect:
-            self.init_collector()
+        self.init_collector()
         for agent in self.schedule.agents:
             agent.hobby = self.random.integers(low=1, high=5, endpoint=True)
         self.calc_correction_for_non_facilitators()
         for agent in self.schedule.agents:
             if not agent.gender_is_male and agent.get_neighbor_list("offspring"):
                 agent.number_of_children = len(agent.get_neighbor_list("offspring"))
-        if self.collect:
-            self.datacollector.collect(self)
+        self.datacollector.collect(self)
         elapsed_time = time.time() - start
         hours = elapsed_time // 3600
         temp = elapsed_time - 3600 * hours
@@ -1094,8 +1065,8 @@ class ProtonOC(Model):
 
         :return: None
         """
-        permuted_set =  self.random.permuted(self.schedule.agents)
-        for agent in  permuted_set:
+        permuted_set = self.random.permuted(self.schedule.agents)
+        for agent in permuted_set:
             if agent.age > 16:
                 agent.job_level = extra.pick_from_pair_list(
                     self.work_status_by_edu_lvl[agent.education_level][agent.gender_is_male],
@@ -1471,7 +1442,9 @@ class ProtonOC(Model):
                 value[1] * len(people_in_cell) / self.ticks_per_year * self.crime_multiplier
             for _target in np.arange(np.round(target_n_of_crimes)):
                 self.number_crimes += 1
-                agent = extra.weighted_one_of(people_in_cell, lambda x: x.criminal_tendency, self.random)
+                agent = extra.weighted_one_of(people_in_cell,
+                                              lambda x: x.criminal_tendency,
+                                              self.random)
                 number_of_accomplices = self.number_of_accomplices()
                 accomplices = agent.find_accomplices(number_of_accomplices)
                 # this takes care of facilitators as well.
@@ -1595,7 +1568,8 @@ class ProtonOC(Model):
         :return: None
         """
         dead_agents = list()
-        for agent in self.schedule.agent_buffer(True):
+        permuted = self.random.permuted(self.schedule.agents)
+        for agent in permuted:
             if self.random.random() < agent.p_mortality() or agent.age > 119:
                 dead_agents.append(agent)
                 if self.removed_fatherships:
@@ -1617,31 +1591,36 @@ class ProtonOC(Model):
             self.schedule.remove(agent)
             del agent
 
-    def save_data(self, save_dir: str, name: str, save_mode: str = "pickle") -> None:
+    def save_data(self,
+                  save_dir: str,
+                  name: str,
+                  snapshot: tuple):
         """
-        This creates a new folder named name in the save_dir location and generates
-        two files:agents.xxx related to historical data of all agents and model.xxx
-        related to model attributes. The save_mode parameter adjusts the save format ("cvs" /
-        "feather")
-        :param save_dir: str, location
-        :param name: str, run name
-        :param save_mode: str, can be either "pickle" or "feather"
+        This method saves the model data in @save_dir as @name in pickle format.
+        If @alldata is True, saves two dataframes: one related to the attributes of the model
+        and one related to the attributes of all agents at each tick (the pkl file is clearly larger).
+        If snapshot is a tuple with a single value or with multiple values, saves model state only
+        at those ticks.
+        :param save_dir: str, direcotry to save
+        :param name: str, the pickle filename
+        :param alldata: bool, if True save a large dataframe with model and agents data
+        :param snapshot: tuple, if tuple of int saves model state only
+        at those ticks.
         :return: None
         """
-        agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
         model_data = self.datacollector.get_model_vars_dataframe()
-        if save_mode == "pickle":
-            with open(os.path.join(save_dir, name + ".pkl"), 'wb') as f:
-                pickle.dump([agent_data, model_data], f)
-
-    def override(self, source_file: Union[str, None] = None) -> None:
-        if source_file is None:
-            pass
+        if snapshot:
+            model_data = model_data.iloc[list(snapshot)]
+        if self.collect_agents:
+            agent_data = self.datacollector.get_agent_vars_dataframe().reset_index()
+            to_save = [model_data, agent_data]
         else:
-            if os.path.splitext(source_file)[1] == ".xml":
-                self.override_xml(source_file)
-            elif os.path.splitext(source_file)[1] == ".json":
-                self.override_json(source_file)
+            to_save = model_data
+        path = os.path.join(save_dir, name + ".pkl")
+        with open((path), 'wb') as f:
+            pickle.dump(to_save, f)
+
+        return "Saved: {}".format(path)
 
     def override_xml(self, xml_file: Union[str, None]) -> None:
         """
@@ -1683,55 +1662,17 @@ class ProtonOC(Model):
                 else:
                     setattr(self, key, value)
 
-    def init_snapshot_state(self, *args: str, name: Union[str, int, float], path: str,
-                            tick: Union[int, None] = None, ) -> None:
+    def override_dict(self, dictionary):
         """
-        This method sets the snapshot generation options. The tick parameter defines at which
-        tick the state will be saved, path and name define the path and name of the json file that
-        will be generated. All previous positional arguments must be additional attributes of
-        the model.
-        This method does not interfere with the collect parameter in the model's __init__;
-        moreover it can be used in combination with override_xml and of course
-        with override_json.
-        :param args: str, additional attributes of the model to be saved
-        :param name: str, the json filename
-        :param path: str, the path where the json file should be saved
-        :param tick: int, which tick the model state should be saved
+        This function override model parameters based on a dictionary.
+        :param json_file_path: dict
         :return: None
         """
-        self.snapshot_tick = self.num_ticks if tick is None else tick
-        self.snapshot_keys = {"number_deceased", "facilitator_fails", "facilitator_crimes",
-                              "crime_size_fails", "number_born", "number_migrants",
-                              "number_law_interventions_this_tick",
-                              "number_protected_recruited_this_tick", "people_jailed",
-                              "number_offspring_recruited_this_tick", "number_crimes",
-                              "big_crime_from_small_fish", "tick", "current_oc_members",
-                              "current_num_persons", "number_weddings",
-                              "kids_intervention_counter",
-                              }.union(set(args))
-        # num_of_family
-        for key in self.snapshot_keys:
-            if key not in self.__dict__.keys():
+        for key, value in dictionary.items():
+            if key not in self.__dict__ and key != "repetitions":
                 raise Exception("{} is not a model attribute".format(key))
-        self.snapshot_path = os.path.join(path, str(name) + ".json")
-
-    def take_snapshot(self) -> None:
-        """
-        This method generates a json file in self.snapshot_path.
-        The json file is composed of the keys in self.snapshot_keys with the respective
-        value of the model at tick = self.snapshot_tick.
-        :return: None
-        """
-        dict_json = dict()
-        dict_json["input"] = dict()
-        dict_json["output"] = dict()
-        for key, value in self.__dict__.items():
-            if key in self.snapshot_keys:
-                dict_json["output"][key] = value if type(value) != np.int32 else float(value)
-            elif key in extra.free_parameters:
-                dict_json["input"][key] = value if type(value) != np.int32 else float(value)
-        with open(self.snapshot_path, 'w') as nf:
-            json.dump(dict_json, nf)
+            else:
+                setattr(self, key, value)
 
     def calculate_fast_reporters(self) -> None:
         """
@@ -1741,7 +1682,53 @@ class ProtonOC(Model):
         """
         self.current_oc_members = len([agent for agent in self.schedule.agents if agent.oc_member])
         self.current_num_persons = len(self.schedule.agents)
+        self.criminal_tendency_mean = np.mean([agent.criminal_tendency for agent in self.schedule.agents])
+        self.criminal_tencency_sd = np.std([agent.criminal_tendency for agent in
+                                          self.schedule.agents])
+        self.age_mean = np.mean([agent.age for agent in self.schedule.agents])
+        self.age_sd = np.std([agent.age for agent in self.schedule.agents])
+        self.education_level_mean = np.mean([agent.education_level for agent in
+                                            self.schedule.agents])
+        self.education_level_sd = np.std([agent.education_level for agent in self.schedule.agents])
+        self.num_crime_committed_mean = np.mean([agent.num_crimes_committed for agent in
+                                            self.schedule.agents])
+        self.num_crime_committed_sd = np.std([agent.num_crimes_committed for agent in
+                                            self.schedule.agents])
+        self.crimes_committed_by_oc = np.sum([agent.num_crimes_committed_this_tick for agent in
+                                            self.schedule.agents if agent.oc_member])
+        self.crimes_committed_by_facilitators = np.sum([agent.num_crimes_committed_this_tick for agent in
+                                            self.schedule.agents if agent.facilitator])
+
+    def overview(self) -> None:
+        """
+        This function prints in console a pretty table with the parameters and the respective values
+        of the model.
+        :return: None
+        """
+        table = pt()
+        table.field_names =["free parameter name", "value"]
+        for par in extra.free_parameters:
+            table.add_row([par, getattr(self, par)])
+        print(table)
+
+    def set_param(self, param_name: str, value: Any) -> None:
+        """
+        Given a parameter name and a value, set that parameter to the active instance of the model.
+        Raises AttributeError if param_name is invalid and raise ValueError if the value is not
+        valid.
+        :param param_name: str, tha parameter to change
+        :param value: Any, the value
+        """
+        if param_name not in self.__dict__:
+            raise AttributeError(param_name +  "attribute is not a valid parameter, to find out "
+                                              "the valid parameters: ProtonOC.overview().")
+        if type(value) != type(getattr(self, param_name)):
+            raise ValueError("param " + param_name + " accepts parameters of type " + type(
+                getattr(self, param_name)).__name__ + " instead provided " + type(value).__name__)
+        setattr(self, param_name, value)
 
 
-
-
+if __name__ == "__main__":
+    model = ProtonOC()
+    model.overview()
+    model.run(num_ticks=480, verbose=True)

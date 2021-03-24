@@ -1,0 +1,3 @@
+{"0": {"intervention": "facilitators", "num_oc_persons": 80, "number_arrests_per_year": 20, "num_oc_families": 16, "initial_agents": 10000}, 
+"1": {"intervention": "baseline", "num_oc_persons": 20, "number_arrests_per_year": 24, "num_oc_families": 4, "initial_agents": 10000}, 
+"2": {"intervention": "students", "num_oc_persons": 20, "number_arrests_per_year": 28, "num_oc_families": 4, "initial_agents": 10000}}
