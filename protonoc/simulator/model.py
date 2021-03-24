@@ -1686,28 +1686,28 @@ class ProtonOC(Model):
         self.crimes_committed_by_oc_this_tick = sum([agent.num_crimes_committed_this_tick for
                                                     agent in self.schedule.agents if
                                                      agent.oc_member])
-        self.current_prisoners = len([agent for agent in model.schedule.agents if agent.prisoner])
-        self.employed = len([agent for agent in model.schedule.agents if agent.my_job is not None])
-        self.facilitators = len([agent for agent in model.schedule.agents if agent.facilitator])
+        self.current_prisoners = len([agent for agent in self.schedule.agents if agent.prisoner])
+        self.employed = len([agent for agent in self.schedule.agents if agent.my_job is not None])
+        self.facilitators = len([agent for agent in self.schedule.agents if agent.facilitator])
         self.tot_friendship_link = sum([len(agent.neighbors.get("friendship")) for agent in
-                                 model.schedule.agents])
+                                 self.schedule.agents])
         self.tot_household_link = sum([len(agent.neighbors.get("household")) for agent in
-                                        model.schedule.agents])
+                                        self.schedule.agents])
         self.tot_partner_link = sum([len(agent.neighbors.get("partner")) for agent in
-                                       model.schedule.agents])
+                                       self.schedule.agents])
         self.tot_offspring_link = sum([len(agent.neighbors.get("offspring")) for agent in
-                                     model.schedule.agents])
+                                     self.schedule.agents])
         self.tot_criminal_link = sum([len(agent.neighbors.get("criminal")) for agent in
-                                       model.schedule.agents])
+                                       self.schedule.agents])
         self.tot_school_link = sum([len(agent.neighbors.get("school")) for agent in
-                                      model.schedule.agents])
+                                      self.schedule.agents])
         self.tot_professional_link = sum([len(agent.neighbors.get("professional")) for agent in
-                                    model.schedule.agents])
+                                    self.schedule.agents])
         self.tot_sibling_link = sum([len(agent.neighbors.get("sibling")) for agent in
-                                          model.schedule.agents])
+                                          self.schedule.agents])
         self.tot_parent_link = sum([len(agent.neighbors.get("parent")) for agent in
-                                     model.schedule.agents])
-        self.number_students = len([agent for school in model.schools for agent in
+                                     self.schedule.agents])
+        self.number_students = len([agent for school in self.schools for agent in
                                   school.my_students])
         self.number_jobs  = len(self.jobs)
 
