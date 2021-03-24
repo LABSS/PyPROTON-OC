@@ -34,10 +34,11 @@ from itertools import combinations, chain
 import time
 from protonoc.simulator.entities import Person, School, Employer, Job
 from protonoc.simulator import extra
-from typing import List, Set, Union, Dict
+from typing import List, Set, Union, Dict, Any
 from xml.dom import minidom
 import json
 import sys
+from prettytable import PrettyTable as pt
 import pickle
 
 class ProtonOC(Model):
@@ -1698,7 +1699,36 @@ class ProtonOC(Model):
         self.crimes_committed_by_facilitators = np.sum([agent.num_crimes_committed_this_tick for agent in
                                             self.schedule.agents if agent.facilitator])
 
+    def overview(self) -> None:
+        """
+        This function prints in console a pretty table with the parameters and the respective values
+        of the model.
+        :return: None
+        """
+        table = pt()
+        table.field_names =["free parameter name", "value"]
+        for par in extra.free_parameters:
+            table.add_row([par, getattr(self, par)])
+        print(table)
+
+    def set_param(self, param_name: str, value: Any) -> None:
+        """
+        Given a parameter name and a value, set that parameter to the active instance of the model.
+        Raises AttributeError if param_name is invalid and raise ValueError if the value is not
+        valid.
+        :param param_name: str, tha parameter to change
+        :param value: Any, the value
+        """
+        if param_name not in self.__dict__:
+            raise AttributeError(param_name +  "attribute is not a valid parameter, to find out "
+                                              "the valid parameters: ProtonOC.overview().")
+        if type(value) != type(getattr(self, param_name)):
+            raise ValueError("param " + param_name + " accepts parameters of type " + type(
+                getattr(self, param_name)).__name__ + " instead provided " + type(value).__name__)
+        setattr(self, param_name, value)
+
 
 if __name__ == "__main__":
     model = ProtonOC()
-    model.run(n_agents=100, num_ticks=480, verbose=True)
+    model.overview()
+    model.run(num_ticks=480, verbose=True)

@@ -103,7 +103,7 @@ def base_mode(*args,
               multiple=True,
               help="If this option is passed with an integer value, collects results "
                    "only at certain ticks (e.g. -s 56 -s 89) save results at tick 56 and tick 89. "
-                   "Accepts multiple calls, default is None.")
+                   "Accepts multiple calls, by default saves data at each step.")
 
 @click.option("-alldata", "-a", 
               is_flag=True, 
