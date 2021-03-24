@@ -132,25 +132,11 @@ class ProtonOC(Model):
         self.punishment_length: int = 1  # 0.5 -> 2
         self.constant_population: bool = False  # True/False->
 
-        #Fast reporter (calculated at each tick)
-        self.current_oc_members: int = 0
-        self.current_num_persons: int = 0
-        self.criminal_tendency_mean = 0
-        self.criminal_tencency_sd = 0
-        self.age_mean = 0
-        self.age_sd = 0
-        self.education_level_mean = 0
-        self.education_level_sd = 0
-        self.male = 0
-        self.female = 0
-        self.num_crime_committed_mean = 0
-        self.num_crime_committed_sd = 0
-        self.crimes_committed_by_oc = 0
-        self.crimes_committed_by_facilitators = 0
+        #Additional attributes are generate by calculate_fast_reporters(). Not included
+        # here for redundancy
 
         # Folders definition
         self.cwd, _ = os.path.split(__file__)
-        # self.cwd: str = os.getcwd()
         self.input_directory: str = os.path.join(self.cwd, "inputs")
         self.palermo: str = os.path.join(self.input_directory, "palermo")
         self.eindhoven: str = os.path.join(self.input_directory, "eindhoven")
@@ -1047,6 +1033,7 @@ class ProtonOC(Model):
         for agent in self.schedule.agents:
             if not agent.gender_is_male and agent.get_neighbor_list("offspring"):
                 agent.number_of_children = len(agent.get_neighbor_list("offspring"))
+        self.calculate_fast_reporters()
         self.datacollector.collect(self)
         elapsed_time = time.time() - start
         hours = elapsed_time // 3600
@@ -1680,6 +1667,8 @@ class ProtonOC(Model):
         state of the model.
         :return: None
         """
+        self.number_crimes_committed_of_persons = sum([agent.num_crimes_committed for agent in
+                                                       self.schedule.agents])
         self.current_oc_members = len([agent for agent in self.schedule.agents if agent.oc_member])
         self.current_num_persons = len(self.schedule.agents)
         self.criminal_tendency_mean = np.mean([agent.criminal_tendency for agent in self.schedule.agents])
@@ -1694,10 +1683,33 @@ class ProtonOC(Model):
                                             self.schedule.agents])
         self.num_crime_committed_sd = np.std([agent.num_crimes_committed for agent in
                                             self.schedule.agents])
-        self.crimes_committed_by_oc = np.sum([agent.num_crimes_committed_this_tick for agent in
-                                            self.schedule.agents if agent.oc_member])
-        self.crimes_committed_by_facilitators = np.sum([agent.num_crimes_committed_this_tick for agent in
-                                            self.schedule.agents if agent.facilitator])
+        self.crimes_committed_by_oc_this_tick = sum([agent.num_crimes_committed_this_tick for
+                                                    agent in self.schedule.agents if
+                                                     agent.oc_member])
+        self.current_prisoners = len([agent for agent in model.schedule.agents if agent.prisoner])
+        self.employed = len([agent for agent in model.schedule.agents if agent.my_job is not None])
+        self.facilitators = len([agent for agent in model.schedule.agents if agent.facilitator])
+        self.tot_friendship_link = sum([len(agent.neighbors.get("friendship")) for agent in
+                                 model.schedule.agents])
+        self.tot_household_link = sum([len(agent.neighbors.get("household")) for agent in
+                                        model.schedule.agents])
+        self.tot_partner_link = sum([len(agent.neighbors.get("partner")) for agent in
+                                       model.schedule.agents])
+        self.tot_offspring_link = sum([len(agent.neighbors.get("offspring")) for agent in
+                                     model.schedule.agents])
+        self.tot_criminal_link = sum([len(agent.neighbors.get("criminal")) for agent in
+                                       model.schedule.agents])
+        self.tot_school_link = sum([len(agent.neighbors.get("school")) for agent in
+                                      model.schedule.agents])
+        self.tot_professional_link = sum([len(agent.neighbors.get("professional")) for agent in
+                                    model.schedule.agents])
+        self.tot_sibling_link = sum([len(agent.neighbors.get("sibling")) for agent in
+                                          model.schedule.agents])
+        self.tot_parent_link = sum([len(agent.neighbors.get("parent")) for agent in
+                                     model.schedule.agents])
+        self.number_students = len([agent for school in model.schools for agent in
+                                  school.my_students])
+        self.number_jobs  = len(self.jobs)
 
     def overview(self) -> None:
         """
