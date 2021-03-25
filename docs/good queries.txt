@@ -92,3 +92,11 @@ with open(absolute_path, 'rb') as f:
 #Build Package in developmemnt mode
 cd to main directory and then
 pip install -e . or pip install -e <path>
+
+#Build package
+python setup.py sdist bdist_wheel
+
+#Check dist
+twine check dist/*
+
+twine upload --repository url https://test.pypi.org/legacy/ dist/*
