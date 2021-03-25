@@ -244,7 +244,7 @@ class ProtonOC(Model):
             if self.welfare_support:
                 self.welfare_intervene()
             # OC-members-repression works in arrest-probability-with-intervention in commmit-crime
-        if (self.tick % self.ticks_per_year) == 0:
+        if (self.tick % self.ticks_per_year) == 0 or self.tick == 1:
             self.calculate_criminal_tendency()
             self.calculate_crime_multiplier()  # we should update it, if population change
             self.graduate_and_enter_jobmarket()
