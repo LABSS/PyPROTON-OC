@@ -41,4 +41,10 @@ setup(
    entry_points ={
       'console_scripts': ['protonoc=protonoc.main:mode'] },
    install_requires=requires,
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Programming Language :: Python :: 3.8",
+        "Topic :: Scientific/Engineering :: Artificial Life",
+        "Topic :: Sociology",
+        "License :: OSI Approved :: MIT License"]
 )
