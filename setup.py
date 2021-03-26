@@ -23,7 +23,7 @@ with open('README.md') as file:
 
 setup(
    name='protonoc',
-   version='1.0.0',
+   version='1.0',
    description=description,
    long_description_content_type="text/markdown",
    long_description=readme,
