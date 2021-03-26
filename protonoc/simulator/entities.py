@@ -462,8 +462,9 @@ class Person(Agent):
         :param agent: Person
         :return: float, the candidates weight
         """
-        return -1 * (self.social_proximity(agent) * self.oc_embeddedness() * self.criminal_tendency) if agent.oc_member \
-            else (self.social_proximity(agent) * self.criminal_tendency)
+        return -1 * (self.social_proximity(agent) * agent.oc_embeddedness() *
+                     agent.criminal_tendency) if self.oc_member \
+            else (self.social_proximity(agent) * agent.criminal_tendency)
 
     def _agents_in_radius(self, context: List[str] =network_names) -> Set[Person]:
         """

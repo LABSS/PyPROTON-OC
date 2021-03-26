@@ -23,9 +23,11 @@ with open('README.md') as file:
 
 setup(
    name='protonoc',
-   version='0.1',
+   version='1.0.0',
    description=description,
+   long_description_content_type="text/markdown",
    long_description=readme,
+   url="https://github.com/LABSS/PyPROTON-OC",
    author='LABSS(Francesco Mattioli, Mario Paolucci)',
    author_email='francesco@nientepanico.org, mario.paolucci@istc.cnr.it',
    package_dir={'protonoc': 'protonoc'},
@@ -41,4 +43,11 @@ setup(
    entry_points ={
       'console_scripts': ['protonoc=protonoc.main:mode'] },
    install_requires=requires,
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Topic :: Scientific/Engineering :: Artificial Life",
+        "Topic :: Sociology",
+        "License :: OSI Approved :: MIT License"]
 )
