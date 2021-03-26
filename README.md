@@ -1,8 +1,9 @@
 # PROTON-OC
 
-PROTON-OC is an agent-based model that explores the dynamics and processes that lead to recruitment into organized crime. The simulator investigates a wide variety of factors in the individual sphere and focuses on the social relationships between agents. Detailed information on the theoretical background, model development process, and model functioning available [here](./D5.1-PROTON-Simulator-Report.pdf).
+PROTON-OC is an agent-based model that explores the dynamics and processes that lead to recruitment into organized crime. The simulator investigates a wide variety of factors in the individual sphere and focuses on the social relationships between agents. Detailed information on the theoretical background, model development process, and model functioning available [here](./D5.1-PROTON-Simulator-Report.pdf). This is the python version of the simulator; the original model was developed in Netlogo and can be found [here](https://github.com/LABSS/PROTON-OC).
 
-The simulation is developed by LABSS-CNR for the PROTON project, https://www.projectproton.eu/
+The simulation is developed by LABSS-CNR as a follow-up of the PROTON project, https://www.projectproton.eu/
+Results from the original simulator have been published on the [Journal of Quantitative Criminology](https://link.springer.com/article/10.1007/s10940-020-09489-z).
 
 ## Get started
 
