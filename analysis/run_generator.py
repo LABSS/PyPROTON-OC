@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 import json
+import os
 
 SAVE_PATH = "E:\\proton" #Your path here
 PATH = "E:\\proton\\panel_abm_all.csv" #Your path here
+
 
 data = pd.read_csv(PATH)
 
@@ -57,19 +59,19 @@ class NpEncoder(json.JSONEncoder):
         else:
             return super(NpEncoder, self).default(obj)
 
-
-with open(os.path.join(SAVE_PATH, "rp_comparison_can_weigh.json"), "w") as file:
-    json.dump(new_rp, file, cls=NpEncoder)
-
-"""
-Only baseline:
-"""
-
-new_rp = dict()
-for index, run in enumerate(rp.keys()):
-    if rp[run]["intervention"] == "baseline":
-        new_rp[index] = rp[run]
-
-
-with open(os.path.join(SAVE_PATH, "rp_comparison_can_weigh.json"), "w") as file:
-    json.dump(new_rp, file, cls=NpEncoder)
+# with open(os.path.join(SAVE_PATH, "rp_comparison_can_weigh.json"), "w") as file:
+#     json.dump(rp, file, cls=NpEncoder)
+#
+#
+# """
+# Only baseline:
+# """
+#
+# new_rp = dict()
+# for index, run in enumerate(rp.keys()):
+#     if rp[run]["intervention"] == "baseline":
+#         new_rp[index] = rp[run]
+#
+#
+# with open(os.path.join(SAVE_PATH, "rp_comparison_can_weigh.json"), "w") as file:
+#     json.dump(new_rp, file, cls=NpEncoder)
