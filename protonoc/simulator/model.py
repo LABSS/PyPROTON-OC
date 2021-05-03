@@ -750,7 +750,7 @@ class ProtonOC(Model):
                                 p.neighbors.get('offspring')]
         # simulates people who left the original household.
         for agent in agent_left_household:
-            num_siblings = self.random.poisson(0.5)
+            num_siblings = self.random.poisson(20)
             # 0.5 -> the number of links is N^3 agents, so let's keep this low at this stage links
             # with other persons are only relatives inside households and friends.
             candidates = [c for c in agent_left_household
