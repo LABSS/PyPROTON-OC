@@ -39,7 +39,7 @@ map = {'count persons with [ migrant? ]' : "number_migrants",
        'count jobs' : "number_jobs",
        "[step]":"tick"}
 
-PATH_PYTHON = "C:\\Users\\franc_pyl533c\\OneDrive\\prova" #YOUR PYTHON PATH HERE
+PATH_PYTHON = "E:\\proton\\prox_more_siblings\\res" #YOUR PYTHON PATH HERE
 PATH_NETLOGO = "E:\\proton\\comparative\\panel_abm_all.csv" #YOUR NETLOGO PATH HERE
 
 interventions = ['baseline']
@@ -85,4 +85,4 @@ for interv in interventions:
         axs[row, column].set_title(metric_netlogo + " // " + metric_python)
         axs[row, column].legend(loc='upper left', frameon=False)
         column += 1
-    plt.savefig(interv + "_general.png")
+    plt.savefig("mod_social_proxy_siblings.png")
