@@ -779,7 +779,7 @@ class ProtonOC(Model):
                 target.add_sibling_link(other_targets)
 
     def setup_siblings(self):
-        agent_left = [person for person in model.schedule.agents if person.neighbors.get(
+        agent_left = [person for person in self.schedule.agents if person.neighbors.get(
                 "offspring")]
         for agent in agent_left:
             num_siblings = self.random.poisson(0.5)
