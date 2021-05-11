@@ -1416,7 +1416,7 @@ class ProtonOC(Model):
                 # we do not care about education level and wealth of migrants, as those variables
                 # exist only in order to generate the job position.
                 new_agent = Person(self)
-                new_agent.init_person()
+                # new_agent.init_person()
                 self.schedule.add(new_agent)
                 new_agent.my_job = job
                 job.my_worker = new_agent
@@ -1428,6 +1428,7 @@ class ProtonOC(Model):
                                        replace=False))
                 new_agent.make_professional_link(employees)
                 new_agent.bird_tick = self.tick - (self.random.integers(0, 20) + 18) * self.ticks_per_year
+                new_agent.calculate_age()
                 new_agent.wealth_level = job.job_level
                 new_agent.migrant = True
 
