@@ -69,12 +69,16 @@ for interv in interventions:
     superrun_netlogo[interv] = pd.concat([tick.mean(axis=0) for number_tick, tick in
                                           reporter_netlogo.groupby(["[step]"])], axis=1).T
 
-fig, axs = plt.subplots(2)
+fig, axs = plt.subplots(3)
 axs[0].set_title("sibligs")
 axs[0].plot(superrun_python["baseline"]["tot_sibling_link"], label="python")
 axs[0].plot(superrun_netlogo["baseline"]['count sibling-links'], label="netlogo")
 axs[1].set_title("current_oc_members")
 axs[1].plot(superrun_python["baseline"]["current_oc_members"], label="python")
 axs[1].plot(superrun_netlogo["baseline"]['o1'], label="netlogo")
+axs[2].set_title("current_oc_members")
+axs[1].plot(superrun_python["baseline"]["current_oc_members"], label="python")
+axs[1].plot(superrun_netlogo["baseline"]['o1'], label="netlogo")
+
 plt.legend()
 plt.show()
