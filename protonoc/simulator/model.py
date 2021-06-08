@@ -701,6 +701,8 @@ class ProtonOC(Model):
                            if oc_member.oc_member]
         for (i, j) in combinations(oc_members_pool, 2):
             i.add_criminal_link(j)
+            i.num_co_offenses[j] = 1
+            j.num_co_offenses[i] = 1
 
 
     def reset_oc_embeddedness(self) -> None:
@@ -711,6 +713,8 @@ class ProtonOC(Model):
         """
         for agent in self.schedule.agents:
             agent.cached_oc_embeddedness = None
+        del self.meta_graph
+        self.meta_graph = nx.Graph()
    
     def setup_persons_and_friendship(self) -> None:
         """
@@ -1443,7 +1447,7 @@ class ProtonOC(Model):
                         and agent.criminal_tendency < self.good_guy_threshold:
                     self.big_crime_from_small_fish += 1
         for co_offender_group in co_offender_groups:
-            extra.commit_crime(co_offender_group)
+            self.commit_crime(co_offender_group)
         for co_offenders_by_OC in co_offender_started_by_oc:
             for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
                 agent.new_recruit = self.tick
@@ -1479,6 +1483,40 @@ class ProtonOC(Model):
                                              lambda x: x.arrest_weight, self.random):
                 agent.get_caught()
 
+    def commit_crime(self, co_offenders: List[Person]) -> None:
+        """
+        This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
+        attributes of the Person objects passed to co_offenders
+        :param co_offenders: list, of Person object
+        :return: None
+        """
+        for co_offender in co_offenders:
+            co_offender.num_crimes_committed += 1
+            co_offender.num_crimes_committed_this_tick += 1
+            other_co_offenders = [agent for agent in co_offenders if agent != co_offender]
+            for agent in other_co_offenders:
+                if agent not in co_offender.neighbors.get("criminal"):
+                    co_offender.add_criminal_link(agent)
+                    co_offender.num_co_offenses[agent] = 0
+                    agent.num_co_offenses[co_offender] = 0
+
+        for agent in model.schedule.agents:
+            if agent.neighbors.get("criminal"):
+                for co_off in agent.co_off_flag.keys():
+                    agent.co_off_flag[co_off] = 0
+
+        for agent in co_offenders:
+            for co_off in agent.co_off_flag.keys():
+                agent.co_off_flag[co_off] += 1
+                co_off.co_off_flag[agent] += 1
+
+        for agent in model.schedule.agents:
+            if agent.neighbors.get("criminal"):
+                for co_off in agent.co_off_flag.keys():
+                    if agent.co_off_flag[co_off] == 2:
+                        agent.num_co_offenses[co_off] += 1
+                        co_off.num_co_offenses[agent] += 1
+
 
     def number_of_accomplices(self) -> int:
         """
@@ -1496,7 +1534,6 @@ class ProtonOC(Model):
         :param agents: Set[Person], the agentset
         :return: None
         """
-        self.meta_graph = nx.Graph(seed=self.random_state)
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
             for in_radius_agent in agent.agents_in_radius(
