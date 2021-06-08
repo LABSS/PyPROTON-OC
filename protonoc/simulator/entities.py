@@ -220,9 +220,9 @@ class Person(Agent):
         :return: None
         """
         self.neighbors.get("criminal").add(asker)
-        self.num_co_offenses[asker] = 1
+        self.co_off_flag[asker] = 0
         asker.neighbors.get("criminal").add(self)
-        asker.num_co_offenses[self] = 1
+        asker.co_off_flag[self] = 0
 
     def remove_link(self, forlorn: Person, context: str) -> None:
         """
