@@ -1500,7 +1500,7 @@ class ProtonOC(Model):
                     co_offender.num_co_offenses[agent] = 0
                     agent.num_co_offenses[co_offender] = 0
 
-        for agent in model.schedule.agents:
+        for agent in self.schedule.agents:
             if agent.neighbors.get("criminal"):
                 for co_off in agent.co_off_flag.keys():
                     agent.co_off_flag[co_off] = 0
@@ -1510,7 +1510,7 @@ class ProtonOC(Model):
                 agent.co_off_flag[co_off] += 1
                 co_off.co_off_flag[agent] += 1
 
-        for agent in model.schedule.agents:
+        for agent in self.schedule.agents:
             if agent.neighbors.get("criminal"):
                 for co_off in agent.co_off_flag.keys():
                     if agent.co_off_flag[co_off] == 2:
