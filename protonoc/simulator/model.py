@@ -79,6 +79,7 @@ class ProtonOC(Model):
         self.welfare_support: Union[str, None] = None
 
         # outputs
+        self.network_used = {net:0 for net in Person.network_names}
         self.this_is_a_big_crime: int = 3
         self.good_guy_threshold: float = 0.6
         self.number_deceased: float = 0
@@ -105,17 +106,17 @@ class ProtonOC(Model):
 
         # from graphical interface (free params)
         self.migration_on: bool = True  # True / False
-        self.initial_agents: int = 1000  # 500 -> n
-        self.num_ticks: int = 480   # tick limit
+        self.initial_agents: int = 2000  # 500 -> n
+        self.num_ticks: int = 24   # tick limit
         self.intervention: str = "baseline"
         self.max_accomplice_radius: int = 2  # 2 -> 4
         self.number_arrests_per_year: int = 30  # 0 -> 100
-        self.number_crimes_yearly_per10k: int = 2000  # 0 -> 3000
+        self.number_crimes_yearly_per10k: int = 40000  # 0 -> 3000
         self.ticks_between_intervention: int = 12  # 1 -> 24
         self.intervention_start: int = 13  # 1 -> 100
         self.intervention_end: int = 999  # n
-        self.num_oc_persons: int = 30  # 2 -> 200
-        self.num_oc_families: int = 8  # 1 -> 50
+        self.num_oc_persons: int = 200  # 2 -> 200
+        self.num_oc_families: int = 20 # 1 -> 50
         self.education_modifier: float = 1.0  # education-rate in Netlogo model 0.1 -> 2.0
         self.retirement_age: int = 65  # 50 -> 80
         self.unemployment_multiplier: Union[str, int] = "base"  # 0.2 -> 2.0
@@ -285,6 +286,8 @@ class ProtonOC(Model):
         self.calculate_fast_reporters()
         self.datacollector.collect(self)
         self.tick += 1
+        print(self.tick)
+        print(len([agent for agent in model.schedule.agents if agent.oc_member]))
 
     def run(self,
             n_agents: Union[int, None] = None,
@@ -1444,10 +1447,22 @@ class ProtonOC(Model):
                     self.big_crime_from_small_fish += 1
         for co_offender_group in co_offender_groups:
             extra.commit_crime(co_offender_group)
+
+
+
         for co_offenders_by_OC in co_offender_started_by_oc:
             for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
                 agent.new_recruit = self.tick
                 agent.oc_member = True
+
+                originator = co_offenders_by_OC[-1]
+                for net in Person.network_names:
+                    for neigh in agent.neighbors.get(net):
+                        if originator in neigh:
+                            self.network_used[net]+=1
+                            print(self.network_used)
+
+
                 if agent.father:
                     if agent.father.oc_member:
                         self.number_offspring_recruited_this_tick += 1
@@ -1743,4 +1758,4 @@ class ProtonOC(Model):
 if __name__ == "__main__":
     model = ProtonOC()
     model.overview()
-    model.run(num_ticks=480, verbose=True)
+    model.run(verbose=False)

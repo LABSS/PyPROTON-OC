@@ -413,7 +413,8 @@ class Person(Agent):
 
     def find_accomplices(self, n_of_accomplices: int) -> List[Person]:
         """
-        This method is used to find accomplices during commit_crimes procedure
+        This method is used to find accomplices during commit_crimes procedure.
+        The last element MUST be the caller.
         :param n_of_accomplices: int, number of accomplices
         :return: List[Person]
         """
