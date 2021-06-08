@@ -1447,22 +1447,14 @@ class ProtonOC(Model):
                     self.big_crime_from_small_fish += 1
         for co_offender_group in co_offender_groups:
             extra.commit_crime(co_offender_group)
-
-
-
         for co_offenders_by_OC in co_offender_started_by_oc:
             for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
                 agent.new_recruit = self.tick
                 agent.oc_member = True
-
                 originator = co_offenders_by_OC[-1]
                 for net in Person.network_names:
-                    for neigh in agent.neighbors.get(net):
-                        if originator in neigh:
+                    if originator in agent.neighbors.get(net):
                             self.network_used[net]+=1
-                            print(self.network_used)
-
-
                 if agent.father:
                     if agent.father.oc_member:
                         self.number_offspring_recruited_this_tick += 1
