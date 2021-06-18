@@ -269,7 +269,8 @@ class ProtonOC(Model):
             self.return_kids()
         self.wedding()
         self.reset_oc_embeddedness()
-        self.commit_crimes()
+        # self.commit_crimes()
+        self.commit_crimes_by_oc()
         self.retire_persons()
         self.make_baby()
         self.remove_excess_friends()
@@ -1017,7 +1018,7 @@ class ProtonOC(Model):
         if self.unemployment_multiplier != "base":
             self.fix_unemployment(self.unemployment_multiplier)
         self.generate_households()
-        self.setup_siblings()
+        #self.setup_siblings()
         self.assing_parents()
         self.setup_employers_jobs()
         for agent in [agent for agent in self.schedule.agents
@@ -1483,6 +1484,67 @@ class ProtonOC(Model):
                                              lambda x: x.arrest_weight, self.random):
                 agent.get_caught()
 
+    def commit_crimes_by_oc(self) -> None:
+        """
+        This procedure is central in the model, allowing agents to find accomplices and commit
+        crimes. Based on the table ProtonOC.c_range_by_age_and_sex, the number of crimes and the
+        subset of the agents who commit them is selected. For each crime a single agent is selected
+        and if necessary activates the procedure that allows the agent to find accomplices.
+        Criminal groups are append within the list co_offender_groups.
+
+        :return: None
+        """
+        co_offender_groups = list()
+        co_offender_started_by_oc = list()
+        for i in range(int(self.number_crimes_yearly_per10k/ 10000 * len(self.schedule.agents))):
+            self.number_crimes += 1
+            for agent in [oc_agent for oc_agent in self.schedule.agents if oc_agent.oc_member]:
+                number_of_accomplices = self.number_of_accomplices()
+                accomplices = agent.find_accomplices(number_of_accomplices + 3)
+                co_offender_groups.append(accomplices)
+                if agent.oc_member:
+                    co_offender_started_by_oc.append(accomplices)
+                # check for big crimes started from a normal guy
+                if len(accomplices) > self.this_is_a_big_crime \
+                        and agent.criminal_tendency < self.good_guy_threshold:
+                    self.big_crime_from_small_fish += 1
+        for co_offender_group in co_offender_groups:
+            self.commit_crime(co_offender_group)
+        for co_offenders_by_OC in co_offender_started_by_oc:
+            for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
+                agent.new_recruit = self.tick
+                agent.oc_member = True
+                if agent.father:
+                    if agent.father.oc_member:
+                        self.number_offspring_recruited_this_tick += 1
+                if agent.target_of_intervention:
+                    self.number_protected_recruited_this_tick += 1
+        criminals = list(chain.from_iterable(co_offender_groups))
+        if criminals:
+            if self.intervention_is_on() and self.facilitator_repression:
+                for criminal in criminals:
+                    criminal.arrest_weight = self.facilitator_repression_multiplier \
+                        if criminal.facilitator else 1
+            else:
+                if self.intervention_is_on() and self.oc_boss_repression and len(
+                        [agent for agent in criminals if agent.oc_member]) >= 1:
+                    for criminal in criminals:
+                        if not criminal.oc_member:
+                            criminal.arrest_weight = 1
+                    extra.calculate_oc_status([agent for agent in criminals if agent.oc_member])
+                else:
+                    # no intervention active
+                    for criminal in criminals:
+                        criminal.arrest_weight = 1
+            arrest_mod = self.number_arrests_per_year / self.ticks_per_year / 10000 * len(self.schedule.agents)
+            target_n_of_arrest = np.floor(
+                arrest_mod + 1
+                if self.random.random() < (arrest_mod - np.floor(arrest_mod))
+                else 0)
+            for agent in extra.weighted_n_of(target_n_of_arrest, criminals,
+                                             lambda x: x.arrest_weight, self.random):
+                agent.get_caught()
+
     def commit_crime(self, co_offenders: List[Person]) -> None:
         """
         This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
@@ -1779,5 +1841,50 @@ class ProtonOC(Model):
 
 if __name__ == "__main__":
     model = ProtonOC()
+    model.initial_agents = 1000
+    model.num_oc_persons = 30
+    model.number_crimes_yearly_per10k = 2000
+    model.max_accomplice_radius = 1
+    model.num_oc_families = 4
+    model.setup()
     model.overview()
-    model.run(num_ticks=480, verbose=True)
+    print("num_oc_setup: ", model.current_oc_members)
+    all = list()
+    nets = ['sibling',
+            'offspring',
+            'partner',
+            'household',
+            'friendship',
+            'criminal',
+            'professional',
+            'school']
+    for agent in model.schedule.agents:
+        if agent.oc_member:
+            n_neight = 0
+            for net in nets:
+                n_neight += len(agent.get_neighbor_list(net))
+            all.append(n_neight)
+    print("mean_oc_links_setup: ", np.mean(all))
+
+    for a in range(100):
+        print("Tick: ", a)
+        model.step()
+        print("num_oc: ", model.current_oc_members)
+        all = list()
+        nets = ['sibling',
+                'offspring',
+                'partner',
+                'household',
+                'friendship',
+                'criminal',
+                'professional',
+                'school']
+        for agent in model.schedule.agents:
+            if agent.oc_member:
+                n_neight = 0
+                for net in nets:
+                    n_neight += len(agent.get_neighbor_list(net))
+                all.append(n_neight)
+        print("mean_oc_links: ", np.mean(all))
+        print()
+    # model.run(num_ticks=480, verbose=True)

@@ -427,7 +427,8 @@ class Person(Agent):
                 n_of_accomplices -= 1  # save a slot for the facilitator
             while len(accomplices) < n_of_accomplices and d <= self.model.max_accomplice_radius:
                 # first create the group
-                candidates = sorted(self.agents_in_radius(d), key=lambda x: self.candidates_weight(x))
+                candidates = list(self.model.random.permutation(list(self.agents_in_radius(d))))
+                # candidates = sorted(self.agents_in_radius(d), key=lambda x: self.candidates_weight(x))
                 while len(accomplices) < n_of_accomplices and len(candidates) > 0:
                     candidate = candidates[0]
                     candidates.remove(candidate)
@@ -466,7 +467,7 @@ class Person(Agent):
                      agent.criminal_tendency) if self.oc_member \
             else (self.social_proximity(agent) * agent.criminal_tendency)
 
-    def _agents_in_radius(self, context: List[str] =network_names) -> Set[Person]:
+    def _agents_in_radius(self, context: List[str] = network_names) -> Set[Person]:
         """
         It finds the agents distant 1 in the specified networks, by default it finds it on all networks.
         :param context: List[str], limit to networks name
@@ -488,6 +489,8 @@ class Person(Agent):
         """
         # todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
         # todo: This function can be unified to neighbors_range
+        # todo: Find a way to exclude Person in inferior radius (e.g. d = 2 should return only
+        #  Person at radius 2 not Person at radius 1 and 2).
         radius = self._agents_in_radius(context)
         if d == 1:
             return radius
