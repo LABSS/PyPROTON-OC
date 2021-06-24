@@ -70,6 +70,11 @@ class ProtonOC(Model):
                         "job": 0}
         self.random_state = np.random.RandomState(self.seed)
 
+        self.co_off_hist = {a : 0 for a in range(15)}
+
+        self.n_accom = 0
+        self.network_used = {key: 0 for key in Person.network_names}
+
         # Scheduler
         self.schedule: BaseScheduler = BaseScheduler(self)
 
@@ -1018,7 +1023,7 @@ class ProtonOC(Model):
         if self.unemployment_multiplier != "base":
             self.fix_unemployment(self.unemployment_multiplier)
         self.generate_households()
-        #self.setup_siblings()
+        self.setup_siblings()
         self.assing_parents()
         self.setup_employers_jobs()
         for agent in [agent for agent in self.schedule.agents
@@ -1494,13 +1499,16 @@ class ProtonOC(Model):
 
         :return: None
         """
+
         co_offender_groups = list()
         co_offender_started_by_oc = list()
         for i in range(int(self.number_crimes_yearly_per10k/ 10000 * len(self.schedule.agents))):
             self.number_crimes += 1
-            for agent in [oc_agent for oc_agent in self.schedule.agents if oc_agent.oc_member]:
+            for agent in [self.random.choice([oc_agent for oc_agent in self.schedule.agents if \
+                    oc_agent.oc_member])]:
                 number_of_accomplices = self.number_of_accomplices()
-                accomplices = agent.find_accomplices(number_of_accomplices + 3)
+                # accomplices = agent.find_accomplices(number_of_accomplices + 3)
+                accomplices = agent.find_accomplices(7)
                 co_offender_groups.append(accomplices)
                 if agent.oc_member:
                     co_offender_started_by_oc.append(accomplices)
@@ -1510,10 +1518,15 @@ class ProtonOC(Model):
                     self.big_crime_from_small_fish += 1
         for co_offender_group in co_offender_groups:
             self.commit_crime(co_offender_group)
+            self.co_off_hist[len(co_offender_group)] += 1
         for co_offenders_by_OC in co_offender_started_by_oc:
             for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
                 agent.new_recruit = self.tick
                 agent.oc_member = True
+                originator = co_offenders_by_OC[-1]
+                for net in Person.network_names:
+                    if originator in agent.neighbors.get(net):
+                        self.network_used[net] += 1
                 if agent.father:
                     if agent.father.oc_member:
                         self.number_offspring_recruited_this_tick += 1
@@ -1838,53 +1851,189 @@ class ProtonOC(Model):
                 getattr(self, param_name)).__name__ + " instead provided " + type(value).__name__)
         setattr(self, param_name, value)
 
+    def test2(self):
+        """
+        set initial-random-seed random 4294967295 - 2147483648
+        """
+        self.collect_agents = True
+        self.init_collector()
+        self.network_used = {key: 0 for key in Person.network_names}
+        for i in range(6):
+            new_agent = Person(self)
+            new_agent.gender_is_male = True
+            self.schedule.add(new_agent)
+
+        self.schedule.agents[0].make_partner_link(self.schedule.agents[1])
+        self.schedule.agents[0].make_friendship_link(self.schedule.agents[2])
+        self.schedule.agents[0].make_professional_link(self.schedule.agents[3])
+        self.schedule.agents[0].make_school_link(self.schedule.agents[4])
+        self.schedule.agents[0].add_criminal_link(self.schedule.agents[5])
+        self.schedule.agents[0].num_co_offenses[self.schedule.agents[5]] = 5
+        self.schedule.agents[5].num_co_offenses[self.schedule.agents[0]] = 5
+        self.schedule.agents[5].oc_member = True
+        self.schedule.agents[5].make_parent_offsprings_link(self.schedule.agents[0])
+        self.num_co_offenders_dist = extra.df_to_lists(
+            pd.read_csv(os.path.join(
+                self.general_data, "num_co_offenders_dist.csv")), split_row=False)
+
+        # for a in range(10):
+        #     self.schedule.step()
+        #     self.commit_crimes_by_oc()
+        #     self.calculate_fast_reporters()
+        #     self.datacollector.collect(self)
+
+    def read_net(self, path):
+        with open(path, "rb") as file:
+            data = file.readlines()[5:]
+        cleaned = list()
+        for line in data:
+            clean = str(line).replace("b", "").replace("'", "").replace("1.0\\n", "").rsplit()
+            cleaned.append([int(clean[0]), int(clean[1])])
+        return cleaned
+
+    def clean_and_reload(self, path):
+        for agent in self.schedule.agents:
+            for net in Person.network_names:
+                agent.neighbors[net] = set()
+
+        for net in [n for n in Person.network_names if n != "parent"]:
+            net_path = os.path.join(path, net + "-links.dl")
+            links = self.read_net(net_path)
+            if net == "sibling":
+                for link in links:
+                    self.schedule.agents[link[0]].add_sibling_link(
+                        [self.schedule.agents[link[1]]])
+            elif net == "friendship":
+                for link in links:
+                    self.schedule.agents[link[0]].make_friendship_link(
+                        self.schedule.agents[link[1]])
+            elif net == "professional":
+                for link in links:
+                    self.schedule.agents[link[0]].make_professional_link(
+                        self.schedule.agents[link[1]])
+            elif net == "household":
+                for link in links:
+                    self.schedule.agents[link[0]].make_household_link(
+                        [self.schedule.agents[link[1]]])
+            elif net == "partner":
+                for link in links:
+                    self.schedule.agents[link[0]].make_partner_link(self.schedule.agents[link[1]])
+            elif net == "offspring":
+                for link in links:
+                    self.schedule.agents[link[1]].make_parent_offsprings_link(
+                        self.schedule.agents[
+                            link[0]])
+            elif net == "school":
+                for link in links:
+                    self.schedule.agents[link[0]].make_school_link(self.schedule.agents[link[1]])
+            elif net == "criminal":
+                for link in links:
+                    self.schedule.agents[link[0]].add_criminal_link(self.schedule.agents[link[1]])
+            else:
+                raise Exception("Fail to build net")
+
 
 if __name__ == "__main__":
-    model = ProtonOC()
-    model.initial_agents = 1000
-    model.num_oc_persons = 30
-    model.number_crimes_yearly_per10k = 2000
-    model.max_accomplice_radius = 1
-    model.num_oc_families = 4
-    model.setup()
-    model.overview()
-    print("num_oc_setup: ", model.current_oc_members)
-    all = list()
-    nets = ['sibling',
-            'offspring',
-            'partner',
-            'household',
-            'friendship',
-            'criminal',
-            'professional',
-            'school']
-    for agent in model.schedule.agents:
-        if agent.oc_member:
-            n_neight = 0
-            for net in nets:
-                n_neight += len(agent.get_neighbor_list(net))
-            all.append(n_neight)
-    print("mean_oc_links_setup: ", np.mean(all))
 
-    for a in range(100):
-        print("Tick: ", a)
-        model.step()
-        print("num_oc: ", model.current_oc_members)
-        all = list()
-        nets = ['sibling',
-                'offspring',
-                'partner',
-                'household',
-                'friendship',
-                'criminal',
-                'professional',
-                'school']
-        for agent in model.schedule.agents:
-            if agent.oc_member:
-                n_neight = 0
-                for net in nets:
-                    n_neight += len(agent.get_neighbor_list(net))
-                all.append(n_neight)
-        print("mean_oc_links: ", np.mean(all))
+    """
+    TEST2
+    """
+    # model = ProtonOC(seed=74839)
+    # # model.setup()
+    # model.test2()
+    #
+    # for a in range(10):
+    #     model.schedule.step()
+    #     model.commit_crimes_by_oc()
+    #     model.calculate_fast_reporters()
+    #     model.datacollector.collect(model)
+    #     print("tick: ", a)
+    #     print("oc_members: ", model.current_oc_members)
+    #     print("num_crimes_by_oc: ", model.number_crimes)
+
+    seed = 74839
+    model = ProtonOC()
+    model.max_accomplice_radius = 1
+    model.threshold_use_facilitators = 1000
+    model.setup()
+
+    base_path = "C:\\Users\\franc_pyl533c\Downloads\\reti"
+    model.clean_and_reload(base_path)
+
+    counter = 0
+    for agent in model.schedule.agents:
+        for net in Person.network_names:
+            counter += len(agent.neighbors.get(net))
+    print("num_links: ", counter/2)
+
+
+    for a in range(4):
+        model.co_off_hist = {a: 0 for a in range(15)}
+        model.commit_crimes_by_oc()
+        print("oc_members: ", len([agent for agent in model.schedule.agents if agent.oc_member]))
+        print("num_crimes: ", model.number_crimes)
+        print(model.network_used)
+        print(model.co_off_hist)
+        print("facilitator: ", model.facilitator_crimes)
+        print("crime size fails: ", model.crime_size_fails)
         print()
-    # model.run(num_ticks=480, verbose=True)
+        print()
+
+
+
+
+
+
+
+
+
+    # model = ProtonOC()
+    # model.test2()
+
+    # model.initial_agents = 300
+    # model.num_oc_persons = 30
+    # model.number_crimes_yearly_per10k = 2000
+    # model.max_accomplice_radius = 1
+    # model.num_oc_families = 4
+    # model.setup()
+    # model.overview()
+    # print("num_oc_setup: ", model.current_oc_members)
+    # all = list()
+    # nets = ['sibling',
+    #         'offspring',
+    #         'partner',
+    #         'household',
+    #         'friendship',
+    #         'criminal',
+    #         'professional',
+    #         'school']
+    # for agent in model.schedule.agents:
+    #     if agent.oc_member:
+    #         n_neight = 0
+    #         for net in nets:
+    #             n_neight += len(agent.get_neighbor_list(net))
+    #         all.append(n_neight)
+    # print("mean_oc_links_setup: ", np.mean(all))
+    #
+    # for a in range(5):
+    #     print("Tick: ", a)
+    #     model.step()
+    #     print("num_oc: ", model.current_oc_members)
+    #     all = list()
+    #     nets = ['sibling',
+    #             'offspring',
+    #             'partner',
+    #             'household',
+    #             'friendship',
+    #             'criminal',
+    #             'professional',
+    #             'school']
+    #     for agent in model.schedule.agents:
+    #         if agent.oc_member:
+    #             n_neight = 0
+    #             for net in nets:
+    #                 n_neight += len(agent.get_neighbor_list(net))
+    #             all.append(n_neight)
+    #     print("mean_oc_links: ", np.mean(all))
+    #     print()
+    # # model.run(num_ticks=480, verbose=True)

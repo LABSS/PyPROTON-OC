@@ -427,14 +427,15 @@ class Person(Agent):
                 n_of_accomplices -= 1  # save a slot for the facilitator
             while len(accomplices) < n_of_accomplices and d <= self.model.max_accomplice_radius:
                 # first create the group
-                candidates = list(self.model.random.permutation(list(self.agents_in_radius(d))))
+                candidates = list(self.model.random.permutation(list(self.agents_in_radius(d) -
+                                                                     self.agents_in_radius(d-1))))
                 # candidates = sorted(self.agents_in_radius(d), key=lambda x: self.candidates_weight(x))
                 while len(accomplices) < n_of_accomplices and len(candidates) > 0:
                     candidate = candidates[0]
                     candidates.remove(candidate)
                     accomplices.add(candidate)
                     # todo: Should be if candidate.facilitator and facilitator_needed? tracked issue #234
-                    if candidate.facilitator:
+                    if candidate.facilitator and facilitator_needed:
                         n_of_accomplices += 1
                         facilitator_needed = False
                 d += 1
@@ -453,6 +454,7 @@ class Person(Agent):
                     self.model.facilitator_crimes += 1
                 else:
                     self.model.facilitator_fails += 1
+
         return list(accomplices)
 
     def candidates_weight(self, agent: Person) -> float:
@@ -490,17 +492,21 @@ class Person(Agent):
         # todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
         # todo: This function can be unified to neighbors_range
         # todo: Find a way to exclude Person in inferior radius (e.g. d = 2 should return only
-        #  Person at radius 2 not Person at radius 1 and 2).
-        radius = self._agents_in_radius(context)
-        if d == 1:
-            return radius
+        # Person at radius 2 not Person at radius 1 and 2).
+
+        if d == 0:
+            return set()
         else:
-            for di in range(d - 1):
-                for agent_in_radius in radius:
-                    radius = radius.union(agent_in_radius._agents_in_radius(context))
-            if self in radius:
-                radius.remove(self)
-            return radius
+            radius = self._agents_in_radius(context)
+            if d == 1:
+                return radius
+            else:
+                for di in range(d - 1):
+                    for agent_in_radius in radius:
+                        radius = radius.union(agent_in_radius._agents_in_radius(context))
+                if self in radius:
+                    radius.remove(self)
+                return radius
 
     def oc_embeddedness(self) -> float:
         """
