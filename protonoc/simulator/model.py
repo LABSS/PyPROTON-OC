@@ -1861,6 +1861,10 @@ class ProtonOC(Model):
         for i in range(6):
             new_agent = Person(self)
             new_agent.gender_is_male = True
+            new_agent.age = i
+            new_agent.gender_is_male = i % 2 == 0
+            new_agent.education_level = 1
+            new_agent.criminal_tendency = 1
             self.schedule.add(new_agent)
 
         self.schedule.agents[0].make_partner_link(self.schedule.agents[1])
@@ -1935,49 +1939,64 @@ class ProtonOC(Model):
 
 if __name__ == "__main__":
 
+    model = ProtonOC()
+    # model.initial_agents = 6
+    # model.max_accomplice_radius = 1
+    # model.number_crimes_yearly_per10k = 2000
+    model.test2()
+
+
+    model.commit_crimes_by_oc()
+
     """
     TEST2
     """
-    # model = ProtonOC(seed=74839)
+    # model = ProtonOC()
     # # model.setup()
     # model.test2()
     #
-    # for a in range(10):
-    #     model.schedule.step()
+    # for a in range(5):
+    #     # model.schedule.step()
     #     model.commit_crimes_by_oc()
-    #     model.calculate_fast_reporters()
-    #     model.datacollector.collect(model)
+    #     # model.calculate_fast_reporters()
+    #     # model.datacollector.collect(model)
     #     print("tick: ", a)
     #     print("oc_members: ", model.current_oc_members)
     #     print("num_crimes_by_oc: ", model.number_crimes)
-
-    seed = 74839
-    model = ProtonOC()
-    model.max_accomplice_radius = 1
-    model.threshold_use_facilitators = 1000
-    model.setup()
-
-    base_path = "C:\\Users\\franc_pyl533c\Downloads\\reti"
-    model.clean_and_reload(base_path)
-
-    counter = 0
-    for agent in model.schedule.agents:
-        for net in Person.network_names:
-            counter += len(agent.neighbors.get(net))
-    print("num_links: ", counter/2)
+    #     print()
+    #     print()
 
 
-    for a in range(4):
-        model.co_off_hist = {a: 0 for a in range(15)}
-        model.commit_crimes_by_oc()
-        print("oc_members: ", len([agent for agent in model.schedule.agents if agent.oc_member]))
-        print("num_crimes: ", model.number_crimes)
-        print(model.network_used)
-        print(model.co_off_hist)
-        print("facilitator: ", model.facilitator_crimes)
-        print("crime size fails: ", model.crime_size_fails)
-        print()
-        print()
+    """
+    Test with netlogo network
+    """
+    # seed = 74839
+    # model = ProtonOC()
+    # model.max_accomplice_radius = 1
+    # model.threshold_use_facilitators = 1000
+    # model.setup()
+    #
+    # base_path = "C:\\Users\\User\\Downloads\\reti"
+    # model.clean_and_reload(base_path)
+    #
+    # counter = 0
+    # for agent in model.schedule.agents:
+    #     for net in Person.network_names:
+    #         counter += len(agent.neighbors.get(net))
+    # print("num_links: ", counter/2)
+    #
+    #
+    # for a in range(4):
+    #     model.co_off_hist = {a: 0 for a in range(15)}
+    #     model.commit_crimes_by_oc()
+    #     print("oc_members: ", len([agent for agent in model.schedule.agents if agent.oc_member]))
+    #     print("num_crimes: ", model.number_crimes)
+    #     print(model.network_used)
+    #     print(model.co_off_hist)
+    #     print("facilitator: ", model.facilitator_crimes)
+    #     print("crime size fails: ", model.crime_size_fails)
+    #     print()
+    #     print()
 
 
 
