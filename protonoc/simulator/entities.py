@@ -187,7 +187,7 @@ class Person(Agent):
 
     def make_parent_offsprings_link(self, asker: Union[List[Person], Person]) -> None:
         """
-        Create a link between parent and offspring. Askers are the offspring.
+        Create a link between parent and offspring. Asker/s are/is the offspring/s.
         :param asker: Union[List[Person], Person]
         :return: None
         """
@@ -219,6 +219,7 @@ class Person(Agent):
         :param asker: Person
         :return: None
         """
+        #todo: add co_offenses
         self.neighbors.get("criminal").add(asker)
         self.co_off_flag[asker] = 0
         asker.neighbors.get("criminal").add(self)
@@ -428,9 +429,9 @@ class Person(Agent):
             while len(accomplices) < n_of_accomplices and d <= self.model.max_accomplice_radius:
                 # first create the group
                 # candidates = list(self.model.random.permutation(list(self.agents_in_radius(d))))
-                candidates = sorted(self.agents_in_radius(d) - self.agents_in_radius(d-1),
+                candidates = sorted(self.agents_in_radius(d),
                                     key=lambda x: self.candidates_weight(x))
-                print(candidates)
+                # print(candidates)
                 while len(accomplices) < n_of_accomplices and len(candidates) > 0:
                     candidate = candidates[0]
                     candidates.remove(candidate)
@@ -468,7 +469,7 @@ class Person(Agent):
         weight = -1 * (self.social_proximity(agent) * agent.oc_embeddedness() *
                      agent.criminal_tendency) if self.oc_member \
             else (self.social_proximity(agent) * agent.criminal_tendency)
-        print(self, agent,  weight)
+        # print(self, agent,  weight)
         return weight
 
     def _agents_in_radius(self, context: List[str] = network_names) -> Set[Person]:
@@ -519,7 +520,7 @@ class Person(Agent):
             oc_members = [agent for agent in agents if agent.oc_member]
             # this needs to include the caller
             agents.add(self)
-            if oc_members:
+            if [a for a in oc_members if a != self]:
                 self.model.update_meta_links(agents)
                 self.cached_oc_embeddedness = self.find_oc_weight_distance(oc_members) / self.find_oc_weight_distance(
                     agents)

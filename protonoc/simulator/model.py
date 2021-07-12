@@ -1502,11 +1502,13 @@ class ProtonOC(Model):
 
         co_offender_groups = list()
         co_offender_started_by_oc = list()
-        for i in range(int(self.number_crimes_yearly_per10k/ 10000 * len(self.schedule.agents))):
-            self.number_crimes += 1
-            for agent in [self.random.choice([oc_agent for oc_agent in self.schedule.agents if \
-                    oc_agent.oc_member])]:
-                number_of_accomplices = self.number_of_accomplices()
+        # for i in range(int(self.number_crimes_yearly_per10k/ 10000 * len(self.schedule.agents))):
+        for i in range(1):
+            # for agent in [self.random.choice([oc_agent for oc_agent in self.schedule.agents if \
+            #         oc_agent.oc_member])]:
+            for agent in [agent for agent in self.schedule.agents if agent.oc_member]:
+                self.number_crimes += 1
+                # number_of_accomplices = self.number_of_accomplices()
                 # accomplices = agent.find_accomplices(number_of_accomplices + 3)
                 accomplices = agent.find_accomplices(7)
                 co_offender_groups.append(accomplices)
@@ -1560,7 +1562,8 @@ class ProtonOC(Model):
 
     def commit_crime(self, co_offenders: List[Person]) -> None:
         """
-        This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick, co_off_flag and num_co_offenses
+        This procedure modify in-place the num_crimes_committed,num_crimes_committed_this_tick,
+        co_off_flag and num_co_offenses
         attributes of the Person objects passed to co_offenders
         :param co_offenders: list, of Person object
         :return: None
@@ -1589,8 +1592,9 @@ class ProtonOC(Model):
             if agent.neighbors.get("criminal"):
                 for co_off in agent.co_off_flag.keys():
                     if agent.co_off_flag[co_off] == 2:
-                        agent.num_co_offenses[co_off] += 1
+                        # agent.num_co_offenses[co_off] += 1
                         co_off.num_co_offenses[agent] += 1
+                        # This runs 2 times, so we just need to assign a + 1 at each call
 
 
     def number_of_accomplices(self) -> int:
@@ -1936,17 +1940,106 @@ class ProtonOC(Model):
             else:
                 raise Exception("Fail to build net")
 
+    def mini_net(self):
+        """
+        aka test2 extended
+        """
+        for i in range(18):
+            new_agent = Person(self)
+            self.schedule.add(new_agent)
+            new_agent.oc_member = False
+            new_agent.facilitator = False
+            new_agent.gender_is_male = i % 2 == 0
+            new_agent.target_of_intervention = False
+            new_agent.age = i * 149 % 45 +10
+            new_agent.education_level = i * 149 % 4
+            new_agent.criminal_tendency = i * 149 % 100 / 100
+            new_agent.wealth_level = i * 149 % 4
+            new_agent.job_level = i * 149 % 4
+            new_agent.propensity = i * 149 % 100 / 100
+            new_agent.migrant = i % 3 == 0
+
+        self.schedule.agents[0].make_partner_link(self.schedule.agents[1])
+        self.schedule.agents[0].make_friendship_link(self.schedule.agents[2])
+        self.schedule.agents[0].make_professional_link(self.schedule.agents[3])
+        self.schedule.agents[0].make_school_link(self.schedule.agents[4])
+        self.schedule.agents[0].add_criminal_link(self.schedule.agents[5])
+        self.schedule.agents[0].num_co_offenses[self.schedule.agents[5]] = 5
+        self.schedule.agents[5].num_co_offenses[self.schedule.agents[0]] = 5
+        #todo: the offspring is agent 0, right?
+        self.schedule.agents[5].make_parent_offsprings_link(self.schedule.agents[0])
+
+        self.schedule.agents[6].make_friendship_link(self.schedule.agents[5])
+        self.schedule.agents[7].make_partner_link(self.schedule.agents[8])
+        self.schedule.agents[8].make_friendship_link(self.schedule.agents[9])
+        self.schedule.agents[7].make_parent_offsprings_link(self.schedule.agents[9])
+        self.schedule.agents[10].make_professional_link(self.schedule.agents[9])
+        self.schedule.agents[10].make_professional_link(self.schedule.agents[11])
+        self.schedule.agents[10].make_school_link(self.schedule.agents[13])
+
+        self.schedule.agents[11].make_professional_link(self.schedule.agents[12])
+        self.schedule.agents[12].make_professional_link(self.schedule.agents[13])
+        self.schedule.agents[12].make_professional_link(self.schedule.agents[14])
+        self.schedule.agents[12].make_professional_link(self.schedule.agents[16])
+
+        self.schedule.agents[13].make_friendship_link(self.schedule.agents[15])
+        self.schedule.agents[14].make_professional_link(self.schedule.agents[15])
+
+        self.schedule.agents[14].make_household_link([self.schedule.agents[17]])
+        self.schedule.agents[16].make_household_link([self.schedule.agents[12]])
+        self.schedule.agents[16].make_household_link([self.schedule.agents[17]])
+
+        self.schedule.agents[5].oc_member = True
+        self.schedule.agents[17].oc_member = True
+        self.schedule.agents[9].facilitator = True
+        self.schedule.agents[3].facilitator = True
+
+
 
 if __name__ == "__main__":
 
+    def get_co_offenses(model):
+        for agent in model.schedule.agents:
+            for c_links in agent.neighbors.get("criminal"):
+                print(agent, c_links, "-> ", agent.num_co_offenses[c_links])
+                print(c_links, agent, "-> ", c_links.num_co_offenses[agent])
+                print()
+
+
+
     model = ProtonOC()
     # model.initial_agents = 6
-    # model.max_accomplice_radius = 1
-    # model.number_crimes_yearly_per10k = 2000
-    model.test2()
+    model.max_accomplice_radius = 1
+    model.number_crimes_yearly_per10k = 2000
+    model.threshold_use_facilitators = 3
+    model.mini_net()
+    model.oc_embeddedness_radius = 2
+    # for agent in model.schedule.agents:
+    #     print(agent, agent.cached_oc_embeddedness, agent.oc_member)
+    #     print()
+    #     print()
+    # print("oc_emb of oc_member")
+    # for agent in [i for i in model.schedule.agents if i.oc_member]:
+    #     print(agent, agent.oc_embeddedness())
+    # print("______________________")
+    # get_co_offenses(model)
 
+    for i in range(3):
+        model.commit_crimes_by_oc()
+        for agent in model.schedule.agents:
+            print(agent, agent.cached_oc_embeddedness, agent.oc_member)
 
-    model.commit_crimes_by_oc()
+    get_co_offenses(model)
+
+    # print("oc_emb of oc_member")
+    # for agent in [i for i in model.schedule.agents if i.oc_member]:
+    #     print(agent, agent.oc_embeddedness())
+    # print("______________________")
+    #
+    #
+    # print("oc_members: ", len([agent for agent in model.schedule.agents if agent.oc_member]))
+    # print("n_crimes: ", model.number_crimes)
+
 
     """
     TEST2
