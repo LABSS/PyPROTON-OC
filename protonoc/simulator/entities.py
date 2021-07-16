@@ -418,7 +418,7 @@ class Person(Agent):
         :return: List[Person]
         """
         if n_of_accomplices == 0:
-            return [self]
+            offenders_group = [self]
         else:
             d = 1  # start with a network distance of 1
             accomplices = set()
@@ -445,13 +445,14 @@ class Person(Agent):
                     accomplices.add(self.model.random.choice(available_facilitators))
             if len(accomplices) < n_of_accomplices:
                 self.model.crime_size_fails += 1
-            accomplices.add(self)
+            offenders_group = list(accomplices)
+            offenders_group.append(self)
             if n_of_accomplices >= self.model.threshold_use_facilitators:
-                if [agent for agent in accomplices if agent.facilitator]:
+                if [agent for agent in offenders_group if agent.facilitator]:
                     self.model.facilitator_crimes += 1
                 else:
                     self.model.facilitator_fails += 1
-        return list(accomplices)
+        return offenders_group
 
     def candidates_weight(self, agent: Person) -> float:
         """
