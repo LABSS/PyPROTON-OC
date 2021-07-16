@@ -432,8 +432,7 @@ class Person(Agent):
                     candidate = candidates[0]
                     candidates.remove(candidate)
                     accomplices.add(candidate)
-                    # todo: Should be if candidate.facilitator and facilitator_needed? tracked issue #234
-                    if candidate.facilitator:
+                    if candidate.facilitator and facilitator_needed:
                         n_of_accomplices += 1
                         facilitator_needed = False
                 d += 1
