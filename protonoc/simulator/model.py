@@ -1523,6 +1523,7 @@ class ProtonOC(Model):
             self.co_off_hist[len(co_offender_group)] += 1
         for co_offenders_by_OC in co_offender_started_by_oc:
             for agent in [agent for agent in co_offenders_by_OC if not agent.oc_member]:
+                print("tick:", model.tick, " ", agent, "rectruited_by: ", co_offenders_by_OC[-1])
                 agent.new_recruit = self.tick
                 agent.oc_member = True
                 originator = co_offenders_by_OC[-1]
@@ -1534,31 +1535,31 @@ class ProtonOC(Model):
                         self.number_offspring_recruited_this_tick += 1
                 if agent.target_of_intervention:
                     self.number_protected_recruited_this_tick += 1
-        criminals = list(chain.from_iterable(co_offender_groups))
-        if criminals:
-            if self.intervention_is_on() and self.facilitator_repression:
-                for criminal in criminals:
-                    criminal.arrest_weight = self.facilitator_repression_multiplier \
-                        if criminal.facilitator else 1
-            else:
-                if self.intervention_is_on() and self.oc_boss_repression and len(
-                        [agent for agent in criminals if agent.oc_member]) >= 1:
-                    for criminal in criminals:
-                        if not criminal.oc_member:
-                            criminal.arrest_weight = 1
-                    extra.calculate_oc_status([agent for agent in criminals if agent.oc_member])
-                else:
-                    # no intervention active
-                    for criminal in criminals:
-                        criminal.arrest_weight = 1
-            arrest_mod = self.number_arrests_per_year / self.ticks_per_year / 10000 * len(self.schedule.agents)
-            target_n_of_arrest = np.floor(
-                arrest_mod + 1
-                if self.random.random() < (arrest_mod - np.floor(arrest_mod))
-                else 0)
-            for agent in extra.weighted_n_of(target_n_of_arrest, criminals,
-                                             lambda x: x.arrest_weight, self.random):
-                agent.get_caught()
+        # criminals = list(chain.from_iterable(co_offender_groups))
+        # if criminals:
+        #     if self.intervention_is_on() and self.facilitator_repression:
+        #         for criminal in criminals:
+        #             criminal.arrest_weight = self.facilitator_repression_multiplier \
+        #                 if criminal.facilitator else 1
+        #     else:
+        #         if self.intervention_is_on() and self.oc_boss_repression and len(
+        #                 [agent for agent in criminals if agent.oc_member]) >= 1:
+        #             for criminal in criminals:
+        #                 if not criminal.oc_member:
+        #                     criminal.arrest_weight = 1
+        #             extra.calculate_oc_status([agent for agent in criminals if agent.oc_member])
+        #         else:
+        #             # no intervention active
+        #             for criminal in criminals:
+        #                 criminal.arrest_weight = 1
+        #     arrest_mod = self.number_arrests_per_year / self.ticks_per_year / 10000 * len(self.schedule.agents)
+        #     target_n_of_arrest = np.floor(
+        #         arrest_mod + 1
+        #         if self.random.random() < (arrest_mod - np.floor(arrest_mod))
+        #         else 0)
+        #     for agent in extra.weighted_n_of(target_n_of_arrest, criminals,
+        #                                      lambda x: x.arrest_weight, self.random):
+        #         agent.get_caught()
 
     def commit_crime(self, co_offenders: List[Person]) -> None:
         """
@@ -1613,15 +1614,21 @@ class ProtonOC(Model):
         :param agents: Set[Person], the agentset
         :return: None
         """
+        self.meta_graph = nx.Graph()
+        #todo: ignorare tutti gli agenti che non sono contenuti in agents
+        #todo: here we are spending resources, w is calculated too many times
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
-            for in_radius_agent in agent.agents_in_radius(
-                    1):  # limit the context to the agents in the radius of interest
+            for in_radius_agent in [i for i in agent.agents_in_radius(1) if i in agents and i !=
+                                                                            agent]:
+                # limit the context to the agents in the radius of interest
                 self.meta_graph.add_node(in_radius_agent.unique_id)
                 w = 0
                 for net in Person.network_names:
                     if in_radius_agent in agent.neighbors.get(net):
                         if net == "criminal":
+                            # todo: this should be removed when add_criminla_link will integrate
+                            #  co_offense (line 222, entities.py)
                             if in_radius_agent in agent.num_co_offenses:
                                 w += agent.num_co_offenses[in_radius_agent]
                         else:
@@ -2001,15 +2008,17 @@ if __name__ == "__main__":
     def get_co_offenses(model):
         for agent in model.schedule.agents:
             for c_links in agent.neighbors.get("criminal"):
-                print(agent, c_links, "-> ", agent.num_co_offenses[c_links])
-                print(c_links, agent, "-> ", c_links.num_co_offenses[agent])
+                # print(agent,  "oc_emb" , agent.cached_oc_embeddedness, "//" , c_links, "-> ",
+                #       agent.num_co_offenses[c_links])
+                # print(c_links, agent, "oc_emb", agent.cached_oc_embeddedness, "-> ",
+                #       c_links.num_co_offenses[agent])
                 print()
 
 
 
     model = ProtonOC()
     # model.initial_agents = 6
-    model.max_accomplice_radius = 1
+    model.max_accomplice_radius = 2
     model.number_crimes_yearly_per10k = 2000
     model.threshold_use_facilitators = 3
     model.mini_net()
@@ -2024,12 +2033,13 @@ if __name__ == "__main__":
     # print("______________________")
     # get_co_offenses(model)
 
-    for i in range(3):
+    for i in range(5):
         model.commit_crimes_by_oc()
-        for agent in model.schedule.agents:
-            print(agent, agent.cached_oc_embeddedness, agent.oc_member)
-
-    get_co_offenses(model)
+        model.tick += 1
+    #     # for agent in model.schedule.agents:
+    #     #     print(agent, agent.cached_oc_embeddedness, agent.oc_member)
+    #
+    # get_co_offenses(model)
 
     # print("oc_emb of oc_member")
     # for agent in [i for i in model.schedule.agents if i.oc_member]:
@@ -2058,6 +2068,34 @@ if __name__ == "__main__":
     #     print("num_crimes_by_oc: ", model.number_crimes)
     #     print()
     #     print()
+
+    """
+    Get social proximity between criminals
+    """
+    # for agent in model.schedule.agents:
+    #     for criminal in agent.neighbors.get("criminal"):
+    #         print(agent, "->", criminal, agent.social_proximity(criminal))
+
+
+    """
+    update meta links
+    """
+    # model.schedule.agents[0].add_criminal_link(model.schedule.agents[1])
+    # model.schedule.agents[0].num_co_offenses[model.schedule.agents[1]] = 3
+    # model.schedule.agents[1].num_co_offenses[model.schedule.agents[0]] = 3
+
+    # model.update_meta_links([model.schedule.agents[0],
+    #                          model.schedule.agents[1],
+    #                          model.schedule.agents[2]])
+
+    # model.update_meta_links(model.schedule.agents)
+
+    """
+    Get meta links weight
+    """
+
+    # for edge in model.meta_graph.edges:
+    #     print(edge[0], "->", edge[1], model.meta_graph.get_edge_data(edge[0], edge[1]))
 
 
     """
@@ -2090,6 +2128,14 @@ if __name__ == "__main__":
     #     print("crime size fails: ", model.crime_size_fails)
     #     print()
     #     print()
+
+    """
+    calc of weight distance
+    """
+
+    # model.schedule.agents[0].find_oc_weight_distance([model.schedule.agents[1],
+    #                                                  model.schedule.agents[2],
+    #                                                  model.schedule.agents[3]])
 
 
 

@@ -437,7 +437,7 @@ class Person(Agent):
                     candidates.remove(candidate)
                     accomplices.add(candidate)
                     # todo: Should be if candidate.facilitator and facilitator_needed? tracked issue #234
-                    if candidate.facilitator:
+                    if candidate.facilitator and facilitator_needed:
                         n_of_accomplices += 1
                         facilitator_needed = False
                 d += 1
@@ -447,16 +447,25 @@ class Person(Agent):
                     [agent.agents_in_radius(self.model.max_accomplice_radius) for agent in accomplices])) if
                                           facilitator.facilitator]
                 if available_facilitators:
-                    accomplices.add(self.model.random.choice(available_facilitators))
+                    # accomplices.add(self.model.random.choice(available_facilitators))
+                    accomplices.add(sorted(available_facilitators, key=lambda x:x.unique_id)[0])
             if len(accomplices) < n_of_accomplices:
                 self.model.crime_size_fails += 1
-            accomplices.add(self)
+            accomplices = list(accomplices)
+            accomplices.append(self)
             if n_of_accomplices >= self.model.threshold_use_facilitators:
                 if [agent for agent in accomplices if agent.facilitator]:
                     self.model.facilitator_crimes += 1
                 else:
                     self.model.facilitator_fails += 1
-        return list(accomplices)
+
+        # if self.unique_id == 9:
+        #     print("tick: ", self.model.tick)
+        #     print(list(accomplices))
+        #     for i in accomplices:
+        #         print("social_prox: ", self, "->", i, self.social_proximity(i))
+        #         print("oc_emb: ", i.cached_oc_embeddedness)
+        return accomplices
 
     def candidates_weight(self, agent: Person) -> float:
         """
@@ -537,6 +546,10 @@ class Person(Agent):
             agents.remove(self)
         distance = 0
         for agent in agents:
+            # print(agent, nx.algorithms.shortest_paths.weighted.dijkstra_path_length(
+            #     self.model.meta_graph,
+            #                                                                            self.unique_id, agent.unique_id,
+            #                                                                            weight='weight'))
             distance += 1 / nx.algorithms.shortest_paths.weighted.dijkstra_path_length(self.model.meta_graph,
                                                                                        self.unique_id, agent.unique_id,
                                                                                        weight='weight')
