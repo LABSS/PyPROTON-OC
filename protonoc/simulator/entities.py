@@ -81,7 +81,6 @@ class Person(Agent):
         self.target_of_intervention: bool = False
         self.arrest_weight: Union[int, float] = 0
         self.num_co_offenses: Dict = dict()  # criminal-links
-        self.co_off_flag: Dict = dict()  # criminal-links
 
 
     def __repr__(self):
@@ -220,9 +219,9 @@ class Person(Agent):
         :return: None
         """
         self.neighbors.get("criminal").add(asker)
-        self.co_off_flag[asker] = 0
+        self.num_co_offenses[asker] = 0
         asker.neighbors.get("criminal").add(self)
-        asker.co_off_flag[self] = 0
+        asker.num_co_offenses[self] = 0
 
     def remove_link(self, forlorn: Person, context: str) -> None:
         """
