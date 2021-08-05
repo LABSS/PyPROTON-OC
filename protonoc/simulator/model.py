@@ -1521,8 +1521,8 @@ class ProtonOC(Model):
         """
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
-            for in_radius_agent in agent.agents_in_radius(
-                    1):  # limit the context to the agents in the radius of interest
+            for in_radius_agent in [i for i in agent.agents_in_radius(1) if
+                                    i in agents and i != agent]:
                 self.meta_graph.add_node(in_radius_agent.unique_id)
                 w = 0
                 for net in Person.network_names:
