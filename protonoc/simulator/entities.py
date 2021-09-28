@@ -497,7 +497,7 @@ class Person(Agent):
                     radius = radius.union(agent_in_radius._agents_in_radius(context))
             if self in radius:
                 radius.remove(self)
-            return radius
+            return self.agents_in_radius(d-1, context) - radius
 
     def oc_embeddedness(self) -> float:
         """
