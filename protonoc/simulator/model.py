@@ -1569,33 +1569,17 @@ class ProtonOC(Model):
         :param co_offenders: list, of Person object
         :return: None
         """
+
+        for (i, j) in combinations(co_offenders, 2):
+            if i not in j.neighbors.get("criminal"):
+                i.add_criminal_link(j)
+
         for co_offender in co_offenders:
             co_offender.num_crimes_committed += 1
             co_offender.num_crimes_committed_this_tick += 1
             other_co_offenders = [agent for agent in co_offenders if agent != co_offender]
-            for agent in other_co_offenders:
-                if agent not in co_offender.neighbors.get("criminal"):
-                    co_offender.add_criminal_link(agent)
-                    co_offender.num_co_offenses[agent] = 0
-                    agent.num_co_offenses[co_offender] = 0
-
-        for agent in self.schedule.agents:
-            if agent.neighbors.get("criminal"):
-                for co_off in agent.co_off_flag.keys():
-                    agent.co_off_flag[co_off] = 0
-
-        for agent in co_offenders:
-            for co_off in agent.co_off_flag.keys():
-                agent.co_off_flag[co_off] += 1
-                co_off.co_off_flag[agent] += 1
-
-        for agent in self.schedule.agents:
-            if agent.neighbors.get("criminal"):
-                for co_off in agent.co_off_flag.keys():
-                    if agent.co_off_flag[co_off] == 2:
-                        # agent.num_co_offenses[co_off] += 1
-                        co_off.num_co_offenses[agent] += 1
-                        # This runs 2 times, so we just need to assign a + 1 at each call
+            for other in other_co_offenders:
+                co_offender.num_co_offenses[other] += 1
 
 
     def number_of_accomplices(self) -> int:
@@ -1619,9 +1603,8 @@ class ProtonOC(Model):
         #todo: here we are spending resources, w is calculated too many times
         for agent in agents:
             self.meta_graph.add_node(agent.unique_id)
-            for in_radius_agent in [i for i in agent.agents_in_radius(1) if i in agents and i !=
-                                                                            agent]:
-                # limit the context to the agents in the radius of interest
+            for in_radius_agent in [i for i in agent.agents_in_radius(1) if
+                                    i in agents and i != agent]:
                 self.meta_graph.add_node(in_radius_agent.unique_id)
                 w = 0
                 for net in Person.network_names:

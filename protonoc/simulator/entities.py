@@ -81,7 +81,6 @@ class Person(Agent):
         self.target_of_intervention: bool = False
         self.arrest_weight: Union[int, float] = 0
         self.num_co_offenses: Dict = dict()  # criminal-links
-        self.co_off_flag: Dict = dict()  # criminal-links
 
 
     def __repr__(self):
@@ -221,9 +220,9 @@ class Person(Agent):
         """
         #todo: add co_offenses
         self.neighbors.get("criminal").add(asker)
-        self.co_off_flag[asker] = 0
+        self.num_co_offenses[asker] = 0
         asker.neighbors.get("criminal").add(self)
-        asker.co_off_flag[self] = 0
+        asker.num_co_offenses[self] = 0
 
     def remove_link(self, forlorn: Person, context: str) -> None:
         """
@@ -419,7 +418,7 @@ class Person(Agent):
         :return: List[Person]
         """
         if n_of_accomplices == 0:
-            return [self]
+            offenders_group = [self]
         else:
             d = 1  # start with a network distance of 1
             accomplices = set()
@@ -451,13 +450,14 @@ class Person(Agent):
                     accomplices.add(sorted(available_facilitators, key=lambda x:x.unique_id)[0])
             if len(accomplices) < n_of_accomplices:
                 self.model.crime_size_fails += 1
-            accomplices = list(accomplices)
-            accomplices.append(self)
+            offenders_group = list(accomplices)
+            offenders_group.append(self)
             if n_of_accomplices >= self.model.threshold_use_facilitators:
-                if [agent for agent in accomplices if agent.facilitator]:
+                if [agent for agent in offenders_group if agent.facilitator]:
                     self.model.facilitator_crimes += 1
                 else:
                     self.model.facilitator_fails += 1
+        return offenders_group
 
         # if self.unique_id == 9:
         #     print("tick: ", self.model.tick)
@@ -669,7 +669,7 @@ class Person(Agent):
             raise Exception(network_name + " is not a valid network name")
         return [agent.unique_id for agent in self.neighbors.get(network_name)]
 
-    def social_proximity(self, target: Person) -> int:
+    def social_proximity(self, target: Person) -> float:
         """
         This function calculates the social proximity between self and another agent based on age,
         gender, wealth level, education level and friendship
