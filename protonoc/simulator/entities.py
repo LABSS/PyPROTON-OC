@@ -648,7 +648,7 @@ class Person(Agent):
             raise Exception(network_name + " is not a valid network name")
         return [agent.unique_id for agent in self.neighbors.get(network_name)]
 
-    def social_proximity(self, target: Person) -> float:
+    def social_proximity(self, target: Person) -> int:
         """
         This function calculates the social proximity between self and another agent based on age,
         gender, wealth level, education level and friendship
@@ -663,7 +663,7 @@ class Person(Agent):
         total += 1 if self.education_level == target.education_level else 0
         total += 1 if self.neighbors.get("friendship").intersection(
             target.neighbors.get("friendship")) else 0
-        return total/5
+        return total
 
     def n_links(self):
         result = 0
