@@ -32,8 +32,8 @@ import networkx as nx
 from tqdm import tqdm
 from itertools import combinations, chain
 import time
-from protonoc.simulator.entities import Person, School, Employer, Job
-from protonoc.simulator import extra
+from entities import Person, School, Employer, Job
+import extra
 from typing import List, Set, Union, Dict, Any
 from xml.dom import minidom
 import json
@@ -102,6 +102,7 @@ class ProtonOC(Model):
         self.hh_size: List = list()
         self.arrest_rate: Union[int, float] = 0
         self.city: Union[str, None] = None
+
 
         # from graphical interface (free params)
         self.migration_on: bool = True  # True / False
@@ -310,7 +311,7 @@ class ProtonOC(Model):
             if verbose:
                 pbar.set_description("tick: %s" % _tick)
 
-    def fix_unemployment(self, correction: Union[float, int, str]) -> None:
+    def _oh_fix_unemployment(self, correction: Union[float, int, str]) -> None:
         """
         Applies a correction to the employment level, with a correction > 1 increase unemployment
         otherwise decrease unemployment. This policy is applied by modifying in-place the
@@ -1436,7 +1437,7 @@ class ProtonOC(Model):
                 agent = extra.weighted_one_of(people_in_cell,
                                               lambda x: x.criminal_tendency,
                                               self.random)
-                number_of_accomplices = self.number_of_accomplices()
+                number_of_accomplices = 5;# self.number_of_accomplices()
                 accomplices = agent.find_accomplices(number_of_accomplices)
                 # this takes care of facilitators as well.
                 co_offender_groups.append(accomplices)
@@ -1764,5 +1765,22 @@ class ProtonOC(Model):
 
 if __name__ == "__main__":
     model = ProtonOC()
+    model.set_param("seed", 1)
+    model.set_param("max_accomplice_radius",  3)
+    model.set_param("oc_embeddedness_radius",  3)
+    model.set_param("initial_agents",  300)
+
     model.overview()
-    model.run(num_ticks=480, verbose=True)
+    print("kkkkkkkkkkkk")
+    #model.run(num_ticks=2,  \verbose=True)
+    model.setup(model.initial_agents)
+    a = model.random.choice(model.schedule.agents, 1, replace=False)[0]
+    print(a)
+
+    for i in range(1,5):
+        print(a.agents_in_radius_M(i))
+        print(a.agents_in_radius_S(i))
+        print(a.agents_in_radius_M(i) - a.agents_in_radius_S(i))
+        print("kkkkkkkkkkkk")
+
+

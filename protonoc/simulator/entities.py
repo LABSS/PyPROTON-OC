@@ -479,7 +479,33 @@ class Person(Agent):
                     agents_in_radius.add(agent)
         return agents_in_radius
 
+    def agents_in_radius_M(self, d: int, context: List[str] =network_names) -> Set[Person]:
+        radius = list()
+        radius.append(set([self]))
+        radius.append(self._agents_in_radius(context))
+        if d == 1:
+            return radius[1]
+        else:
+            for i in range(1,d):
+                nextring = set()
+                for expanding_agent in radius[i]:
+                    nextring = nextring.union(expanding_agent._agents_in_radius(context))
+                nextring -= radius[i] # removing the previous ring. Takes care of self, too.
+                radius.append(nextring)          
+            summed_ring = set()
+            for ring in radius:
+                summed_ring = summed_ring.union(ring)
+            return summed_ring
+
     def agents_in_radius(self, d: int, context: List[str] =network_names) -> Set[Person]:
+        a = agents_in_radius_S(self, d)
+        b = agents_in_radius_M(self, d)
+        print(a-b)
+        print(b-a)
+        return a
+
+
+    def agents_in_radius_S(self, d: int, context: List[str] =network_names) -> Set[Person]:
         """
         It finds the agents distant "d" in the specified networks "context", by default it finds it on all networks.
         :param d: int, the distance
@@ -489,6 +515,7 @@ class Person(Agent):
         # todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
         # todo: This function can be unified to neighbors_range
         radius = self._agents_in_radius(context)
+        #print("---------starts here------ with d= "+str(d))
         if d == 1:
             return radius
         else:
@@ -497,7 +524,8 @@ class Person(Agent):
                     radius = radius.union(agent_in_radius._agents_in_radius(context))
             if self in radius:
                 radius.remove(self)
-            return self.agents_in_radius(d-1, context) - radius
+
+            return radius - self.agents_in_radius_S(d-1, context) 
 
     def oc_embeddedness(self) -> float:
         """
