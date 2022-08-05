@@ -14,6 +14,8 @@ proton-oc requires python  >= 3.8, we recommend to use a virtual environment
 pip install protonoc
 ```
 
+To run directly from source, `pip install mesa prettytable numba` is a simple way to check some of the dependences.
+
 ### Command Line Interface
 
 proton-oc integrates a **command line interface** that offers two usage modes:

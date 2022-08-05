@@ -1764,8 +1764,8 @@ class ProtonOC(Model):
 
 
 if __name__ == "__main__":
-    model = ProtonOC()
-    model.set_param("seed", 1)
+    model = ProtonOC(1) # fixed seed
+    #model.set_param("seed", 1) # this cannot work; seed is used at class init.
     model.set_param("max_accomplice_radius",  3)
     model.set_param("oc_embeddedness_radius",  3)
     model.set_param("initial_agents",  300)
@@ -1783,4 +1783,7 @@ if __name__ == "__main__":
         print(a.agents_in_radius_M(i) - a.agents_in_radius_S(i))
         print("kkkkkkkkkkkk")
 
+    for j in range (1,10000):
+        for i in range(1,3):
+            b = model.random.choice(model.schedule.agents, 1, replace=False)[0].agents_in_radius_S(i)
 

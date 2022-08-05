@@ -29,7 +29,7 @@ if typing.TYPE_CHECKING:
 from mesa import Agent
 import networkx as nx
 from itertools import chain
-from protonoc.simulator import extra
+import extra
 import numpy as np
 
 
@@ -480,22 +480,24 @@ class Person(Agent):
         return agents_in_radius
 
     def agents_in_radius_M(self, d: int, context: List[str] =network_names) -> Set[Person]:
-        radius = list()
-        radius.append(set([self]))
-        radius.append(self._agents_in_radius(context))
+        rings = list()
+        rings.append(set([self]))
+        rings.append(self._agents_in_radius(context))
         if d == 1:
-            return radius[1]
+            return rings[1]
         else:
             for i in range(1,d):
                 nextring = set()
-                for expanding_agent in radius[i]:
+                for expanding_agent in rings[i]:
                     nextring = nextring.union(expanding_agent._agents_in_radius(context))
-                nextring -= radius[i] # removing the previous ring. Takes care of self, too.
-                radius.append(nextring)          
-            summed_ring = set()
-            for ring in radius:
-                summed_ring = summed_ring.union(ring)
-            return summed_ring
+                for j in range(i+1):
+                    nextring -= rings[j] # removing the previous ring. Takes care of self, too.
+                rings.append(nextring)
+            summed_rings = set()
+            rings.pop(0) # removes the origin agent, the self
+            for ring in rings:
+                summed_rings = summed_rings.union(ring)
+            return summed_rings
 
     def agents_in_radius(self, d: int, context: List[str] =network_names) -> Set[Person]:
         a = agents_in_radius_S(self, d)
@@ -525,7 +527,7 @@ class Person(Agent):
             if self in radius:
                 radius.remove(self)
 
-            return radius - self.agents_in_radius_S(d-1, context) 
+            return radius 
 
     def oc_embeddedness(self) -> float:
         """
