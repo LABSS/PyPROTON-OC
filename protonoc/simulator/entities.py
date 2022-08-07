@@ -426,7 +426,7 @@ class Person(Agent):
                 n_of_accomplices -= 1  # save a slot for the facilitator
             while len(accomplices) < n_of_accomplices and d <= self.model.max_accomplice_radius:
                 # first create the group
-                candidates = sorted(self.agents_in_radius(d), key=lambda x: self.candidates_weight(x))
+                candidates = sorted(self.agents_at_distance(d), key=lambda x: self.candidates_weight(x))
                 while len(accomplices) < n_of_accomplices and len(candidates) > 0:
                     candidate = candidates[0]
                     candidates.remove(candidate)
@@ -481,7 +481,7 @@ class Person(Agent):
 
     def agents_in_radius(self, d: int, context: List[str] =network_names) -> Set[Person]:
         """
-        It finds the agents distant "d" in the specified networks "context", by default it finds it on all networks.
+        It finds the agents distant "d" or less in the specified networks "context", by default it finds it on all networks.
         :param d: int, the distance
         :param context: List[str], limit to networks name
         :return: Set[Person]
@@ -493,17 +493,35 @@ class Person(Agent):
             return rings[1]
         else:
             for i in range(1,d):
-                nextring = set()
-                for expanding_agent in rings[i]:
-                    nextring = nextring.union(expanding_agent._agents_in_radius(context))
+                nextring = set().union(*[x._agents_in_radius(context) for x in rings[i]])
                 for j in range(i+1):
-                    nextring -= rings[j] # removing the previous ring. Takes care of self, too.
+                    nextring -= rings[j] # removing the previous rings. Takes care of self, too.
                 rings.append(nextring)
             summed_rings = set()
             rings.pop(0) # removes the origin agent, the self
             for ring in rings:
                 summed_rings = summed_rings.union(ring)
             return summed_rings
+
+    def agents_at_distance(self, d: int, context: List[str] =network_names) -> Set[Person]:
+        """
+        It finds the agents exactly distant "d" in the specified networks "context", by default it finds it on all networks.
+        :param d: int, the distance
+        :param context: List[str], limit to networks name
+        :return: Set[Person]
+        """
+        # todo: This function can be unified to neighbors_range
+        rings = [set([self])]
+        rings.append(self._agents_in_radius(context))
+        if d == 1:
+            return rings[1]
+        else:
+            for i in range(1,d):
+                nextring = set().union(*[x._agents_in_radius(context) for x in rings[i]])
+                for j in range(i+1):
+                    nextring -= rings[j] # removing the previous rings. Takes care of self, too.
+                rings.append(nextring)
+            return nextring
 
     def oc_embeddedness(self) -> float:
         """

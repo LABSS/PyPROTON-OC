@@ -627,7 +627,16 @@ def test_micro_net():
     model = ProtonOC()
     generate_micro_net(model)
 
-    #tests that agents_in_range isn't broken.
+    #tests that agents_at_distance isn't broken.
+    ag_9_range_3 = set().union(
+        [model.schedule.agents[x] for x in [12,15]])
+
+    ag_0_range_2 = set([model.schedule.agents[6]])
+
+    assert model.schedule.agents[0].agents_at_distance(2)==ag_0_range_2
+    assert model.schedule.agents[9].agents_at_distance(3)==ag_9_range_3
+
+    #tests that agents_in_radius isn't broken.
     ag_9_range_3 = list()
     for i in [7,8,10,11,12,13,15]:
         ag_9_range_3.append(model.schedule.agents[i])
@@ -640,6 +649,7 @@ def test_micro_net():
 
     assert model.schedule.agents[0].agents_in_radius(2)==ag_0_range_2
     assert model.schedule.agents[9].agents_in_radius(3)==ag_9_range_3
+
 
     #test if the trouble starter is the last of the accomplices list
     assert model.schedule.agents[0].find_accomplices(5)[-1] == model.schedule.agents[0]
