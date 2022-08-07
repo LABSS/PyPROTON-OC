@@ -1778,12 +1778,11 @@ if __name__ == "__main__":
     print(a)
 
     for i in range(1,5):
-        print(a.agents_in_radius_M(i))
-        print(a.agents_in_radius_S(i))
-        print(a.agents_in_radius_M(i) - a.agents_in_radius_S(i))
-        print("kkkkkkkkkkkk")
+        print(a.agents_in_radius(i))
+
 
     for j in range (1,10000):
         for i in range(1,3):
-            b = model.random.choice(model.schedule.agents, 1, replace=False)[0].agents_in_radius_S(i)
+            b = model.random.choice(
+                model.schedule.agents, 1, replace=False)[0].agents_in_radius(i)
 
