@@ -29,7 +29,7 @@ if typing.TYPE_CHECKING:
 from mesa import Agent
 import networkx as nx
 from itertools import chain
-from protonoc.simulator import extra
+import extra
 import numpy as np
 
 
@@ -426,7 +426,7 @@ class Person(Agent):
                 n_of_accomplices -= 1  # save a slot for the facilitator
             while len(accomplices) < n_of_accomplices and d <= self.model.max_accomplice_radius:
                 # first create the group
-                candidates = sorted(self.agents_in_radius(d), key=lambda x: self.candidates_weight(x))
+                candidates = sorted(self.agents_at_distance(d), key=lambda x: self.candidates_weight(x))
                 while len(accomplices) < n_of_accomplices and len(candidates) > 0:
                     candidate = candidates[0]
                     candidates.remove(candidate)
@@ -481,23 +481,47 @@ class Person(Agent):
 
     def agents_in_radius(self, d: int, context: List[str] =network_names) -> Set[Person]:
         """
-        It finds the agents distant "d" in the specified networks "context", by default it finds it on all networks.
+        It finds the agents distant "d" or less in the specified networks "context", by default it finds it on all networks.
         :param d: int, the distance
         :param context: List[str], limit to networks name
         :return: Set[Person]
         """
-        # todo: This function must be speeded up, radius(3) on all agents with 1000 initial agents, t = 1.05 sec
         # todo: This function can be unified to neighbors_range
-        radius = self._agents_in_radius(context)
+        rings = [set([self])]
+        rings.append(self._agents_in_radius(context))
         if d == 1:
-            return radius
+            return rings[1]
         else:
-            for di in range(d - 1):
-                for agent_in_radius in radius:
-                    radius = radius.union(agent_in_radius._agents_in_radius(context))
-            if self in radius:
-                radius.remove(self)
-            return radius
+            for i in range(1,d):
+                nextring = set().union(*[x._agents_in_radius(context) for x in rings[i]])
+                for j in range(i+1):
+                    nextring -= rings[j] # removing the previous rings. Takes care of self, too.
+                rings.append(nextring)
+            summed_rings = set()
+            rings.pop(0) # removes the origin agent, the self
+            for ring in rings:
+                summed_rings = summed_rings.union(ring)
+            return summed_rings
+
+    def agents_at_distance(self, d: int, context: List[str] =network_names) -> Set[Person]:
+        """
+        It finds the agents exactly distant "d" in the specified networks "context", by default it finds it on all networks.
+        :param d: int, the distance
+        :param context: List[str], limit to networks name
+        :return: Set[Person]
+        """
+        # todo: This function can be unified to neighbors_range
+        rings = [set([self])]
+        rings.append(self._agents_in_radius(context))
+        if d == 1:
+            return rings[1]
+        else:
+            for i in range(1,d):
+                nextring = set().union(*[x._agents_in_radius(context) for x in rings[i]])
+                for j in range(i+1):
+                    nextring -= rings[j] # removing the previous rings. Takes care of self, too.
+                rings.append(nextring)
+            return nextring
 
     def oc_embeddedness(self) -> float:
         """
@@ -517,7 +541,6 @@ class Person(Agent):
                 self.cached_oc_embeddedness = self.find_oc_weight_distance(oc_members) / self.find_oc_weight_distance(
                     agents)
         return self.cached_oc_embeddedness
-
 
     def find_oc_weight_distance(self, agents: Union[Set[Person], List[Person]]) -> float:
         """

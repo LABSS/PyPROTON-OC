@@ -32,8 +32,8 @@ import networkx as nx
 from tqdm import tqdm
 from itertools import combinations, chain
 import time
-from protonoc.simulator.entities import Person, School, Employer, Job
-from protonoc.simulator import extra
+from entities import Person, School, Employer, Job
+import extra
 from typing import List, Set, Union, Dict, Any
 from xml.dom import minidom
 import json
@@ -102,6 +102,7 @@ class ProtonOC(Model):
         self.hh_size: List = list()
         self.arrest_rate: Union[int, float] = 0
         self.city: Union[str, None] = None
+
 
         # from graphical interface (free params)
         self.migration_on: bool = True  # True / False
@@ -1763,6 +1764,23 @@ class ProtonOC(Model):
 
 
 if __name__ == "__main__":
-    model = ProtonOC()
+    model = ProtonOC(1) # fixed seed
+    #model.set_param("seed", 1) # this cannot work; seed is used at class init.
+    model.set_param("max_accomplice_radius",  3)
+    model.set_param("oc_embeddedness_radius",  3)
+    model.set_param("initial_agents",  300)
+
     model.overview()
-    model.run(num_ticks=480, verbose=True)
+    #model.run(num_ticks=2, verbose=True)
+    model.setup(model.initial_agents)
+    a = model.random.choice(model.schedule.agents, 1, replace=False)[0]
+    print(a)
+
+    for i in range(1,5):
+        print(a.agents_in_radius(i))
+
+    for j in range (1,10000):
+        for i in range(1,3):
+            b = model.random.choice(
+                model.schedule.agents, 1, replace=False)[0].agents_in_radius(i)
+
