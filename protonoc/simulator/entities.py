@@ -480,8 +480,14 @@ class Person(Agent):
         return agents_in_radius
 
     def agents_in_radius(self, d: int, context: List[str] =network_names) -> Set[Person]:
-        rings = list()
-        rings.append(set([self]))
+        """
+        It finds the agents distant "d" in the specified networks "context", by default it finds it on all networks.
+        :param d: int, the distance
+        :param context: List[str], limit to networks name
+        :return: Set[Person]
+        """
+        # todo: This function can be unified to neighbors_range
+        rings = [set([self])]
         rings.append(self._agents_in_radius(context))
         if d == 1:
             return rings[1]
@@ -498,27 +504,6 @@ class Person(Agent):
             for ring in rings:
                 summed_rings = summed_rings.union(ring)
             return summed_rings
-
-    def agents_in_radius_S(self, d: int, context: List[str] =network_names) -> Set[Person]:
-        """
-        It finds the agents distant "d" in the specified networks "context", by default it finds it on all networks.
-        :param d: int, the distance
-        :param context: List[str], limit to networks name
-        :return: Set[Person]
-        """
-        # todo: This function can be unified to neighbors_range
-        radius = self._agents_in_radius(context)
-        #print("---------starts here------ with d= "+str(d))
-        if d == 1:
-            return radius
-        else:
-            for di in range(d - 1):
-                for agent_in_radius in radius:
-                    radius = radius.union(agent_in_radius._agents_in_radius(context))
-            if self in radius:
-                radius.remove(self)
-            return self.agents_in_radius(d-1, context) - radius
-#return radius 
 
     def oc_embeddedness(self) -> float:
         """
@@ -538,7 +523,6 @@ class Person(Agent):
                 self.cached_oc_embeddedness = self.find_oc_weight_distance(oc_members) / self.find_oc_weight_distance(
                     agents)
         return self.cached_oc_embeddedness
-
 
     def find_oc_weight_distance(self, agents: Union[Set[Person], List[Person]]) -> float:
         """

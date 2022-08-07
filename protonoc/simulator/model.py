@@ -311,7 +311,7 @@ class ProtonOC(Model):
             if verbose:
                 pbar.set_description("tick: %s" % _tick)
 
-    def _oh_fix_unemployment(self, correction: Union[float, int, str]) -> None:
+    def fix_unemployment(self, correction: Union[float, int, str]) -> None:
         """
         Applies a correction to the employment level, with a correction > 1 increase unemployment
         otherwise decrease unemployment. This policy is applied by modifying in-place the
@@ -1437,7 +1437,7 @@ class ProtonOC(Model):
                 agent = extra.weighted_one_of(people_in_cell,
                                               lambda x: x.criminal_tendency,
                                               self.random)
-                number_of_accomplices = 5;# self.number_of_accomplices()
+                number_of_accomplices = self.number_of_accomplices()
                 accomplices = agent.find_accomplices(number_of_accomplices)
                 # this takes care of facilitators as well.
                 co_offender_groups.append(accomplices)
@@ -1771,15 +1771,13 @@ if __name__ == "__main__":
     model.set_param("initial_agents",  300)
 
     model.overview()
-    print("kkkkkkkkkkkk")
-    #model.run(num_ticks=2,  \verbose=True)
+    #model.run(num_ticks=2, verbose=True)
     model.setup(model.initial_agents)
     a = model.random.choice(model.schedule.agents, 1, replace=False)[0]
     print(a)
 
     for i in range(1,5):
         print(a.agents_in_radius(i))
-
 
     for j in range (1,10000):
         for i in range(1,3):
