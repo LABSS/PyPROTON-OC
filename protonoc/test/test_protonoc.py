@@ -59,7 +59,7 @@ def test_generate_households():
     single = len([x for x in model.hh_size if x == 1])
     assert counter_couple+counter_single_parent+single == len(model.hh_size)
     #2
-    test_family = model.random.choice(np.array(model.families, dtype=object)))
+    test_family = model.random.choice(np.array(model.families, dtype=object))
     for member in test_family:
         other_members = set([x for x in test_family if x != member])
         assert other_members == member.neighbors["household"]
